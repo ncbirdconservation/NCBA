@@ -4,12 +4,16 @@
 Created on Wed Dec 19 20:19:02 2018
 
 @author: nmtarr
+
+Description: Create a database for storing occurrence data.  Needs to have 
+spatialite functionality.
 """
-import sys
-sys.path.append('Users/nmtarr/Code/ranger/')
-import config
+
 import sqlite3
 import os
+os.chdir('/')
+os.chdir('Users/nmtarr/Code/Ranger')
+import config
 
 srn = config.epsg
 
@@ -19,9 +23,15 @@ os.chdir(config.workDir)
 conn = sqlite3.connect('occurrences.sqlite')
 cursor = conn.cursor()
 
+# Make database spatial
+conn.enable_load_extension(True)
+conn.execute('SELECT load_extension("mod_spatialite")')
+conn.execute('SELECT InitSpatialMetaData();')
+
+#### Create taxa table
 sql1 = """
 CREATE TABLE IF NOT EXISTS taxa (
-                    species_id INTEGER NOT NULL PRIMARY KEY UNIQUE,
+                    species_id TEXT NOT NULL PRIMARY KEY UNIQUE,
                     fws_id TEXT,
                     gap_code VARCHAR(5),
                     itis_tsn TEXT,
@@ -31,10 +41,9 @@ CREATE TABLE IF NOT EXISTS taxa (
                     scientific_name TEXT,
                     start_date TEXT, 
                     end_date TEXT)
-    WITHOUT ROWID;"""
-cursor.execute(sql1)
+    WITHOUT ROWID;
 
-sql2 = """CREATE TABLE IF NOT EXISTS occs (
+CREATE TABLE IF NOT EXISTS occs (
         occ_id INTEGER NOT NULL PRIMARY KEY UNIQUE,        
         species_id INTEGER NOT NULL,
         source TEXT NOT NULL,
@@ -50,9 +59,11 @@ sql2 = """CREATE TABLE IF NOT EXISTS occs (
         individualCount INTEGER DEFAULT 1,
             FOREIGN KEY (species_id) REFERENCES taxa(species_id)
             ON UPDATE RESTRICT
-            ON DELETE NO ACTION)
-    WITHOUT ROWID;"""
-cursor.execute(sql2)
+            ON DELETE NO ACTION);
+    
+        """
+#SELECT AddGeometryColumn ('occs', 'Geometry', 4326, 'POINT', 'XY');
 
+cursor.executescript(sql1)
 conn.commit()
 conn.close()

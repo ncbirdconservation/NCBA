@@ -5,15 +5,11 @@ Created on Wed Dec 19 20:31:49 2018
 
 @author: nmtarr
 
-Description: Retrieve GBIF records for a species and save appropriate attributes
-in the occurrence db.  
+Description: Retrieve GBIF records for a species and save appropriate 
+attributes in the occurrence db.  
 """
-
 import config
-from pprint import pprint
-from pygbif import species
 from pygbif import occurrences
-import pandas as pd
 import sqlite3
 import os
 
@@ -89,6 +85,19 @@ alloccs3 = [x for x in alloccs2
 os.chdir('/')
 os.chdir(config.workDir)
 
+##### ---- TEMP put a record in taxa table
+#conn = sqlite3.connect('occurrences.sqlite')
+#cursor = conn.cursor()
+#sql-1 = """
+#        INSERT INTO taxa 
+#        (species_id, gap_code, gbif_id, common_name, scientific_name) 
+#        VALUES ('bYBCUx0', 'bYBCUx', 2496287, 'Yellow-billed Cuckoo', 
+#                'Coccyzus americanus');
+#        """
+#cursor.execute(sql-1)
+#conn.commit()
+#conn.close()
+
 # Insert the records 
 insert1 = []
 for x in alloccs3:
@@ -118,7 +127,18 @@ for e in alloccs3:
             SET individualCount = {0}
             WHERE occ_id = {1};""".format(e['individualCount'], e['gbifID'])
         cursor.execute(sql2)
+'''
+#############################################################  EXPORT
+#############################################################
+conn.enable_load_extension(True)
+conn.execute('SELECT load_extension("mod_spatialite")')
+sql4 = """
+        SELECT ExportSHP('occs', 'geom', 'cuckoccurence', 'utf-8');
+        
+    """
+cursor.execute(sql4)
+
 
 conn.commit()
 conn.close()
-            
+'''         
