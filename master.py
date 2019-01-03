@@ -9,51 +9,23 @@ Description: draft workflow for creating spatial data summaries to support
 range delineation.  This script will eventually be placed in a jupyter
 notebook or separate top-level scripts.
 
+1. Create HUC Database
+2. Create Occurrence Database
+3. Solve Taxonomy
+4. Get GBIF Records
+5. Get GAP Range Data
+
 """
 #############################################################################
-#                            Create HUC Database
+#                               Configuration
 #############################################################################
-"""
-Description: Create a database for the GAP hucs and GAP ranges.  This data 
-will be used for spatial summaries of occurrence records.
-"""
-
-import sqlite3
-import os
-
+species = 'Coccyzus americanus' # Yellow-billed Cuckoo
+sp_id = 'bYBCUx0'
+sp_gbif_key = 2496287
+sp_TSN = 177831
+epsg = 102008 # Albers Equal Area spatial reference ID
+workDir = 'Users/nmtarr/Documents/RANGES'
 data_dir = 'Users/nmtarr/Documents/Ranges/InData'
-
-os.chdir('/Users/nmtarr/Documents/RANGES')
-
-conn = sqlite3.connect("GAPhuc.sqlite")
-conn.enable_load_extension(True)
-conn.load_extension("mod_spatialite")
-
-curs = conn.cursor()
-
-conn.commit()
-conn.close()
-
-
-'''
-# Make table of hucs
-sql1 = 'CREATE TABLE hucs
-        
-
-
-# Make table of GBIF occurrences
-sql2 = 'CREATE TABLE occu
-
-
-
-# Make table of GAP hucs
-
-'''
-
-
-
-
-
 
 
 #############################################################################
@@ -70,11 +42,15 @@ os.chdir('/')
 os.chdir('Users/nmtarr/Code/Ranger')
 import config
 
-srn = config.epsg
+file1 = 'Occurrences.sqlite'
+if os.path.exists(file1):
+    os.remove(file1)
+    
+srn = epsg
 
 # Connect to or create db
 os.chdir('/')
-os.chdir(config.workDir)
+os.chdir(workDir)
 conn = sqlite3.connect('occurrences.sqlite')
 cursor = conn.cursor()
 
@@ -83,8 +59,11 @@ conn.enable_load_extension(True)
 conn.execute('SELECT load_extension("mod_spatialite")')
 conn.execute('SELECT InitSpatialMetaData();')
 
-#### Create taxa table
+######################################################## Create tables
+######################################################################
 sql_cdb = """
+
+/* Create a taxa table for species-concepts */
 CREATE TABLE IF NOT EXISTS taxa (
                     species_id TEXT NOT NULL PRIMARY KEY UNIQUE,
                     fws_id TEXT,
@@ -95,9 +74,10 @@ CREATE TABLE IF NOT EXISTS taxa (
                     common_name TEXT,
                     scientific_name TEXT,
                     start_date TEXT, 
-                    end_date TEXT)
-    WITHOUT ROWID;
+                    end_date TEXT) 
+                    WITHOUT ROWID;
 
+/* Create a table for occurrence records */
 CREATE TABLE IF NOT EXISTS occs (
         occ_id INTEGER NOT NULL PRIMARY KEY UNIQUE,        
         species_id INTEGER NOT NULL,
@@ -118,8 +98,20 @@ CREATE TABLE IF NOT EXISTS occs (
     
         """
 #SELECT AddGeometryColumn ('occs', 'Geometry', 4326, 'POINT', 'XY');
-
 cursor.executescript(sql_cdb)
+
+######################################################### Add GAP hucs
+######################################################################
+#sqlHUC = 
+"""
+/* Add the hucs shapefile to the db. NOTE: doesn't work in python yet
+because SPATIAL_SECURITY needs to be set to 'relaxed'*/
+SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 
+                 'geometry', 'HUC12RNG', 'POLYGON');
+    
+"""
+#curs.executescript(sqlHUC)
+
 conn.commit()
 conn.close()
 
@@ -139,14 +131,12 @@ For this project/effort, individual species-concepts are identified,
 crosswalked to concepts from various datasets, and stored in a table within
 occurrences.sqlite database.
 """
-import pandas as pd
 from pygbif import species
-import config
 from pprint import pprint
 import sqlite3
 import os
 
-sp = config.species
+sp = species
 
 #df = pd.DataFrame(columns=['fws_id', 'gap_code', 'itis_tsn', 'gbif_id', 
 #                           'bcb_id', 'common_name', 'scientific_name', 
@@ -160,7 +150,7 @@ pprint(name_dict)
 
 # Connect to or create db
 os.chdir('/')
-os.chdir(config.workDir)
+os.chdir(workDir)
 conn = sqlite3.connect('occurrences.sqlite')
 cursor = conn.cursor()
 sql1 = """
@@ -177,7 +167,7 @@ conn.close()
 
 
 #############################################################################
-#                           Get GBIF Occurrences
+#                            Get GBIF Records
 #############################################################################
 """
 Description: Retrieve GBIF records for a species and save appropriate 
@@ -188,8 +178,8 @@ from pygbif import occurrences
 import sqlite3
 import os
 
-sp = config.species
-gbif_key = config.sp_gbif_key
+sp = species
+gbif_key = sp_gbif_key
 
 ############################# RETRIEVE RECORDS
 # First pass filters
@@ -256,7 +246,7 @@ alloccs3 = [x for x in alloccs2
 ###########################################################  INSERT INTO DB
 ###########################################################
 os.chdir('/')
-os.chdir(config.workDir)
+os.chdir(workDir)
 
 ##### ---- TEMP put a record in taxa table
 #conn = sqlite3.connect('occurrences.sqlite')
@@ -315,3 +305,7 @@ cursor.execute(sql4)
 conn.commit()
 conn.close()
 '''   
+
+#############################################################################
+#                           Get GAP Range Data
+#############################################################################

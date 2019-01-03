@@ -9,5 +9,5 @@ species = 'Coccyzus americanus'
 sp_id = 'bYBCUx0'
 sp_gbif_key = 2496287
 sp_TSN = 177831
-epsg = 102008
+epsg = 102008 # Albers Equal Area spatial reference ID
 workDir = 'Users/nmtarr/Documents/RANGES'
