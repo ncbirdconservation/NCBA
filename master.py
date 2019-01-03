@@ -23,9 +23,10 @@ species = 'Coccyzus americanus' # Yellow-billed Cuckoo
 sp_id = 'bYBCUx0'
 sp_gbif_key = 2496287
 sp_TSN = 177831
-epsg = 102008 # Albers Equal Area spatial reference ID
+srn = 102008 # Albers Equal Area spatial reference ID
 workDir = 'Users/nmtarr/Documents/RANGES'
 data_dir = 'Users/nmtarr/Documents/Ranges/InData'
+SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
 
 
 #############################################################################
@@ -40,23 +41,22 @@ import sqlite3
 import os
 os.chdir('/')
 os.chdir('Users/nmtarr/Code/Ranger')
-import config
 
 file1 = 'Occurrences.sqlite'
 if os.path.exists(file1):
     os.remove(file1)
-    
-srn = epsg
 
-# Connect to or create db
+############################################################ Create db 
+######################################################################
 os.chdir('/')
 os.chdir(workDir)
 conn = sqlite3.connect('occurrences.sqlite')
+os.putenv('SPATIALITE_SECURITY', 'relaxed')
+conn.enable_load_extension(True)
+conn.execute('SELECT load_extension("mod_spatialite")')
 cursor = conn.cursor()
 
 # Make database spatial
-conn.enable_load_extension(True)
-conn.execute('SELECT load_extension("mod_spatialite")')
 conn.execute('SELECT InitSpatialMetaData();')
 
 ######################################################## Create tables
@@ -95,25 +95,17 @@ CREATE TABLE IF NOT EXISTS occs (
             FOREIGN KEY (species_id) REFERENCES taxa(species_id)
             ON UPDATE RESTRICT
             ON DELETE NO ACTION);
-    
         """
-#SELECT AddGeometryColumn ('occs', 'Geometry', 4326, 'POINT', 'XY');
 cursor.executescript(sql_cdb)
 
 ######################################################### Add GAP hucs
 ######################################################################
-#sqlHUC = 
+sqlHUC = """
+/* Add the hucs shapefile to the db. */
+SELECT ImportSHP('InData/SHUCS', 'shucs_albers', 'utf-8', 102008, 'geometry', 
+                 'HUC12RNG', 'POLYGON');
 """
-/* Add the hucs shapefile to the db. NOTE: doesn't work in python yet
-because SPATIAL_SECURITY needs to be set to 'relaxed'*/
-SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 
-                 'geometry', 'HUC12RNG', 'POLYGON');
-    
-"""
-#curs.executescript(sqlHUC)
-
-conn.commit()
-conn.close()
+cursor.executescript(sqlHUC)
 
 
 #############################################################################
@@ -149,10 +141,6 @@ pprint(name_dict)
 #df.loc[1000, 'gbif_key'] = int(name_dict['speciesKey'])
 
 # Connect to or create db
-os.chdir('/')
-os.chdir(workDir)
-conn = sqlite3.connect('occurrences.sqlite')
-cursor = conn.cursor()
 sql1 = """
         INSERT INTO taxa 
         (species_id, gap_code, gbif_id, common_name, scientific_name) 
@@ -162,8 +150,6 @@ sql1 = """
 cursor.execute(sql1)
 sql2 = """SELECT * FROM taxa;"""
 cursor.execute(sql2).fetchall()
-conn.commit()
-conn.close()
 
 
 #############################################################################
@@ -173,7 +159,6 @@ conn.close()
 Description: Retrieve GBIF records for a species and save appropriate 
 attributes in the occurrence db.  
 """
-import config
 from pygbif import occurrences
 import sqlite3
 import os
@@ -248,19 +233,6 @@ alloccs3 = [x for x in alloccs2
 os.chdir('/')
 os.chdir(workDir)
 
-##### ---- TEMP put a record in taxa table
-#conn = sqlite3.connect('occurrences.sqlite')
-#cursor = conn.cursor()
-#sql-1 = """
-#        INSERT INTO taxa 
-#        (species_id, gap_code, gbif_id, common_name, scientific_name) 
-#        VALUES ('bYBCUx0', 'bYBCUx', 2496287, 'Yellow-billed Cuckoo', 
-#                'Coccyzus americanus');
-#        """
-#cursor.execute(sql-1)
-#conn.commit()
-#conn.close()
-
 # Insert the records 
 insert1 = []
 for x in alloccs3:
@@ -270,8 +242,6 @@ for x in alloccs3:
             x['year'], x['month']))
 insert1 = tuple(insert1)
 
-conn = sqlite3.connect('occurrences.sqlite')
-cursor = conn.cursor()
 sql1 = """INSERT INTO occs (
                             'occ_id', 'species_id', 'source',
                             'source_sp_id', 'decimalLongitude',
@@ -290,22 +260,43 @@ for e in alloccs3:
             SET individualCount = {0}
             WHERE occ_id = {1};""".format(e['individualCount'], e['gbifID'])
         cursor.execute(sql2)
+   
+############################################################
+############################################################  Geometry     
+# Geometry needs to be added to the occurrence records, but they may not all 
+# have the same spatial reference.  Sort this out; initially, GBIF is mostly 
+# WGS84 so just use those records.
+sql_geo = """
+CREATE TABLE occs_wgs84 AS 
+                        SELECT * FROM occs 
+                        WHERE geodeticDatum = 'WGS84';
+
+/* Add a geometry column for the occurrence points with WGS84 SR */
+SELECT AddGeometryColumn ('occs_wgs84', 'Geometry', 4326, 'POINT', 'XY'); 
+"""
+cursor.executescript(sql_geo)
+
 '''
 #############################################################  EXPORT
 #############################################################
-conn.enable_load_extension(True)
-conn.execute('SELECT load_extension("mod_spatialite")')
+
 sql4 = """
         SELECT ExportSHP('occs', 'geom', 'cuckoccurence', 'utf-8');
         
     """
 cursor.execute(sql4)
+'''
 
 
-conn.commit()
-conn.close()
-'''   
 
 #############################################################################
 #                           Get GAP Range Data
 #############################################################################
+
+
+
+#os.putenv('SPATIALITE_SECURITY', '')  Remove the environment variable, somehow
+
+
+conn.commit()
+conn.close()  
