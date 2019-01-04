@@ -54,7 +54,7 @@ conn.execute('SELECT load_extension("mod_spatialite")')
 cursor = conn.cursor()
 
 # Make database spatial and add the spatial reference system that GAP used
-conn.execute('''SELECT InitSpatialMetaData();
+conn.executescript('''SELECT InitSpatialMetaData();
              INSERT into spatial_ref_sys 
              (srid, auth_name, auth_srid, proj4text, srtext) 
              values (102008, 'ESRI', 102008, '+proj=aea +lat_1=20 +lat_2=60 
@@ -71,9 +71,7 @@ conn.execute('''SELECT InitSpatialMetaData();
              PARAMETER["Standard_Parallel_1",20],
              PARAMETER["Standard_Parallel_2",60],
              PARAMETER["latitude_of_center",40],
-             UNIT["Meter",1],AUTHORITY["EPSG","102008"]]');
-
-''')
+             UNIT["Meter",1],AUTHORITY["EPSG","102008"]]');''')
 
 ######################################################## Create tables
 ######################################################################
@@ -248,22 +246,22 @@ alloccs3 = [x for x in alloccs2
 ###########################################################
 
 # Insert the records 
-insert1 = []
 for x in alloccs3:
-    insert1.append((x['gbifID'], 'bYBCUx', 'gbif', x['acceptedTaxonKey'], 
-            x['decimalLongitude'], x['decimalLatitude'], x['geodeticDatum'],
+    insert1 = []
+    insert1.append((x['gbifID'], 'bYBCUx', 'gbif', x['acceptedTaxonKey'],
             x['coordinateUncertaintyInMeters'], x['eventDate'],
             x['year'], x['month']))
-insert1 = tuple(insert1)
+    
+    insert1 = tuple(insert1)[0]
 
-geom = "GeomFromText('POINT(1.01 2.02)', 4326)"
-
-sql1 = """INSERT INTO occs ('occ_id', 'species_id', 'source',
+    sql1 = """INSERT INTO occs ('occ_id', 'species_id', 'source',
                             'source_sp_id', 'coordinateUncertaintyInMeters', 
                             'occurrenceDate','occurrenceYear', 
-                            'occurrenceMonth')
-                            VALUES {0}{1}""".format(str(insert1)[1:-1], geom)
-cursor.execute(sql1)
+                            'occurrenceMonth', 'geom_4326')
+                VALUES {0}, GeomFromText('POINT({1} {2})', {3}))""".format(str(insert1)[:-1], 
+                x['decimalLongitude'], x['decimalLatitude'], 
+                SRID_dict[x['geodeticDatum']])
+    cursor.executescript(sql1)
 
 # Update the individual count when it exists
 for e in alloccs3:
