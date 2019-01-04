@@ -39,24 +39,41 @@ data.  Needs to have spatial querying functionality.
 import sqlite3
 import os
 os.chdir('/')
-os.chdir('Users/nmtarr/Code/Ranger')
+os.chdir(workDir)
 
-file1 = 'Occurrences.sqlite'
+file1 = workDir + '/Occurrences.sqlite'
 if os.path.exists(file1):
     os.remove(file1)
 
 ############################################################ Create db 
 ######################################################################
-os.chdir('/')
-os.chdir(workDir)
 conn = sqlite3.connect('occurrences.sqlite')
 os.putenv('SPATIALITE_SECURITY', 'relaxed')
 conn.enable_load_extension(True)
 conn.execute('SELECT load_extension("mod_spatialite")')
 cursor = conn.cursor()
 
-# Make database spatial
-conn.execute('SELECT InitSpatialMetaData();')
+# Make database spatial and add the spatial reference system that GAP used
+conn.execute('''SELECT InitSpatialMetaData();
+             INSERT into spatial_ref_sys 
+             (srid, auth_name, auth_srid, proj4text, srtext) 
+             values (102008, 'ESRI', 102008, '+proj=aea +lat_1=20 +lat_2=60 
+             +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m 
+             +no_defs ', 'PROJCS["North_America_Albers_Equal_Area_Conic",
+             GEOGCS["GCS_North_American_1983",
+             DATUM["North_American_Datum_1983",
+             SPHEROID["GRS_1980",6378137,298.257222101]],
+             PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],
+             PROJECTION["Albers_Conic_Equal_Area"],
+             PARAMETER["False_Easting",0],
+             PARAMETER["False_Northing",0],
+             PARAMETER["longitude_of_center",-96],
+             PARAMETER["Standard_Parallel_1",20],
+             PARAMETER["Standard_Parallel_2",60],
+             PARAMETER["latitude_of_center",40],
+             UNIT["Meter",1],AUTHORITY["EPSG","102008"]]');
+
+''')
 
 ######################################################## Create tables
 ######################################################################
@@ -82,9 +99,6 @@ CREATE TABLE IF NOT EXISTS occs (
         species_id INTEGER NOT NULL,
         source TEXT NOT NULL,
         source_sp_id TEXT NOT NULL,
-        decimalLongitude VARCHAR NOT NULL,
-        decimalLatitude VARCHAR NOT NULL, 
-        geodeticDatum TEXT NOT NULL,
         coordinateUncertaintyInMeters INTEGER,
         occurrenceDate TEXT,
         occurrenceYear TEXT,
@@ -96,15 +110,15 @@ CREATE TABLE IF NOT EXISTS occs (
             ON DELETE NO ACTION);
 
 /* Add a geometry column for the occurrence points with WGS84 SR */
-SELECT AddGeometryColumn ('occs_geo', 'geom_4326', 4326, 'POINT', 'XY'); 
-        """
+SELECT AddGeometryColumn ('occs', 'geom_4326', 4326, 'POINT', 'XY'); 
+"""
 cursor.executescript(sql_cdb)
 
 ######################################################### Add GAP hucs
 ######################################################################
 sqlHUC = """
 /* Add the hucs shapefile to the db. */
-SELECT ImportSHP('InData/SHUCS', 'shucs_albers', 'utf-8', 102008, 'geometry', 
+SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008', 
                  'HUC12RNG', 'POLYGON');
 """
 cursor.executescript(sqlHUC)
@@ -232,8 +246,6 @@ alloccs3 = [x for x in alloccs2
 
 ###########################################################  INSERT INTO DB
 ###########################################################
-os.chdir('/')
-os.chdir(workDir)
 
 # Insert the records 
 insert1 = []
@@ -244,14 +256,13 @@ for x in alloccs3:
             x['year'], x['month']))
 insert1 = tuple(insert1)
 
-sql1 = """INSERT INTO occs (
-                            'occ_id', 'species_id', 'source',
-                            'source_sp_id', 'decimalLongitude',
-                            'decimalLatitude', 'geodeticDatum',
-                            'coordinateUncertaintyInMeters', 
+geom = "GeomFromText('POINT(1.01 2.02)', 4326)"
+
+sql1 = """INSERT INTO occs ('occ_id', 'species_id', 'source',
+                            'source_sp_id', 'coordinateUncertaintyInMeters', 
                             'occurrenceDate','occurrenceYear', 
                             'occurrenceMonth')
-                            VALUES {0}""".format(str(insert1)[1:-1])
+                            VALUES {0}{1}""".format(str(insert1)[1:-1], geom)
 cursor.execute(sql1)
 
 # Update the individual count when it exists
