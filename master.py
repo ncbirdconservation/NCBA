@@ -94,6 +94,9 @@ CREATE TABLE IF NOT EXISTS occs (
             FOREIGN KEY (species_id) REFERENCES taxa(species_id)
             ON UPDATE RESTRICT
             ON DELETE NO ACTION);
+
+/* Add a geometry column for the occurrence points with WGS84 SR */
+SELECT AddGeometryColumn ('occs_geo', 'geom_4326', 4326, 'POINT', 'XY'); 
         """
 cursor.executescript(sql_cdb)
 
@@ -270,8 +273,7 @@ CREATE TABLE IF NOT EXISTS occs_geo AS
                         SELECT * FROM occs 
                         WHERE geodeticDatum = 'WGS84';
 
-/* Add a geometry column for the occurrence points with WGS84 SR */
-SELECT AddGeometryColumn ('occs_geo', 'geom_4326', 4326, 'POINT', 'XY'); 
+
 
 ALTER TABLE occs_geo ADD COLUMN geom_102008;
 UPDATE occs_geo SET geom_102008=TRANSFORM(geom_4326, 102008);
