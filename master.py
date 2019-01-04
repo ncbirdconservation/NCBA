@@ -13,7 +13,6 @@ notebook or separate top-level scripts.
 2. Create Occurrence Database
 3. Solve Taxonomy
 4. Get GBIF Records
-5. Get GAP Range Data
 
 """
 #############################################################################
@@ -261,18 +260,21 @@ for e in alloccs3:
             WHERE occ_id = {1};""".format(e['individualCount'], e['gbifID'])
         cursor.execute(sql2)
    
-############################################################
-############################################################  Geometry     
+############################################################  Geometry
+############################################################       
 # Geometry needs to be added to the occurrence records, but they may not all 
 # have the same spatial reference.  Sort this out; initially, GBIF is mostly 
 # WGS84 so just use those records.
 sql_geo = """
-CREATE TABLE occs_wgs84 AS 
+CREATE TABLE IF NOT EXISTS occs_geo AS 
                         SELECT * FROM occs 
                         WHERE geodeticDatum = 'WGS84';
 
 /* Add a geometry column for the occurrence points with WGS84 SR */
-SELECT AddGeometryColumn ('occs_wgs84', 'Geometry', 4326, 'POINT', 'XY'); 
+SELECT AddGeometryColumn ('occs_geo', 'geom_4326', 4326, 'POINT', 'XY'); 
+
+ALTER TABLE occs_geo ADD COLUMN geom_102008;
+UPDATE occs_geo SET geom_102008=TRANSFORM(geom_4326, 102008);
 """
 cursor.executescript(sql_geo)
 
