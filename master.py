@@ -23,8 +23,8 @@ sp_id = 'bYBCUx0'
 sp_gbif_key = 2496287
 sp_TSN = 177831
 srn = 102008 # Albers Equal Area spatial reference ID
-workDir = 'Users/nmtarr/Documents/RANGES'
-data_dir = 'Users/nmtarr/Documents/Ranges/InData'
+workDir = '/Users/nmtarr/Documents/RANGES'
+data_dir = '/Users/nmtarr/Documents/Ranges/InData'
 SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
 
 
@@ -277,15 +277,14 @@ for e in alloccs3:
 #############################################################
 
 sql4 = """
-        CREATE VIEW ybcu_may
+        CREATE VIEW ybcu_june
         AS 
-        SELECT * FROM occs WHERE occurrenceMonth = 5;
-        SELECT * FROM ybcu_may;
-        
+        SELECT * FROM occs WHERE occurrenceMonth = 6;
+        SELECT * FROM ybcu_june;        
     """
-cursor.executescript(sql4).fetchall()
+cursor.executescript(sql4)
 
-#       SELECT ExportSHP('ybcu_june', 'geom_4326', 'ybcu-june', 'utf-8');
+cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'ybcu2', 'utf-8');""")
 
 
 conn.commit()
