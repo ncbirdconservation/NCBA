@@ -271,44 +271,21 @@ for e in alloccs3:
             SET individualCount = {0}
             WHERE occ_id = {1};""".format(e['individualCount'], e['gbifID'])
         cursor.execute(sql2)
-   
-############################################################  Geometry
-############################################################       
-# Geometry needs to be added to the occurrence records, but they may not all 
-# have the same spatial reference.  Sort this out; initially, GBIF is mostly 
-# WGS84 so just use those records.
-sql_geo = """
-CREATE TABLE IF NOT EXISTS occs_geo AS 
-                        SELECT * FROM occs 
-                        WHERE geodeticDatum = 'WGS84';
 
 
-
-ALTER TABLE occs_geo ADD COLUMN geom_102008;
-UPDATE occs_geo SET geom_102008=TRANSFORM(geom_4326, 102008);
-"""
-cursor.executescript(sql_geo)
-
-'''
 #############################################################  EXPORT
 #############################################################
 
 sql4 = """
-        SELECT ExportSHP('occs', 'geom', 'cuckoccurence', 'utf-8');
+        CREATE VIEW ybcu_may
+        AS 
+        SELECT * FROM occs WHERE occurrenceMonth = 5;
+        SELECT * FROM ybcu_may;
         
     """
-cursor.execute(sql4)
-'''
+cursor.executescript(sql4).fetchall()
 
-
-
-#############################################################################
-#                           Get GAP Range Data
-#############################################################################
-
-
-
-#os.putenv('SPATIALITE_SECURITY', '')  Remove the environment variable, somehow
+#       SELECT ExportSHP('ybcu_june', 'geom_4326', 'ybcu-june', 'utf-8');
 
 
 conn.commit()
