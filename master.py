@@ -111,14 +111,14 @@ SELECT AddGeometryColumn ('occs', 'geom_4326', 4326, 'POINT', 'XY');
 """
 cursor.executescript(sql_cdb)
 
-######################################################### Add GAP hucs
-######################################################################
-sqlHUC = """
-/* Add the hucs shapefile to the db. */
-SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008', 
-                 'HUC12RNG', 'POLYGON');
-"""
-cursor.executescript(sqlHUC)
+########################################################## Add GAP hucs
+#######################################################################
+#sqlHUC = """
+#/* Add the hucs shapefile to the db. */
+#SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008', 
+#                 'HUC12RNG', 'POLYGON');
+#"""
+#cursor.executescript(sqlHUC)
 
 
 #############################################################################
@@ -183,7 +183,7 @@ gbif_key = sp_gbif_key
 # First pass filters
 latRange = '27,41'
 lonRange = '-91,-75'
-years = '1998,2018'
+years = '1970,2018'
 months = '1,12'
 geoIssue = False
 coordinate = True
@@ -271,26 +271,63 @@ for e in alloccs3:
             WHERE occ_id = {1};""".format(e['individualCount'], e['gbifID'])
         cursor.execute(sql2)
 
+###########################################################  BUFFER POINTS
+###########################################################
+# Buffer the x,y locations with the coordinate uncertainty in order to create
+# circles.
+sql_buf = """
+/* Add an additional geometry column to store the new geometries (polygons)*/
+ALTER TABLE occs ADD COLUMN circle_albers BLOB;
+
+/* Transform to albers (102008) and apply buffer */
+UPDATE occs SET circle_albers = Buffer(Transform(geom_4326, 102008),
+                                coordinateUncertaintyInMeters);
+
+/* The new geometry column needs an entry in the geometry columns table */
+INSERT INTO geometry_columns (f_table_name, f_geometry_column,
+                              geometry_type, coord_dimension,
+                              srid, spatial_index_enabled)
+            VALUES ('occs', 'circle_albers', 3, 2, 102008, 0);
+
+/* Export the results to a shapefile */
+SELECT ExportSHP('occs', 'circle_albers', 'ybcu_circles', 'utf-8');
+"""
+
+cursor.executescript(sql_buf)
+conn.commit()
+
 
 #############################################################  EXPORT
 #############################################################
-cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'ybcu', 'utf-8');""")
+# Export occurrence 'points' as a shapefile (all seasons)
+cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'ybcu_points', 
+                                   'utf-8');""")
+
+# Make shapefiles for each month
 month_dict = {'january': 1, 'february':2, 'march':3, 'april':4, 'may':5,
               'june':6, 'july':7, 'august':8, 'september':9, 'october':10,
               'november':11, 'december':12}
 for month in month_dict.keys():
     print(month)
     sql4 = """
+    /* Create views for each month and export as shapefiles.  A record has 
+    to be added to the views geometry table in order for the geometry of 
+    the view to be recognized and spatial processes to work */
+    
     DROP VIEW IF EXISTS ybcu_{0};
-    CREATE VIEW ybcu_{0} AS
-            SELECT * FROM occs WHERE occurrenceMonth = {1};
+    
+    CREATE VIEW ybcu_{0} AS SELECT * FROM occs WHERE occurrenceMonth = {1};
+    
     DELETE FROM views_geometry_columns WHERE view_name='ybcu_{0}';
+    
     INSERT INTO views_geometry_columns
                 (view_name, view_geometry, view_rowid, f_table_name,
                   f_geometry_column, read_only)
                   VALUES
-                 ('ybcu_{0}', 'geom_4326', 'occ_id', 'occs', 'geom_4326', 1);
-    SELECT ExportSHP('ybcu_{0}', 'geom_4326', 'ybcu_{0}', 'utf-8');     
+                 ('ybcu_{0}', 'circle_albers', 'occ_id', 'occs', 
+                 'circle_albers', 1);
+    
+    SELECT ExportSHP('ybcu_{0}', 'circle_albers', 'ybcu_{0}', 'utf-8'); 
     """.format(month, month_dict[month])
     cursor.executescript(sql4)
 
