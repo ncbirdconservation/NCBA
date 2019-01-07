@@ -35,7 +35,6 @@ SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
 Description: Create a database for storing occurrence and species-concept 
 data.  Needs to have spatial querying functionality.
 """
-
 import sqlite3
 import os
 os.chdir('/')
@@ -275,17 +274,25 @@ for e in alloccs3:
 
 #############################################################  EXPORT
 #############################################################
-
-sql4 = """
-        CREATE VIEW ybcu_june
-        AS 
-        SELECT * FROM occs WHERE occurrenceMonth = 6;
-        SELECT * FROM ybcu_june;        
-    """
-cursor.executescript(sql4)
-
-cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'ybcu2', 'utf-8');""")
-
+cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'ybcu', 'utf-8');""")
+month_dict = {'january': 1, 'february':2, 'march':3, 'april':4, 'may':5,
+              'june':6, 'july':7, 'august':8, 'september':9, 'october':10,
+              'november':11, 'december':12}
+for month in month_dict.keys():
+    print(month)
+    sql4 = """
+    DROP VIEW IF EXISTS ybcu_{0};
+    CREATE VIEW ybcu_{0} AS
+            SELECT * FROM occs WHERE occurrenceMonth = {1};
+    DELETE FROM views_geometry_columns WHERE view_name='ybcu_{0}';
+    INSERT INTO views_geometry_columns
+                (view_name, view_geometry, view_rowid, f_table_name,
+                  f_geometry_column, read_only)
+                  VALUES
+                 ('ybcu_{0}', 'geom_4326', 'occ_id', 'occs', 'geom_4326', 1);
+    SELECT ExportSHP('ybcu_{0}', 'geom_4326', 'ybcu_{0}', 'utf-8');     
+    """.format(month, month_dict[month])
+    cursor.executescript(sql4)
 
 conn.commit()
 conn.close()  
