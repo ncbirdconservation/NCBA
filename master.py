@@ -328,10 +328,21 @@ for month in month_dict.keys():
                  'circle_albers', 1);
     
     SELECT ExportSHP('ybcu_{0}', 'circle_albers', 'ybcu_{0}', 'utf-8'); 
+    
+    DROP VIEW ybcu_{0};
     """.format(month, month_dict[month])
     cursor.executescript(sql4)
 
-
+# Make range shapefiles for each season
+sql_season = """
+    /* Create views for each season that can then be used to create 
+    occurrence-derived range maps. */
+    CREATE VIEW ybcu_summer AS
+                SELECT occ_id, species_id, FROM occs WHERE occurrenceMonth IN (5, 6, 7);
+                
+    
+"""
+cursor.execute(sql_season).fetchall()
 
 
 
