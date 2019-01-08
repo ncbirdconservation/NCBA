@@ -120,14 +120,14 @@ SELECT AddGeometryColumn('rangemaps', 'circles', 102008, 'MULTIPOLYGON',
 """
 cursor.executescript(sql_cdb)
 
-########################################################## Add GAP hucs
-#######################################################################
-#sqlHUC = """
-#/* Add the hucs shapefile to the db. */
-#SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008', 
-#                 'HUC12RNG', 'POLYGON');
-#"""
-#cursor.executescript(sqlHUC)
+######################################################### Add GAP hucs
+######################################################################
+sqlHUC = """
+/* Add the hucs shapefile to the db. */
+SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008', 
+                 'HUC12RNG', 'POLYGON');
+"""
+cursor.executescript(sqlHUC)
 
 
 #############################################################################
@@ -317,7 +317,7 @@ for month in month_dict.keys():
     print(month)
     try:
         sql4 = """    
-        /* Create views for each month and export as shapefiles. */
+        /* Create tables for each month and export as shapefiles. */
         
         INSERT INTO rangemaps (species_id, period, range, circles)
                         SELECT species_id, '{0}',
@@ -387,6 +387,9 @@ conn.commit()
 
 ###########################################################  HUCS WITH RECORDS
 ###########################################################
+
+
+
 
 conn.commit()
 conn.close()
