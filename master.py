@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS occs (
             ON DELETE NO ACTION);
 
 /* Add a geometry column for the occurrence points with WGS84 SR */
-SELECT AddGeometryColumn ('occs', 'geom_4326', 4326, 'POINT', 'XY'); 
+SELECT AddGeometryColumn('occs', 'geom_4326', 4326, 'POINT', 'XY'); 
 """
 cursor.executescript(sql_cdb)
 
@@ -298,7 +298,7 @@ conn.commit()
 
 
 #############################################################  EXPORT
-#############################################################
+#############################################################  OCCURRENCES
 # Export occurrence 'points' as a shapefile (all seasons)
 cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'ybcu_points', 
                                    'utf-8');""")
@@ -333,3 +333,17 @@ for month in month_dict.keys():
 
 conn.commit()
 conn.close()  
+
+
+############################################################  CONVEX HULL
+############################################################
+
+
+
+
+
+
+
+
+
+

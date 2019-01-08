@@ -7,4 +7,5 @@ CREATE VIEW ybcu_april AS
               VALUES
              ('ybcu_april', 'geom_4326', 'occ_id', 'occs', 'geom_4326',
              1);*/
-SELECT ExportSHP('ybcu_april', 'circles_albers', 'ybcu_april', 'utf-8');
+SELECT ExportSHP('ybcu_april', 'circles_albers', 'ybcu_april',
+  'utf-8');
