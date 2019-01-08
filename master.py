@@ -110,6 +110,7 @@ SELECT AddGeometryColumn('occs', 'geom_4326', 4326, 'POINT', 'XY');
 /* Make a table for storing range maps for unique species-time period
 combinations, WITH GEOMETRY */
 CREATE TABLE rangemaps (
+             rmap_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
              species_id TEXT NOT NULL,
              period TEXT NOT NULL);
 SELECT AddGeometryColumn('rangemaps', 'range', 102008, 'MULTIPOLYGON',
@@ -148,8 +149,6 @@ from pygbif import species
 from pprint import pprint
 import sqlite3
 import os
-
-sp = species
 
 #df = pd.DataFrame(columns=['fws_id', 'gap_code', 'itis_tsn', 'gbif_id', 
 #                           'bcb_id', 'common_name', 'scientific_name', 
@@ -316,24 +315,35 @@ month_dict = {'january': 1, 'february':2, 'march':3, 'april':4, 'may':5,
               'november':11, 'december':12}
 for month in month_dict.keys():
     print(month)
-    sql4 = """    
-    /* Create views for each month and export as shapefiles.  A record has 
-    to be added to the views geometry table in order for the geometry of 
-    the view to be recognized and spatial processes to work */
-    
-    INSERT INTO rangemaps (species_id, period, range, circles)
-                    SELECT species_id, '{0}',
-                    ConcaveHull(CastToMultiPolygon(GUnion(circle_albers))),
-                    CastToMultiPolygon(GUnion(circle_albers))
-                    FROM occs
-                    WHERE occurrenceMonth = {1};
-                    
-    SELECT ExportSHP('rangemaps', 'range', '{0}_rng', 'utf-8');
-            
-    SELECT ExportSHP('rangemaps', 'circles', '{0}_occs', 'utf-8');
-            
-    """.format(month, month_dict[month])
-    cursor.executescript(sql4)
+    try:
+        sql4 = """    
+        /* Create views for each month and export as shapefiles. */
+        
+        INSERT INTO rangemaps (species_id, period, range, circles)
+                        SELECT species_id, '{0}',
+                        ConcaveHull(CastToMultiPolygon(GUnion(circle_albers))),
+                        CastToMultiPolygon(GUnion(circle_albers))
+                        FROM occs
+                        WHERE occurrenceMonth = {1};
+        
+        /* Pull out the period for mapping */
+        CREATE TABLE temp1 AS SELECT * FROM rangemaps
+                        WHERE period='{0}';
+        SELECT RecoverGeometryColumn('temp1', 'range', 102008, 'MULTIPOLYGON', 
+                                     'XY');
+        SELECT RecoverGeometryColumn('temp1', 'circles', 102008, 'MULTIPOLYGON', 
+                                     'XY');                
+        /* Export shapefiles */               
+        SELECT ExportSHP('temp1', 'range', '{0}_rng', 'utf-8');
+                
+        SELECT ExportSHP('temp1', 'circles', '{0}_occs', 'utf-8');
+        
+        DROP TABLE temp1;
+                
+        """.format(month, month_dict[month])
+        cursor.executescript(sql4)
+    except:
+        print(Exception)
 
 # Make range shapefiles for each season
 period_dict = {"summer": '(5,6,7,8)', "winter": '(11,12,1,2)',
@@ -353,9 +363,21 @@ for period in period_dict:
                     FROM occs
                     WHERE occurrenceMonth IN {1};
                     
-            SELECT ExportSHP('rangemaps', 'range', '{0}_rng', 'utf-8');
+            /* Pull out the period for mapping */
+            CREATE TABLE temp2 AS SELECT * FROM rangemaps
+                            WHERE period='{0}';
+            SELECT RecoverGeometryColumn('temp2', 'range', 102008, 
+                                         'MULTIPOLYGON', 
+                                         'XY');
+            SELECT RecoverGeometryColumn('temp2', 'circles', 102008, 
+                                         'MULTIPOLYGON', 
+                                         'XY'); 
+                   
+            SELECT ExportSHP('temp2', 'range', '{0}_rng', 'utf-8');
             
-            SELECT ExportSHP('rangemaps', 'circles', '{0}_occs', 'utf-8');
+            SELECT ExportSHP('temp2', 'circles', '{0}_occs', 'utf-8');
+            
+            DROP TABLE temp2;
         """.format(period, period_dict[period])
         cursor.executescript(sql_season)
     except:
