@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS taxa (
                     end_date TEXT) 
                     WITHOUT ROWID;
 
-/* Create a table for occurrence records */
+/* Create a table for occurrence records, WITH GEOMETRY */
 CREATE TABLE IF NOT EXISTS occs (
         occ_id INTEGER NOT NULL PRIMARY KEY UNIQUE,        
         species_id INTEGER NOT NULL,
@@ -105,9 +105,17 @@ CREATE TABLE IF NOT EXISTS occs (
             FOREIGN KEY (species_id) REFERENCES taxa(species_id)
             ON UPDATE RESTRICT
             ON DELETE NO ACTION);
-
-/* Add a geometry column for the occurrence points with WGS84 SR */
 SELECT AddGeometryColumn('occs', 'geom_4326', 4326, 'POINT', 'XY'); 
+
+/* Make a table for storing range maps for unique species-time period
+combinations, WITH GEOMETRY */
+CREATE TABLE rangemaps (
+             species_id TEXT NOT NULL,
+             period TEXT NOT NULL);
+SELECT AddGeometryColumn('rangemaps', 'range', 102008, 'MULTIPOLYGON',
+                          'XY');
+SELECT AddGeometryColumn('rangemaps', 'circles', 102008, 'MULTIPOLYGON',
+                          'XY');
 """
 cursor.executescript(sql_cdb)
 
@@ -292,15 +300,14 @@ INSERT INTO geometry_columns (f_table_name, f_geometry_column,
 /* Export the results to a shapefile */
 SELECT ExportSHP('occs', 'circle_albers', 'ybcu_circles', 'utf-8');
 """
-
 cursor.executescript(sql_buf)
 conn.commit()
 
 
-#############################################################  EXPORT
-#############################################################  OCCURRENCES
+#############################################################  EXPORT MAPS
+#############################################################
 # Export occurrence 'points' as a shapefile (all seasons)
-cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'ybcu_points', 
+cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'occ_points', 
                                    'utf-8');""")
 
 # Make shapefiles for each month
@@ -309,90 +316,52 @@ month_dict = {'january': 1, 'february':2, 'march':3, 'april':4, 'may':5,
               'november':11, 'december':12}
 for month in month_dict.keys():
     print(month)
-    sql4 = """
+    sql4 = """    
     /* Create views for each month and export as shapefiles.  A record has 
     to be added to the views geometry table in order for the geometry of 
     the view to be recognized and spatial processes to work */
     
-    DROP VIEW IF EXISTS ybcu_{0};
-    
-    CREATE VIEW ybcu_{0} AS SELECT * FROM occs WHERE occurrenceMonth = {1};
-    
-    DELETE FROM views_geometry_columns WHERE view_name='ybcu_{0}';
-    
-    INSERT INTO views_geometry_columns
-                (view_name, view_geometry, view_rowid, f_table_name,
-                  f_geometry_column, read_only)
-                  VALUES
-                 ('ybcu_{0}', 'circle_albers', 'occ_id', 'occs', 
-                 'circle_albers', 1);
-    
-    SELECT ExportSHP('ybcu_{0}', 'circle_albers', 'ybcu_{0}', 'utf-8'); 
-    
-    DROP VIEW ybcu_{0};
+    INSERT INTO rangemaps (species_id, period, range, circles)
+                    SELECT species_id, '{0}',
+                    ConcaveHull(CastToMultiPolygon(GUnion(circle_albers))),
+                    CastToMultiPolygon(GUnion(circle_albers))
+                    FROM occs
+                    WHERE occurrenceMonth = {1};
+                    
+    SELECT ExportSHP('rangemaps', 'range', '{0}_rng', 'utf-8');
+            
+    SELECT ExportSHP('rangemaps', 'circles', '{0}_occs', 'utf-8');
+            
     """.format(month, month_dict[month])
     cursor.executescript(sql4)
 
 # Make range shapefiles for each season
-sql_season = """
-    /* Create views for each season that can then be used to create 
-    occurrence-derived range maps. */
-    CREATE VIEW ybcu_summer AS
-                SELECT occ_id, species_id, FROM occs WHERE occurrenceMonth IN (5, 6, 7);
-                
-    
-"""
-cursor.execute(sql_season).fetchall()
-
-
+period_dict = {"summer": '(5,6,7,8)', "winter": '(11,12,1,2)',
+               "spring": '(3,4,5)', "fall": '(8,9,10,11)',
+               "yearly": '(1,2,3,4,5,6,7,8,9,10,11,12)'}
+for period in period_dict:
+    print(period)
+    try:
+        sql_season = """
+            /*  Insert a record for a range map, created by making polygons into
+            a multipolygon geometry and then calculating the concave hull.
+            Also, insert circles into a column for provenance */
+            INSERT INTO rangemaps (species_id, period, range, circles)
+                    SELECT species_id, '{0}',
+                    ConcaveHull(CastToMultiPolygon(GUnion(circle_albers))),
+                    CastToMultiPolygon(GUnion(circle_albers))
+                    FROM occs
+                    WHERE occurrenceMonth IN {1};
+                    
+            SELECT ExportSHP('rangemaps', 'range', '{0}_rng', 'utf-8');
+            
+            SELECT ExportSHP('rangemaps', 'circles', '{0}_occs', 'utf-8');
+        """.format(period, period_dict[period])
+        cursor.executescript(sql_season)
+    except:
+        print(Exception)
 
 conn.commit()
-
-
-############################################################  CONVEX HULL
-############################################################  CONTINENTAL
-
-sql_hull = """
-CREATE TABLE multi AS
-      SELECT 'ybcu' AS species,
-             CastToMultipoint(GUnion(geom_4326)) AS points
-      FROM occs;
-
-SELECT RecoverGeometryColumn('multi', 'points',
-                              4326, 'MULTIPOINT', 'XY');
-
-SELECT ExportSHP('multi', 'points', 'ybcu_multi', 'utf-8');
-
-/* Make the multipoint into a convex hull and export */
-CREATE TABLE convex AS
-      SELECT 'ybcu' AS species,
-      Transform(ConvexHull(points), 102008) AS convexhull
-      FROM multi;
-
-SELECT RecoverGeometryColumn('convex', 'convexhull',
-                              102008, 'POLYGON', 'XY');
-
-SELECT ExportSHP('convex', 'convexhull', 'ybcu_convex', 'utf-8');
-
-/* Make the multipoint into a concave hull and export */
-CREATE TABLE IF NOT EXISTS concave AS
-      SELECT 'ybcu' AS species,
-      Transform(ConcaveHull(points), 102008) AS concavehull
-      FROM multi;
-
-SELECT RecoverGeometryColumn('concave', 'concavehull',
-                              102008, 'MULTIPOLYGON', 'XY');
-
-SELECT ExportSHP('concave', 'concavehull', 'ybcu_concave', 'utf-8');
-
-DROP TABLE multi;
-
-DROP TABLE convex;
-
-DROP TABLE concave;
-"""
-cursor.executescript(sql_hull)
-
 
 ###########################################################  HUCS WITH RECORDS
 ###########################################################
