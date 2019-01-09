@@ -123,9 +123,7 @@ cursor.executescript(sql_cdb)
 ######################################################### Add GAP hucs
 ######################################################################
 sqlHUC = """
-/* Add the hucs shapefile to the db. */
-SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008',
-                 'HUC12RNG', 'POLYGON');
+
 """
 cursor.executescript(sqlHUC)
 
@@ -265,7 +263,7 @@ for x in alloccs3:
                             'occurrenceDate','occurrenceYear',
                             'occurrenceMonth', 'geom_4326')
                 VALUES {0}, GeomFromText('POINT({1} {2})',
-                                            {3}))""".format(str(insert1)[:-1], 
+                                            {3}))""".format(str(insert1)[:-1],
                 x['decimalLongitude'], x['decimalLatitude'],
                 SRID_dict[x['geodeticDatum']])
     cursor.executescript(sql1)
@@ -383,14 +381,11 @@ for period in period_dict:
         cursor.executescript(sql_season)
     except:
         print(Exception)
-
 conn.commit()
 
 ###########################################################  HUCS WITH RECORDS
 ###########################################################
-
-
-
+# SEE GAPrangeEval.sql .  It takes a little while to run.
 
 conn.commit()
 conn.close()

@@ -1,6 +1,13 @@
 /*
-Use the occurrence data to evaluate the GAP range map for a species
+Use occurrence data to evaluate the GAP range map for a species.  A
+table is created for the GAP range and columns reporting the results of
+evaluation and validation are populated after evaluating spatial relationships
+of occurrence records (circles) and GAP range.
 */
+
+/* Add the hucs shapefile to the db. */
+SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008',
+                 'HUC12RNG', 'POLYGON');
 
 /* Load the GAP range csv, filter out some columns, rename others */
 .mode csv
@@ -45,6 +52,14 @@ SELECT blue.HUC12RNG, 0
 FROM blue LEFT JOIN sp_range ON sp_range.HUC12RNG = blue.HUC12RNG
 WHERE sp_range.HUC12RNG IS NULL;
 
+/*  Populated a validation column.  If an evaluation supports the GAP ranges
+then it is validated */
+ALTER TABLE sp_range ADD COLUMN validated_presence INTEGER NOT NULL DEFAULT 0;
+
+UPDATE sp_range
+SET validated_presence = 1
+WHERE eval_gbif1 = 1;
+
 /*  For new records, put zeros in GAP range attribute fields  */
 UPDATE sp_range
 SET intGAPOrigin = 0,
@@ -52,11 +67,6 @@ SET intGAPOrigin = 0,
     intGAPReproduction = 0,
     intGAPSeason = 0
 WHERE eval_gbif1 = 0;
-
-
-
-
-
 
 /*  Create a version of sp_range with geometry  */
 CREATE TABLE sp_geom AS
