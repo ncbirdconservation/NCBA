@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jan  3 08:08:59 2019
+Created on Thu Jan 3 08:08:59 2019
 
-@author: nmtarr
+author: nmtarr
 
-Description: draft workflow for creating spatial data summaries to support
+Description: Draft workflow for creating spatial data summaries to support
 range delineation.  This script will eventually be placed in a jupyter
 notebook or separate top-level scripts.
 
-1. Create HUC Database
-2. Create Occurrence Database
-3. Solve Taxonomy
-4. Get GBIF Records
+Functionality:
+Identifying a species concept to investigate
+Retrieving and filtering occurrence records, saving them in a database
+Generating shapefiles of occurrence records by month as well as concave hull
+polygons around recordsself.
 
+Outputs:
+Maps and spatially-explicit tables within a database.
+
+Uses:
+Provide resources to consult when creating expert drawn range mapsself.
+Investigation of data availability and agreement.
 """
 #############################################################################
 #                               Configuration
@@ -40,12 +47,12 @@ import os
 os.chdir('/')
 os.chdir(workDir)
 
+# Delete the database if it already exists
 file1 = workDir + '/Occurrences.sqlite'
 if os.path.exists(file1):
     os.remove(file1)
 
-############################################################ Create db
-######################################################################
+# Create or connect to the database
 conn = sqlite3.connect('occurrences.sqlite')
 os.putenv('SPATIALITE_SECURITY', 'relaxed')
 conn.enable_load_extension(True)
@@ -75,7 +82,6 @@ conn.executescript('''SELECT InitSpatialMetaData();
 ######################################################## Create tables
 ######################################################################
 sql_cdb = """
-
 /* Create a taxa table for species-concepts */
 CREATE TABLE IF NOT EXISTS taxa (
                     species_id TEXT NOT NULL PRIMARY KEY UNIQUE,
@@ -120,14 +126,6 @@ SELECT AddGeometryColumn('rangemaps', 'circles', 102008, 'MULTIPOLYGON',
 """
 cursor.executescript(sql_cdb)
 
-######################################################### Add GAP hucs
-######################################################################
-sqlHUC = """
-
-"""
-cursor.executescript(sqlHUC)
-
-
 #############################################################################
 #                            SOLVE TAXONOMY
 #############################################################################
@@ -145,8 +143,6 @@ occurrences.sqlite database.
 """
 from pygbif import species
 from pprint import pprint
-import sqlite3
-import os
 
 #df = pd.DataFrame(columns=['fws_id', 'gap_code', 'itis_tsn', 'gbif_id',
 #                           'bcb_id', 'common_name', 'scientific_name',
@@ -178,14 +174,12 @@ Description: Retrieve GBIF records for a species and save appropriate
 attributes in the occurrence db.
 """
 from pygbif import occurrences
-import sqlite3
-import os
 
 sp = species
 gbif_key = sp_gbif_key
 
 ############################# RETRIEVE RECORDS
-# First pass filters
+# Up-front filters are an opportunity to lighten the load from the start.
 latRange = '27,41'
 lonRange = '-91,-75'
 years = '1970,2018'
@@ -244,11 +238,10 @@ for x in alloccs:
 alloccs3 = [x for x in alloccs2
             if 'coordinateUncertaintyInMeters' in x.keys()]
 
-#...
+#  WHAT ELSE CAN WE DO ??????...
 
 ###########################################################  INSERT INTO DB
 ###########################################################
-
 # Insert the records
 for x in alloccs3:
     insert1 = []
@@ -308,7 +301,7 @@ conn.commit()
 cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'occ_points',
                                    'utf-8');""")
 
-# Make shapefiles for each month
+# Make occurrence shapefiles for each month
 month_dict = {'january': 1, 'february':2, 'march':3, 'april':4, 'may':5,
               'june':6, 'july':7, 'august':8, 'september':9, 'october':10,
               'november':11, 'december':12}
@@ -383,9 +376,8 @@ for period in period_dict:
         print(Exception)
 conn.commit()
 
-###########################################################  HUCS WITH RECORDS
-###########################################################
-# SEE GAPrangeEval.sql .  It takes a little while to run.
+###########################################################  GET THE GAP RANGES
+###########################################################  FROM SCIENCEBASE
 
 conn.commit()
 conn.close()
