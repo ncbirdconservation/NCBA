@@ -1,10 +1,27 @@
 /*
-Use occurrence data to evaluate the GAP range map for a species.  A
-table is created for the GAP range and columns reporting the results of
+Description: This code uses occurrence data collected with
+'occurrence_records_summaries.py' to evaluate the GAP range map for a species.
+A table is created for the GAP range and columns reporting the results of
 evaluation and validation are populated after evaluating spatial relationships
 of occurrence records (circles) and GAP range.
+
+The results of this code are new columns in the GAP range table (in the db
+created for work in this repository) and a range shapefile.
+
+The primary use of code like this would be range evaluation and revision.
+
+Unresolved issues:
+1. How can overlap be handled?  As is, occurrence circles overlaping huc
+boundaries are omitted.
+2. Can the final shapefile be dissolved?
+3. Can the runtime be improved with spatial indexing?  Minimum bounding rectangle?
+4. ".import" has to be worked around when this goes into python.
+5. Locations of huc and GAP range files.
 */
 
+/******************************************************************************
+                                 Load Tables
+ ******************************************************************************/
 /* Add the hucs shapefile to the db. */
 SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008',
                  'HUC12RNG', 'POLYGON');
@@ -27,6 +44,10 @@ CREATE TABLE sp_range AS
                       FROM garb;
 DROP TABLE garb;
 
+
+/******************************************************************************
+                             Assess Agreement
+ ******************************************************************************/
 /*
 Add a column to store gbif evaluation result - meaning, does the huc
 completely contain an occurrence circle?  Circles that overlap huc boundaries
@@ -68,6 +89,10 @@ SET intGAPOrigin = 0,
     intGAPSeason = 0
 WHERE eval_gbif1 = 0;
 
+
+/******************************************************************************
+                                 Make Spatial
+ ******************************************************************************/
 /*  Create a version of sp_range with geometry  */
 CREATE TABLE sp_geom AS
               SELECT sp_range.*, shucs.geom_102008

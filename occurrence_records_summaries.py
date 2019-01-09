@@ -21,6 +21,11 @@ Maps and spatially-explicit tables within a database.
 Uses:
 Provide resources to consult when creating expert drawn range mapsself.
 Investigation of data availability and agreement.
+
+Unresolved issues:
+1.  Downloading from Sciencebase with code.
+2.  Maximize filtering.
+3.  Develop taxonomy section.
 """
 #############################################################################
 #                               Configuration
