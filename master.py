@@ -32,7 +32,7 @@ SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
 #                       Create Occurrence Database
 #############################################################################
 """
-Description: Create a database for storing occurrence and species-concept 
+Description: Create a database for storing occurrence and species-concept
 data.  Needs to have spatial querying functionality.
 """
 import sqlite3
@@ -44,7 +44,7 @@ file1 = workDir + '/Occurrences.sqlite'
 if os.path.exists(file1):
     os.remove(file1)
 
-############################################################ Create db 
+############################################################ Create db
 ######################################################################
 conn = sqlite3.connect('occurrences.sqlite')
 os.putenv('SPATIALITE_SECURITY', 'relaxed')
@@ -54,10 +54,10 @@ cursor = conn.cursor()
 
 # Make database spatial and add the spatial reference system that GAP used
 conn.executescript('''SELECT InitSpatialMetaData();
-             INSERT into spatial_ref_sys 
-             (srid, auth_name, auth_srid, proj4text, srtext) 
-             values (102008, 'ESRI', 102008, '+proj=aea +lat_1=20 +lat_2=60 
-             +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m 
+             INSERT into spatial_ref_sys
+             (srid, auth_name, auth_srid, proj4text, srtext)
+             values (102008, 'ESRI', 102008, '+proj=aea +lat_1=20 +lat_2=60
+             +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m
              +no_defs ', 'PROJCS["North_America_Albers_Equal_Area_Conic",
              GEOGCS["GCS_North_American_1983",
              DATUM["North_American_Datum_1983",
@@ -86,13 +86,13 @@ CREATE TABLE IF NOT EXISTS taxa (
                     bcb_id TEXT,
                     common_name TEXT,
                     scientific_name TEXT,
-                    start_date TEXT, 
-                    end_date TEXT) 
+                    start_date TEXT,
+                    end_date TEXT)
                     WITHOUT ROWID;
 
 /* Create a table for occurrence records, WITH GEOMETRY */
 CREATE TABLE IF NOT EXISTS occs (
-        occ_id INTEGER NOT NULL PRIMARY KEY UNIQUE,        
+        occ_id INTEGER NOT NULL PRIMARY KEY UNIQUE,
         species_id INTEGER NOT NULL,
         source TEXT NOT NULL,
         source_sp_id TEXT NOT NULL,
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS occs (
             FOREIGN KEY (species_id) REFERENCES taxa(species_id)
             ON UPDATE RESTRICT
             ON DELETE NO ACTION);
-SELECT AddGeometryColumn('occs', 'geom_4326', 4326, 'POINT', 'XY'); 
+SELECT AddGeometryColumn('occs', 'geom_4326', 4326, 'POINT', 'XY');
 
 /* Make a table for storing range maps for unique species-time period
 combinations, WITH GEOMETRY */
@@ -124,7 +124,7 @@ cursor.executescript(sql_cdb)
 ######################################################################
 sqlHUC = """
 /* Add the hucs shapefile to the db. */
-SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008', 
+SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008',
                  'HUC12RNG', 'POLYGON');
 """
 cursor.executescript(sqlHUC)
@@ -134,14 +134,14 @@ cursor.executescript(sqlHUC)
 #                            SOLVE TAXONOMY
 #############################################################################
 """
-Description:  Data retrieved from datasets is for specific species-concepts, 
+Description:  Data retrieved from datasets is for specific species-concepts,
 which change over time, sometimes with a spatial component (e.g., changes in
 range delination of closely related species or subspecies).  Retrieval of data
-for the wrong species-concept would introduce error.  Therefore, the first 
+for the wrong species-concept would introduce error.  Therefore, the first
 step is to sort out species concepts of different datasets to identify concepts
 to include.
 
-For this project/effort, individual species-concepts are identified, 
+For this project/effort, individual species-concepts are identified,
 crosswalked to concepts from various datasets, and stored in a table within
 occurrences.sqlite database.
 """
@@ -150,8 +150,8 @@ from pprint import pprint
 import sqlite3
 import os
 
-#df = pd.DataFrame(columns=['fws_id', 'gap_code', 'itis_tsn', 'gbif_id', 
-#                           'bcb_id', 'common_name', 'scientific_name', 
+#df = pd.DataFrame(columns=['fws_id', 'gap_code', 'itis_tsn', 'gbif_id',
+#                           'bcb_id', 'common_name', 'scientific_name',
 #                           'start_date', 'end_date'])
 #df.index.name='uid'
 
@@ -162,9 +162,9 @@ pprint(name_dict)
 
 # Connect to or create db
 sql1 = """
-        INSERT INTO taxa 
-        (species_id, gap_code, gbif_id, common_name, scientific_name) 
-        VALUES ('bYBCUx0', 'bYBCUx', 2496287, 'Yellow-billed Cuckoo', 
+        INSERT INTO taxa
+        (species_id, gap_code, gbif_id, common_name, scientific_name)
+        VALUES ('bYBCUx0', 'bYBCUx', 2496287, 'Yellow-billed Cuckoo',
                 'Coccyzus americanus');
         """
 cursor.execute(sql1)
@@ -176,8 +176,8 @@ cursor.execute(sql2).fetchall()
 #                            Get GBIF Records
 #############################################################################
 """
-Description: Retrieve GBIF records for a species and save appropriate 
-attributes in the occurrence db.  
+Description: Retrieve GBIF records for a species and save appropriate
+attributes in the occurrence db.
 """
 from pygbif import occurrences
 import sqlite3
@@ -230,10 +230,10 @@ for i in batches:
 # will be performed with info from these keys.
 keykeys = ['basisOfRecord', 'individualCount', 'acceptedTaxonKey',
            'scientificName', 'acceptedScientificName','taxonomicStatus',
-           'decimalLongitude', 'decimalLatitude', 
+           'decimalLongitude', 'decimalLatitude',
            'coordinateUncertaintyInMeters', 'year',
-           'month', 'day', 'eventDate', 'issues','geodeticDatum', 
-           'gbifID', 'type', 'preparations', 'occurrenceStatus', 
+           'month', 'day', 'eventDate', 'issues','geodeticDatum',
+           'gbifID', 'type', 'preparations', 'occurrenceStatus',
            'georeferenceProtocol', 'georeferenceVerificationStatus',
            'occurrenceID']
 alloccs2 = []
@@ -243,7 +243,7 @@ for x in alloccs:
 #############################################################  FILTER MORE
 #############################################################
 # Remove if no coordinate uncertainty
-alloccs3 = [x for x in alloccs2 
+alloccs3 = [x for x in alloccs2
             if 'coordinateUncertaintyInMeters' in x.keys()]
 
 #...
@@ -251,21 +251,22 @@ alloccs3 = [x for x in alloccs2
 ###########################################################  INSERT INTO DB
 ###########################################################
 
-# Insert the records 
+# Insert the records
 for x in alloccs3:
     insert1 = []
     insert1.append((x['gbifID'], 'bYBCUx', 'gbif', x['acceptedTaxonKey'],
             x['coordinateUncertaintyInMeters'], x['eventDate'],
             x['year'], x['month']))
-    
+
     insert1 = tuple(insert1)[0]
 
     sql1 = """INSERT INTO occs ('occ_id', 'species_id', 'source',
-                            'source_sp_id', 'coordinateUncertaintyInMeters', 
-                            'occurrenceDate','occurrenceYear', 
+                            'source_sp_id', 'coordinateUncertaintyInMeters',
+                            'occurrenceDate','occurrenceYear',
                             'occurrenceMonth', 'geom_4326')
-                VALUES {0}, GeomFromText('POINT({1} {2})', {3}))""".format(str(insert1)[:-1], 
-                x['decimalLongitude'], x['decimalLatitude'], 
+                VALUES {0}, GeomFromText('POINT({1} {2})',
+                                            {3}))""".format(str(insert1)[:-1], 
+                x['decimalLongitude'], x['decimalLatitude'],
                 SRID_dict[x['geodeticDatum']])
     cursor.executescript(sql1)
 
@@ -306,7 +307,7 @@ conn.commit()
 #############################################################  EXPORT MAPS
 #############################################################
 # Export occurrence 'points' as a shapefile (all seasons)
-cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'occ_points', 
+cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'occ_points',
                                    'utf-8');""")
 
 # Make shapefiles for each month
@@ -316,30 +317,30 @@ month_dict = {'january': 1, 'february':2, 'march':3, 'april':4, 'may':5,
 for month in month_dict.keys():
     print(month)
     try:
-        sql4 = """    
+        sql4 = """
         /* Create tables for each month and export as shapefiles. */
-        
+
         INSERT INTO rangemaps (species_id, period, range, circles)
                         SELECT species_id, '{0}',
                         ConcaveHull(CastToMultiPolygon(GUnion(circle_albers))),
                         CastToMultiPolygon(GUnion(circle_albers))
                         FROM occs
                         WHERE occurrenceMonth = {1};
-        
+
         /* Pull out the period for mapping */
         CREATE TABLE temp1 AS SELECT * FROM rangemaps
                         WHERE period='{0}';
-        SELECT RecoverGeometryColumn('temp1', 'range', 102008, 'MULTIPOLYGON', 
+        SELECT RecoverGeometryColumn('temp1', 'range', 102008, 'MULTIPOLYGON',
                                      'XY');
-        SELECT RecoverGeometryColumn('temp1', 'circles', 102008, 'MULTIPOLYGON', 
-                                     'XY');                
-        /* Export shapefiles */               
+        SELECT RecoverGeometryColumn('temp1', 'circles', 102008, 'MULTIPOLYGON',
+                                     'XY');
+        /* Export shapefiles */
         SELECT ExportSHP('temp1', 'range', '{0}_rng', 'utf-8');
-                
+
         SELECT ExportSHP('temp1', 'circles', '{0}_occs', 'utf-8');
-        
+
         DROP TABLE temp1;
-                
+
         """.format(month, month_dict[month])
         cursor.executescript(sql4)
     except:
@@ -362,21 +363,21 @@ for period in period_dict:
                     CastToMultiPolygon(GUnion(circle_albers))
                     FROM occs
                     WHERE occurrenceMonth IN {1};
-                    
+
             /* Pull out the period for mapping */
             CREATE TABLE temp2 AS SELECT * FROM rangemaps
                             WHERE period='{0}';
-            SELECT RecoverGeometryColumn('temp2', 'range', 102008, 
-                                         'MULTIPOLYGON', 
+            SELECT RecoverGeometryColumn('temp2', 'range', 102008,
+                                         'MULTIPOLYGON',
                                          'XY');
-            SELECT RecoverGeometryColumn('temp2', 'circles', 102008, 
-                                         'MULTIPOLYGON', 
-                                         'XY'); 
-                   
+            SELECT RecoverGeometryColumn('temp2', 'circles', 102008,
+                                         'MULTIPOLYGON',
+                                         'XY');
+
             SELECT ExportSHP('temp2', 'range', '{0}_rng', 'utf-8');
-            
+
             SELECT ExportSHP('temp2', 'circles', '{0}_occs', 'utf-8');
-            
+
             DROP TABLE temp2;
         """.format(period, period_dict[period])
         cursor.executescript(sql_season)
