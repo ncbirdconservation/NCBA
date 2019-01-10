@@ -69,14 +69,14 @@ CREATE TABLE blue AS
 /*  Record in sp_range that gap and gbif agreed on species presence */
 UPDATE sp_range
 SET eval_gbif1 = 1
-WHERE EXISTS (SELECT HUC12RNG FROM blue WHERE HUC12RNG = sp_range.HUC12RNG);
+WHERE EXISTS (SELECT HUC12RNG FROM blue WHERE HUC12RNG = sp_range.strHUC12RNG);
 
 /*  Find hucs that contained gbif occurrences, but were not in gaprange and
 insert them into sp_range as new records */
-INSERT INTO sp_range (HUC12RNG, eval_gbif1)
+INSERT INTO sp_range (strHUC12RNG, eval_gbif1)
 SELECT blue.HUC12RNG, 0
-FROM blue LEFT JOIN sp_range ON sp_range.HUC12RNG = blue.HUC12RNG
-WHERE sp_range.HUC12RNG IS NULL;
+FROM blue LEFT JOIN sp_range ON sp_range.strHUC12RNG = blue.HUC12RNG
+WHERE sp_range.strHUC12RNG IS NULL;
 
 /*  Populated a validation column.  If an evaluation supports the GAP ranges
 then it is validated */
@@ -96,13 +96,18 @@ WHERE eval_gbif1 = 0;
 
 
 /******************************************************************************
-                                 Make Spatial
+                               Export Table and Map
  ******************************************************************************/
 /*  Create a version of sp_range with geometry  */
 CREATE TABLE sp_geom AS
               SELECT sp_range.*, shucs.geom_102008
-              FROM sp_range LEFT JOIN shucs ON sp_range.HUC12RNG = shucs.HUC12RNG;
+              FROM sp_range LEFT JOIN shucs ON sp_range.strHUC12RNG = shucs.HUC12RNG;
 SELECT RecoverGeometryColumn('sp_geom', 'geom_102008', 102008, 'POLYGON');
 
 /* Export maps */
-SELECT ExportSHP('sp_geom', 'geom_102008', 'sp_geom1', 'utf-8');
+SELECT ExportSHP('sp_geom', 'geom_102008',
+                 '/users/nmtarr/documents/ranges/sp_geom1', 'utf-8');
+
+/* Export csv */
+.output /users/nmtarr/documents/ranges/sp_geom1.csv
+SELECT * FROM sp_range;
