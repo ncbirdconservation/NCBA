@@ -12,18 +12,23 @@ The primary use of code like this would be range evaluation and revision.
 
 Unresolved issues:
 1. How can overlap be handled?  As is, occurrence circles overlaping huc
-boundaries are omitted.
+   boundaries are omitted.  Set a tolerable level of spatial error?
 2. Can the final shapefile be dissolved?
 3. Can the runtime be improved with spatial indexing?  Minimum bounding rectangle?
 4. ".import" has to be worked around when this goes into python.
 5. Locations of huc and GAP range files.
+6. How many points/individuals per huc?.
+7. Documenting evaluation paramters (spatial error allowed, spatial relationship
+   rules.)
+8. Export a csv file.
 */
 
+SELECT load_extension('mod_spatialite');
 /******************************************************************************
                                  Load Tables
  ******************************************************************************/
 /* Add the hucs shapefile to the db. */
-SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008',
+SELECT ImportSHP('/users/nmtarr/data/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008',
                  'HUC12RNG', 'POLYGON');
 
 /* Load the GAP range csv, filter out some columns, rename others */
@@ -32,7 +37,7 @@ SELECT ImportSHP('InData/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008',
 .headers on
 ALTER TABLE sp_range RENAME TO garb;
 CREATE TABLE sp_range AS
-                      SELECT strHUC12RNG AS HUC12RNG,
+                      SELECT strHUC12RNG,
                              intGapOrigin AS intGAPOrigin,
                              intGapPres AS intGAPPresence,
                              intGapRepro AS intGAPReproduction,

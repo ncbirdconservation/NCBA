@@ -26,6 +26,8 @@ Unresolved issues:
 1.  Downloading from Sciencebase with code.
 2.  Maximize filtering.
 3.  Develop taxonomy section.
+4.  Archiving and documenting data and process.
+5.
 """
 #############################################################################
 #                               Configuration
@@ -155,7 +157,7 @@ from pprint import pprint
 #df.index.name='uid'
 
 # Solve taxonomy
-name_dict = species.name_backbone(sp)
+name_dict = species.name_backbone(species)
 pprint(name_dict)
 #df.loc[1000, 'gbif_key'] = int(name_dict['speciesKey'])
 
