@@ -14,19 +14,22 @@ Unresolved issues:
 1. How can overlap be handled?  As is, occurrence circles overlaping huc
    boundaries are omitted.  Set a tolerable level of spatial error?
 2. Can the final shapefile be dissolved?
+   Code to try:
+   """Select f.field1 as field1, st_unaryunion(st_collect(f.geometry)) as geometry
+   From tableA as f
+   Group by field1;"""
 3. Can the runtime be improved with spatial indexing?  Minimum bounding rectangle?
 4. ".import" has to be worked around when this goes into python.
 5. Locations of huc and GAP range files.
 6. How many points/individuals per huc?.
-7. Documenting evaluation paramters (spatial error allowed, spatial relationship
+7. Documenting evaluation parameters (spatial error allowed, spatial relationship
    rules.)
-8. Export a csv file.
 */
 
 SELECT load_extension('mod_spatialite');
-/******************************************************************************
+/*#############################################################################
                                  Load Tables
- ******************************************************************************/
+ ############################################################################*/
 /* Add the hucs shapefile to the db. */
 SELECT ImportSHP('/users/nmtarr/data/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008',
                  'HUC12RNG', 'POLYGON');
@@ -50,19 +53,22 @@ CREATE TABLE sp_range AS
 DROP TABLE garb;
 
 
-/******************************************************************************
+/*#############################################################################
                              Assess Agreement
- ******************************************************************************/
+ ############################################################################*/
 /*
 Add a column to store gbif evaluation result - meaning, does the huc
 completely contain an occurrence circle?  Circles that overlap huc boundaries
 are left out of this, but could possibly be added later
 */
+
+/*############################################  Does HUC contain an occurrence?
+#############################################################################*/
 ALTER TABLE sp_range ADD COLUMN eval_gbif1 INTEGER;
 
-/*  Select hucs that contain an occurrence circle */
+/*  Make table of hucs that contain an occurrence circle */
 CREATE TABLE blue AS
-              SELECT shucs.HUC12RNG, shucs.geom_102008
+              SELECT shucs.HUC12RNG, shucs.geom_102008,
               FROM shucs, occs
               WHERE Contains(shucs.geom_102008, occs.circle_albers);
 
@@ -78,14 +84,6 @@ SELECT blue.HUC12RNG, 0
 FROM blue LEFT JOIN sp_range ON sp_range.strHUC12RNG = blue.HUC12RNG
 WHERE sp_range.strHUC12RNG IS NULL;
 
-/*  Populated a validation column.  If an evaluation supports the GAP ranges
-then it is validated */
-ALTER TABLE sp_range ADD COLUMN validated_presence INTEGER NOT NULL DEFAULT 0;
-
-UPDATE sp_range
-SET validated_presence = 1
-WHERE eval_gbif1 = 1;
-
 /*  For new records, put zeros in GAP range attribute fields  */
 UPDATE sp_range
 SET intGAPOrigin = 0,
@@ -94,10 +92,38 @@ SET intGAPOrigin = 0,
     intGAPSeason = 0
 WHERE eval_gbif1 = 0;
 
+/*  Populated a validation column.  If an evaluation supports the GAP ranges
+then it is validated */
+ALTER TABLE sp_range ADD COLUMN validated_presence INTEGER NOT NULL DEFAULT 0;
 
-/******************************************************************************
+UPDATE sp_range
+SET validated_presence = 1
+WHERE eval_gbif1 = 1;
+
+
+/*######################################  How many occurrences inside each huc?
+#############################################################################*/
+/*  How many occurrences in each huc that had an occurrence? */
+/*
+SELECT g.plgnID AS "plgn_ID",
+   AVG(s.pollution) AS "Average Pollution",
+   MAX(s.pollution) AS "Maximum Pollution",
+   COUNT(*) AS "Number of Sensors"
+FROM sensors AS s JOIN SHAPE1 AS g
+ON contains(g.geometry, s.geometry)
+GROUP BY g.plgnID*/
+ALTER TABLE sp_range ADD COLUMN eval_gbif1_cnt INTEGER DEFAULT 0;
+
+UPDATE sp_range
+SET eval_gbif1_cnt = (SELECT COUNT(geom_102008)
+                      FROM blue
+                      WHERE HUC12RNG = sp_range.strHUC12RNG
+                      GROUP BY HUC12RNG);
+
+
+/*#############################################################################
                                Export Table and Map
- ******************************************************************************/
+ ############################################################################*/
 /*  Create a version of sp_range with geometry  */
 CREATE TABLE sp_geom AS
               SELECT sp_range.*, shucs.geom_102008
@@ -106,8 +132,8 @@ SELECT RecoverGeometryColumn('sp_geom', 'geom_102008', 102008, 'POLYGON');
 
 /* Export maps */
 SELECT ExportSHP('sp_geom', 'geom_102008',
-                 '/users/nmtarr/documents/ranges/sp_geom1', 'utf-8');
+                 '/users/nmtarr/documents/ranges/bYBCUx_CONUS_Range_2001v1_eval', 'utf-8');
 
 /* Export csv */
-.output /users/nmtarr/documents/ranges/sp_geom1.csv
+.output /users/nmtarr/documents/ranges/bYBCUx_CONUS_Range_2001v1_eval.csv
 SELECT * FROM sp_range;
