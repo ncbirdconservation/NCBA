@@ -33,15 +33,10 @@ Unresolved issues:
 """
 import pandas as pd
 pd.set_option('display.width', 1000)
-%matplotlib inline
-import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
-import matplotlib.gridspec as gridspec
-import numpy as np
+#%matplotlib inline
 import sqlite3
 import os
 os.chdir('/')
-os.chdir(workDir)
 
 
 #############################################################################
@@ -53,6 +48,7 @@ sp_gbif_key = 2496287
 sp_TSN = 177831
 srn = 102008 # Albers Equal Area spatial reference ID
 workDir = '/Users/nmtarr/Documents/RANGES'
+os.chdir(workDir)
 data_dir = '/Users/nmtarr/Documents/Ranges/InData'
 SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
 
@@ -322,24 +318,11 @@ conn.commit()
 
 ##################################################################  EXPORT MAPS
 ###############################################################################
+
+
 # Export occurrence 'points' as a shapefile (all seasons)
 cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'occ_points',
                                    'utf-8');""")
-
-# Display
-
-m = Basemap(ax=plt.subplot(G[0, 1:]), projection='aea', resolution='c',
-                llcrnrlat=20,urcrnrlat=55,
-                llcrnrlon=-126,urcrnrlon=-66,
-                lat_ts=20,)
-m.drawcoastlines()
-m.drawstates()
-m.drawcountries()
-m.fillcontinents(color='green',lake_color='aqua')
-m.drawmapboundary(fill_color='aqua')
-
-# plot
-
 
 
 
@@ -377,10 +360,12 @@ for month in month_dict.keys():
 
         """.format(month, month_dict[month])
         cursor.executescript(sql4)
+
+
     except:
         print(Exception)
 
-# Make range shapefiles for each season
+# Make range shapefiles for each season, display them too
 period_dict = {"summer": '(5,6,7,8)', "winter": '(11,12,1,2)',
                "spring": '(3,4,5)', "fall": '(8,9,10,11)',
                "yearly": '(1,2,3,4,5,6,7,8,9,10,11,12)'}

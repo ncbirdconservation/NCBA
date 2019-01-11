@@ -1,12 +1,15 @@
-import pandas as pd
-pd.set_option('display.width', 1000)
-import os
-os.chdir('/')
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jan 11 16:29:24 2019
 
-mapfile = '/users/nmtarr/documents/ranges/ybcu_circles'
-title = 'Yellow-billed cuckoo occurrences from GBIF - any month'
-mapfile2 = '/Users/nmtarr/Documents/RANGES/ybcu_circles'
+@author: nmtarr
 
+Descripton: Display the shapefiles of the species occurrence that were 
+generated with other code.
+
+"""
+# Define a function for displaying the maps that will be created.
 def MapPolygonsFromSHP(map_these, title):
     """
     Displays shapefiles on a simple CONUS basemap.  Maps are plotted in the order
@@ -55,5 +58,15 @@ def MapPolygonsFromSHP(map_these, title):
     fig.suptitle(title, fontsize=20)
     fig.show()
     return fig
+##########################################################
 
-MapPolygonsFromSHP(map_these=[mapfile, mapfile2], title=title)
+workDir = '/Users/nmtarr/Documents/RANGES'
+
+# Display occurrence polygons
+MapPolygonsFromSHP(map_these=['/users/nmtarr/documents/ranges/ybcu_circles'],
+                   title='Yellow-billed Cuckoo occurrence polygons - any month')
+
+for period in ['fall', 'winter', 'summer', 'spring']:        
+        MapPolygonsFromSHP(map_these=['{0}/{1}_rng'.format(workDir, period), 
+                                      '{0}/{1}_occs'.format(workDir, period)],
+                           title='YBCU occurrences and concave hull during {0}'.format(period))
