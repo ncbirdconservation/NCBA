@@ -27,8 +27,23 @@ Unresolved issues:
 2.  Maximize filtering.
 3.  Develop taxonomy section.
 4.  Archiving and documenting data and process.
-5.
+5.  Incorporate detection distance.
+6.  Print maps into console.
+7.  Incorporate allowable spatial error, which would vary by species.
 """
+import pandas as pd
+pd.set_option('display.width', 1000)
+%matplotlib inline
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
+import matplotlib.gridspec as gridspec
+import numpy as np
+import sqlite3
+import os
+os.chdir('/')
+os.chdir(workDir)
+
+
 #############################################################################
 #                               Configuration
 #############################################################################
@@ -49,11 +64,6 @@ SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
 Description: Create a database for storing occurrence and species-concept
 data.  Needs to have spatial querying functionality.
 """
-import sqlite3
-import os
-os.chdir('/')
-os.chdir(workDir)
-
 # Delete the database if it already exists
 file1 = workDir + '/Occurrences.sqlite'
 if os.path.exists(file1):
@@ -86,8 +96,8 @@ conn.executescript('''SELECT InitSpatialMetaData();
              PARAMETER["latitude_of_center",40],
              UNIT["Meter",1],AUTHORITY["EPSG","102008"]]');''')
 
-######################################################## Create tables
-######################################################################
+################################################################# Create tables
+###############################################################################
 sql_cdb = """
 /* Create a taxa table for species-concepts */
 CREATE TABLE IF NOT EXISTS taxa (
@@ -239,16 +249,16 @@ alloccs2 = []
 for x in alloccs:
     alloccs2.append(dict((y,x[y]) for y in x if y in keykeys))
 
-#############################################################  FILTER MORE
-#############################################################
+##################################################################  FILTER MORE
+###############################################################################
 # Remove if no coordinate uncertainty
 alloccs3 = [x for x in alloccs2
             if 'coordinateUncertaintyInMeters' in x.keys()]
 
 #  WHAT ELSE CAN WE DO ??????...
 
-###########################################################  INSERT INTO DB
-###########################################################
+###############################################################  INSERT INTO DB
+###############################################################################
 # Insert the records
 for x in alloccs3:
     insert1 = []
@@ -277,36 +287,62 @@ for e in alloccs3:
             WHERE occ_id = {1};""".format(e['individualCount'], e['gbifID'])
         cursor.execute(sql2)
 
-###########################################################  BUFFER POINTS
-###########################################################
-# Buffer the x,y locations with the coordinate uncertainty in order to create
-# circles.
+################################################################  BUFFER POINTS
+###############################################################################
+# Buffer the x,y locations with the coordinate uncertainty
+# in order to create circles.  Create versions in albers and wgs84.  The
+# wgs84 version will be used in plotting with Basemap.
 sql_buf = """
-/* Add an additional geometry column to store the new geometries (polygons)*/
+/* Transform to albers (102008) and apply buffer */
 ALTER TABLE occs ADD COLUMN circle_albers BLOB;
 
-/* Transform to albers (102008) and apply buffer */
 UPDATE occs SET circle_albers = Buffer(Transform(geom_4326, 102008),
                                 coordinateUncertaintyInMeters);
 
-/* The new geometry column needs an entry in the geometry columns table */
+/* The new geometry column needs an entry in the geometry columns table CAN THIS BE DONE WITH RecoverGeometryColumn???*/
 INSERT INTO geometry_columns (f_table_name, f_geometry_column,
                               geometry_type, coord_dimension,
                               srid, spatial_index_enabled)
             VALUES ('occs', 'circle_albers', 3, 2, 102008, 0);
 
+/* Apply buffer */
+ALTER TABLE occs ADD COLUMN circle_wgs84 BLOB;
+
+UPDATE occs SET circle_wgs84 = Transform(circle_albers, 4326);
+
+SELECT RecoverGeometryColumn('occs', 'circle_wgs84', 4326, 'POLYGON', 'XY');
+
 /* Export the results to a shapefile */
-SELECT ExportSHP('occs', 'circle_albers', 'ybcu_circles', 'utf-8');
+SELECT ExportSHP('occs', 'circle_wgs84',
+                 '/users/nmtarr/documents/ranges/ybcu_circles', 'utf-8');
 """
 cursor.executescript(sql_buf)
 conn.commit()
 
 
-#############################################################  EXPORT MAPS
-#############################################################
+##################################################################  EXPORT MAPS
+###############################################################################
 # Export occurrence 'points' as a shapefile (all seasons)
 cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'occ_points',
                                    'utf-8');""")
+
+# Display
+
+m = Basemap(ax=plt.subplot(G[0, 1:]), projection='aea', resolution='c',
+                llcrnrlat=20,urcrnrlat=55,
+                llcrnrlon=-126,urcrnrlon=-66,
+                lat_ts=20,)
+m.drawcoastlines()
+m.drawstates()
+m.drawcountries()
+m.fillcontinents(color='green',lake_color='aqua')
+m.drawmapboundary(fill_color='aqua')
+
+# plot
+
+
+
+
 
 # Make occurrence shapefiles for each month
 month_dict = {'january': 1, 'february':2, 'march':3, 'april':4, 'may':5,
@@ -382,6 +418,9 @@ for period in period_dict:
     except:
         print(Exception)
 conn.commit()
+
+
+# Print maps
 
 ###########################################################  GET THE GAP RANGES
 ###########################################################  FROM SCIENCEBASE

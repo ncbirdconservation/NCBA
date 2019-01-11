@@ -21,8 +21,7 @@ Unresolved issues:
 3. Can the runtime be improved with spatial indexing?  Minimum bounding rectangle?
 4. ".import" has to be worked around when this goes into python.
 5. Locations of huc and GAP range files.
-6. How many points/individuals per huc?.
-7. Documenting evaluation parameters (spatial error allowed, spatial relationship
+6. Documenting evaluation parameters (spatial error allowed, spatial relationship
    rules.)
 */
 
