@@ -25,7 +25,7 @@ Investigation of data availability and agreement.
 Unresolved issues:
 1.  Downloading from Sciencebase with code.
 2.  Maximize filtering.
-3.  Develop taxonomy section.
+3.  Develop taxonomy section. - add columns for dates and geometries of ranges?
 4.  Archiving and documenting data and process.
 5.  Incorporate detection distance.
 6.  Print maps into console.
@@ -135,6 +135,10 @@ CREATE TABLE rangemaps (
 SELECT AddGeometryColumn('rangemaps', 'range', 102008, 'MULTIPOLYGON',
                           'XY');
 SELECT AddGeometryColumn('rangemaps', 'circles', 102008, 'MULTIPOLYGON',
+                          'XY');
+SELECT AddGeometryColumn('rangemaps', 'range_4326', 4326, 'MULTIPOLYGON',
+                          'XY');
+SELECT AddGeometryColumn('rangemaps', 'circles_4326', 4326, 'MULTIPOLYGON',
                           'XY');
 """
 cursor.executescript(sql_cdb)
@@ -301,7 +305,7 @@ INSERT INTO geometry_columns (f_table_name, f_geometry_column,
                               srid, spatial_index_enabled)
             VALUES ('occs', 'circle_albers', 3, 2, 102008, 0);
 
-/* Apply buffer */
+/* Transform back to WGS84 so it can be displayed in iPython */
 ALTER TABLE occs ADD COLUMN circle_wgs84 BLOB;
 
 UPDATE occs SET circle_wgs84 = Transform(circle_albers, 4326);
@@ -318,14 +322,9 @@ conn.commit()
 
 ##################################################################  EXPORT MAPS
 ###############################################################################
-
-
 # Export occurrence 'points' as a shapefile (all seasons)
 cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'occ_points',
                                    'utf-8');""")
-
-
-
 
 # Make occurrence shapefiles for each month
 month_dict = {'january': 1, 'february':2, 'march':3, 'april':4, 'may':5,
@@ -347,21 +346,35 @@ for month in month_dict.keys():
         /* Pull out the period for mapping */
         CREATE TABLE temp1 AS SELECT * FROM rangemaps
                         WHERE period='{0}';
+
         SELECT RecoverGeometryColumn('temp1', 'range', 102008, 'MULTIPOLYGON',
                                      'XY');
+
         SELECT RecoverGeometryColumn('temp1', 'circles', 102008, 'MULTIPOLYGON',
                                      'XY');
-        /* Export shapefiles */
-        SELECT ExportSHP('temp1', 'range', '{0}_rng', 'utf-8');
 
-        SELECT ExportSHP('temp1', 'circles', '{0}_occs', 'utf-8');
+        /* Transform back to WGS84 so that map can be displayed in ipython */
+        ALTER TABLE temp1 ADD COLUMN range_wgs84 blob;
+
+        SELECT RecoverGeometryColumn('temp1', 'range_wgs84', 4326,
+                                     'MULTIPOLYGON')
+        UPDATE temp1 SET range_wgs84 = Transform(range, 4326)
+
+        ALTER TABLE temp1 ADD COLUMN circles_4326 blob;
+
+        SELECT RecoverGeometryColumn('temp1', 'circles_wgs84', 4326,
+                                     'MULTIPOLYGON')
+        UPDATE temp1 SET circles_4326 = Transform(circles, 4326)
+
+        /* Export shapefiles */
+        SELECT ExportSHP('temp1', 'range_4326', '{0}_rng', 'utf-8');
+
+        SELECT ExportSHP('temp1', 'circles_4326', '{0}_occs', 'utf-8');
 
         DROP TABLE temp1;
 
         """.format(month, month_dict[month])
         cursor.executescript(sql4)
-
-
     except:
         print(Exception)
 
@@ -386,16 +399,34 @@ for period in period_dict:
             /* Pull out the period for mapping */
             CREATE TABLE temp2 AS SELECT * FROM rangemaps
                             WHERE period='{0}';
+
             SELECT RecoverGeometryColumn('temp2', 'range', 102008,
                                          'MULTIPOLYGON',
                                          'XY');
+
             SELECT RecoverGeometryColumn('temp2', 'circles', 102008,
                                          'MULTIPOLYGON',
                                          'XY');
 
-            SELECT ExportSHP('temp2', 'range', '{0}_rng', 'utf-8');
+            /* Transform back to WGS84 so that map can be displayed in ipython */
+            ALTER TABLE temp2 ADD COLUMN range_wgs84 blob;
 
-            SELECT ExportSHP('temp2', 'circles', '{0}_occs', 'utf-8');
+            SELECT RecoverGeometryColumn('temp2', 'range_wgs84', 4326,
+                                         'MULTIPOLYGON')
+
+            UPDATE temp2 SET range_wgs84 = Transform(range, 4326)
+
+            ALTER TABLE temp2 ADD COLUMN circles_4326 blob;
+
+            SELECT RecoverGeometryColumn('temp2', 'circles_wgs84', 4326,
+                                         'MULTIPOLYGON')
+
+            UPDATE temp2 SET circles_4326 = Transform(circles, 4326)
+
+
+            SELECT ExportSHP('temp2', 'range_4326', '{0}_rng', 'utf-8');
+
+            SELECT ExportSHP('temp2', 'circles_4326', '{0}_occs', 'utf-8');
 
             DROP TABLE temp2;
         """.format(period, period_dict[period])
