@@ -20,7 +20,10 @@ def MapPolygonsFromSHP(map_these, title):
     (list, str) -> displays maps, returns matplotlib.pyplot figure
 
     Arguments:
-    map_these -- list of paths for shapefiles you want to display in CONUS.
+    map_these -- list of dictionaries for shapefiles you want to display in 
+                CONUS. Each dictionary should have the following format:
+                    {'file': '/path/to/your/shapfile', 'border_color': 'k',
+                    'fill_color': 'k', 'border_weight': 1, 'drawbounds': True}
     title -- title for the map.
 
     Example:
@@ -37,6 +40,7 @@ def MapPolygonsFromSHP(map_these, title):
 
     # Basemap
     fig = plt.figure(figsize=(12,8))
+    ax = plt.subplot(1,1,1)
     map = Basemap(projection='aea', resolution='c', lon_0=-95.5, lat_0=39.5,
                   height=3400000, width=5000000)
     map.drawcoastlines(color='grey')
@@ -47,26 +51,44 @@ def MapPolygonsFromSHP(map_these, title):
 
     for mapfile in map_these:
         # Add shapefiles to the map
-        map.readshapefile(mapfile, 'mapfile', drawbounds=True, linewidth=2)
-        ## Code for extra formatting -- filling in polygons setting border color
-        #patches = []
-        #for info, shape in zip(map.mapfile_info, map.mapfile):
-        #    patches.append(Polygon(np.array(shape), True))
-        #ax.add_collection(PatchCollection(patches, facecolor= 'y', edgecolor='k',
-        #                                  linewidths=.5, zorder=2))
+        if mapfile['fill_color'] == None:
+            map.readshapefile(mapfile['file'], 'mapfile', 
+                              drawbounds=mapfile['drawbounds'], 
+                              linewidth=mapfile['linewidth'],
+                              color=mapfile['linecolor'])
+        else:
+            map.readshapefile(mapfile['file'], 'mapfile', 
+                      drawbounds=mapfile['drawbounds'])
+            # Code for extra formatting -- filling in polygons setting border 
+            # color
+            patches = []
+            for info, shape in zip(map.mapfile_info, map.mapfile):
+                patches.append(Polygon(np.array(shape), True))
+            ax.add_collection(PatchCollection(patches, 
+                                              facecolor= mapfile['fill_color'],
+                                              edgecolor=mapfile['linecolor'],
+                                              linewidths=mapfile['linewidth'], 
+                                              zorder=2))
 
     fig.suptitle(title, fontsize=20)
-    fig.show()
     return fig
 ##########################################################
 
 workDir = '/Users/nmtarr/Documents/RANGES'
 
+shp1 = {'file': '/users/nmtarr/documents/ranges/inputs/ybcu_range',
+        'drawbounds': False, 'linewidth': .5, 'linecolor': 'y', 
+        'fill_color': 'y'}
+
+shp2 = {'file': '/users/nmtarr/documents/ranges/ybcu_circles',
+        'drawbounds': True, 'linewidth': .5, 'linecolor': 'k', 
+        'fill_color': None}
+
 # Display occurrence polygons
-MapPolygonsFromSHP(map_these=['/users/nmtarr/documents/ranges/ybcu_circles'],
+MapPolygonsFromSHP(map_these=[shp1, shp2],
                    title='Yellow-billed Cuckoo occurrence polygons - any month')
 
-for period in ['fall', 'winter', 'summer', 'spring']:        
-        MapPolygonsFromSHP(map_these=['{0}/{1}_rng'.format(workDir, period), 
-                                      '{0}/{1}_occs'.format(workDir, period)],
-                           title='YBCU occurrences and concave hull during {0}'.format(period))
+#for period in ['fall', 'winter', 'summer', 'spring']:        
+#        MapPolygonsFromSHP(map_these=['{0}/{1}_rng'.format(workDir, period), 
+#                                      '{0}/{1}_occs'.format(workDir, period)],
+#                           title='YBCU occurrences and concave hull during {0}'.format(period))
