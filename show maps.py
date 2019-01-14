@@ -17,18 +17,17 @@ def MapPolygonsFromSHP(map_these, title):
 
     NOTE: The shapefiles have to be in WGS84 CRS.
 
-    (list, str) -> displays maps, returns matplotlib.pyplot figure
+    (dict, str) -> displays maps, returns matplotlib.pyplot figure
 
     Arguments:
     map_these -- list of dictionaries for shapefiles you want to display in 
                 CONUS. Each dictionary should have the following format:
-                    {'file': '/path/to/your/shapfile', 'border_color': 'k',
-                    'fill_color': 'k', 'border_weight': 1, 'drawbounds': True}
+                    {'file': '/path/to/your/shapfile', 
+                    'linecolor': 'k',
+                    'fillcolor': 'k', 
+                    'linewidth': 1, 
+                    'drawbounds': True}
     title -- title for the map.
-
-    Example:
-    >>MapPolygonsFromSHP(['/users/nmtarr/documents/ranges/ybcu_circles'],
-                        'ybcu occurrences')
     """
     # Packages needed for plotting
     import matplotlib.pyplot as plt
@@ -51,7 +50,7 @@ def MapPolygonsFromSHP(map_these, title):
 
     for mapfile in map_these:
         # Add shapefiles to the map
-        if mapfile['fill_color'] == None:
+        if mapfile['fillcolor'] == None:
             map.readshapefile(mapfile['file'], 'mapfile', 
                               drawbounds=mapfile['drawbounds'], 
                               linewidth=mapfile['linewidth'],
@@ -65,30 +64,48 @@ def MapPolygonsFromSHP(map_these, title):
             for info, shape in zip(map.mapfile_info, map.mapfile):
                 patches.append(Polygon(np.array(shape), True))
             ax.add_collection(PatchCollection(patches, 
-                                              facecolor= mapfile['fill_color'],
+                                              facecolor= mapfile['fillcolor'],
                                               edgecolor=mapfile['linecolor'],
                                               linewidths=mapfile['linewidth'], 
                                               zorder=2))
+    
+#    # Make a legend
+#    handles, labels = plt.gca().get_legend_handles_labels()
+#    handles.extend(['mapfile'])  
+#    labels.extend(["mapfile"])                     
+#    plt.legend(handles=handles, labels=labels)
 
     fig.suptitle(title, fontsize=20)
     return fig
+
 ##########################################################
 
 workDir = '/Users/nmtarr/Documents/RANGES'
 
 shp1 = {'file': '/users/nmtarr/documents/ranges/inputs/ybcu_range',
         'drawbounds': False, 'linewidth': .5, 'linecolor': 'y', 
-        'fill_color': 'y'}
+        'fillcolor': 'y'}
 
 shp2 = {'file': '/users/nmtarr/documents/ranges/ybcu_circles',
         'drawbounds': True, 'linewidth': .5, 'linecolor': 'k', 
-        'fill_color': None}
+        'fillcolor': None}
 
 # Display occurrence polygons
 MapPolygonsFromSHP(map_these=[shp1, shp2],
                    title='Yellow-billed Cuckoo occurrence polygons - any month')
 
-#for period in ['fall', 'winter', 'summer', 'spring']:        
-#        MapPolygonsFromSHP(map_these=['{0}/{1}_rng'.format(workDir, period), 
-#                                      '{0}/{1}_occs'.format(workDir, period)],
-#                           title='YBCU occurrences and concave hull during {0}'.format(period))
+season_colors = {'Fall': 'red', 'Winter': 'white', 'Summer': 'magenta',
+                    'Spring': 'blue'}
+for period in ['Fall', 'Winter', 'Summer', 'Spring']: 
+     shp1 = {'file': workDir + '/{0}_rng'.format(period),
+                    'drawbounds': True, 'linewidth': 1, 
+                    'linecolor': season_colors[period], 
+                    'fillcolor': None}
+     shp2 = {'file': workDir + '/{0}_occs'.format(period),
+                    'drawbounds': True, 'linewidth': .5, 'linecolor': 'k', 
+                    'fillcolor': None}
+     title = "Yellow-billed Cuckoo occurrence polygons - {0}".format(period)  
+     try:
+         MapPolygonsFromSHP([shp1, shp2], title)
+     except:
+         print(period + " FAILED !!!!")
