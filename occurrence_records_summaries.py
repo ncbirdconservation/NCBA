@@ -25,15 +25,16 @@ Investigation of data availability and agreement.
 Unresolved issues:
 1.  Downloading from Sciencebase with code.
 2.  Maximize filtering.
-3.  Develop taxonomy section. - add columns for dates and geometries of ranges?
 4.  Archiving and documenting data and process.
 5.  Incorporate detection distance.
+6.  Can we use EPSG:5070?
 7.  Incorporate allowable spatial error, which would vary by species.
 """
 import pandas as pd
 pd.set_option('display.width', 1000)
 #%matplotlib inline
 import sqlite3
+from pygbif import occurrences
 import os
 os.chdir('/')
 
@@ -41,31 +42,46 @@ os.chdir('/')
 #############################################################################
 #                               Configuration
 #############################################################################
-species = 'Coccyzus americanus' # Yellow-billed Cuckoo
-sp_id = 'bYBCUx0'
-sp_gbif_key = 2496287
-sp_TSN = 177831
-srn = 102008 # Albers Equal Area spatial reference ID
 workDir = '/Users/nmtarr/Documents/RANGES'
 os.chdir(workDir)
-data_dir = '/Users/nmtarr/Documents/Ranges/Inputs'
+inDir = workDir + '/Inputs/'
+outDir = workDir + '/Outputs/'
 SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
+gbif_req_id = 'gbif0001'
 
 
 #############################################################################
-#                       Create Occurrence Database
+#                              Species-concept
+#############################################################################
+# Species to investigate
+sp_id = 'bybcux0'
+
+# Get species info from requests database
+conn2 = sqlite3.connect(inDir + 'requests.sqlite')
+cursor2 = conn2.cursor()
+sql_tax = """SELECT gbif_id, common_name, scientific_name
+             FROM species_concepts
+             WHERE species_id = '{0}';""".format(sp_id)
+concept = cursor2.execute(sql_tax).fetchall()[0]
+gbif_id = concept[0]
+common_name = concept[1]
+scientific_name = concept[2]
+
+
+#############################################################################
+#                           Create Occurrence Database
 #############################################################################
 """
 Description: Create a database for storing occurrence and species-concept
 data.  Needs to have spatial querying functionality.
 """
 # Delete the database if it already exists
-file1 = workDir + '/Occurrences.sqlite'
-if os.path.exists(file1):
-    os.remove(file1)
+spdb = outDir + sp_id + '_occurrencess.sqlite'
+if os.path.exists(spdb):
+    os.remove(spdb)
 
 # Create or connect to the database
-conn = sqlite3.connect('occurrences.sqlite')
+conn = sqlite3.connect(spdb)
 os.putenv('SPATIALITE_SECURITY', 'relaxed')
 conn.enable_load_extension(True)
 conn.execute('SELECT load_extension("mod_spatialite")')
@@ -90,24 +106,11 @@ conn.executescript('''SELECT InitSpatialMetaData();
              PARAMETER["Standard_Parallel_2",60],
              PARAMETER["latitude_of_center",40],
              UNIT["Meter",1],AUTHORITY["EPSG","102008"]]');''')
+conn.commit()
 
 ################################################################# Create tables
 ###############################################################################
 sql_cdb = """
-/* Create a taxa table for species-concepts */
-CREATE TABLE IF NOT EXISTS taxa (
-                    species_id TEXT NOT NULL PRIMARY KEY UNIQUE,
-                    fws_id TEXT,
-                    gap_code VARCHAR(5),
-                    itis_tsn TEXT,
-                    gbif_id TEXT,
-                    bcb_id TEXT,
-                    common_name TEXT,
-                    scientific_name TEXT,
-                    start_date TEXT,
-                    end_date TEXT)
-                    WITHOUT ROWID;
-
 /* Create a table for occurrence records, WITH GEOMETRY */
 CREATE TABLE IF NOT EXISTS occs (
         occ_id INTEGER NOT NULL PRIMARY KEY UNIQUE,
@@ -135,77 +138,50 @@ SELECT AddGeometryColumn('rangemaps', 'range', 102008, 'MULTIPOLYGON',
                           'XY');
 SELECT AddGeometryColumn('rangemaps', 'circles', 102008, 'MULTIPOLYGON',
                           'XY');
-SELECT AddGeometryColumn('rangemaps', 'range_4326', 4326, 'MULTIPOLYGON',
-                          'XY');
-SELECT AddGeometryColumn('rangemaps', 'circles_4326', 4326, 'MULTIPOLYGON',
-                          'XY');
 """
 cursor.executescript(sql_cdb)
-
-#############################################################################
-#                            SOLVE TAXONOMY
-#############################################################################
-"""
-Description:  Data retrieved from datasets is for specific species-concepts,
-which change over time, sometimes with a spatial component (e.g., changes in
-range delination of closely related species or subspecies).  Retrieval of data
-for the wrong species-concept would introduce error.  Therefore, the first
-step is to sort out species concepts of different datasets to identify concepts
-to include.
-
-For this project/effort, individual species-concepts are identified,
-crosswalked to concepts from various datasets, and stored in a table within
-occurrences.sqlite database.
-"""
-from pygbif import species
-from pprint import pprint
-
-#df = pd.DataFrame(columns=['fws_id', 'gap_code', 'itis_tsn', 'gbif_id',
-#                           'bcb_id', 'common_name', 'scientific_name',
-#                           'start_date', 'end_date'])
-#df.index.name='uid'
-
-# Solve taxonomy
-name_dict = species.name_backbone(species)
-pprint(name_dict)
-#df.loc[1000, 'gbif_key'] = int(name_dict['speciesKey'])
-
-# Connect to or create db
-sql1 = """
-        INSERT INTO taxa
-        (species_id, gap_code, gbif_id, common_name, scientific_name)
-        VALUES ('bYBCUx0', 'bYBCUx', 2496287, 'Yellow-billed Cuckoo',
-                'Coccyzus americanus');
-        """
-cursor.execute(sql1)
-sql2 = """SELECT * FROM taxa;"""
-cursor.execute(sql2).fetchall()
 
 
 #############################################################################
 #                            Get GBIF Records
 #############################################################################
 """
-Description: Retrieve GBIF records for a species and save appropriate
+Retrieve GBIF records for a species and save appropriate
 attributes in the occurrence db.
 """
-from pygbif import occurrences
-
-sp = species
-gbif_key = sp_gbif_key
-
-############################# RETRIEVE RECORDS
+############################# RETRIEVE REQUEST PARAMETERS
 # Up-front filters are an opportunity to lighten the load from the start.
-latRange = '27,41'
-lonRange = '-91,-75'
-years = '1970,2018'
-months = '1,12'
-geoIssue = False
-coordinate = True
-continent= 'north_america'
+sql_twi = """ SELECT lat_range FROM gbif_requests 
+              WHERE request_id = '{0}'""".format(gbif_req_id)
+latRange = cursor2.execute(sql_twi).fetchone()[0]
 
+sql_twi = """ SELECT lon_range FROM gbif_requests 
+              WHERE request_id = '{0}'""".format(gbif_req_id)
+lonRange = cursor2.execute(sql_twi).fetchone()[0]
+
+sql_twi = """ SELECT years_range FROM gbif_requests 
+              WHERE request_id = '{0}'""".format(gbif_req_id)
+years = cursor2.execute(sql_twi).fetchone()[0]
+
+sql_twi = """ SELECT months_range FROM gbif_requests 
+              WHERE request_id = '{0}'""".format(gbif_req_id)
+months = cursor2.execute(sql_twi).fetchone()[0]
+
+sql_twi = """ SELECT geoissue FROM gbif_requests 
+              WHERE request_id = '{0}'""".format(gbif_req_id)
+geoIssue = cursor2.execute(sql_twi).fetchone()[0]
+
+sql_twi = """ SELECT coordinate_issue FROM gbif_requests 
+              WHERE request_id = '{0}'""".format(gbif_req_id)
+coordinate = cursor2.execute(sql_twi).fetchone()[0]
+
+sql_twi = """ SELECT continent FROM gbif_requests 
+              WHERE request_id = '{0}'""".format(gbif_req_id)
+continent = cursor2.execute(sql_twi).fetchone()[0]
+
+############################# REQUEST RECORDS ACCORDING TO REQUEST PARAMS
 # First, find out how many records there are that meet criteria
-occ_search = occurrences.search(gbif_key,
+occ_search = occurrences.search(gbif_id,
                           year=years,
                           month=months,
                           decimelLatitude=latRange,
@@ -232,7 +208,6 @@ for i in batches:
                               continent=continent)
     occs = occ_json['results']
     alloccs = alloccs + occs
-    print(len(alloccs))
 
 # Pull out relevant attributes from occurrence dictionaries.  Filtering
 # will be performed with info from these keys.
@@ -261,7 +236,7 @@ alloccs3 = [x for x in alloccs2
 # Insert the records
 for x in alloccs3:
     insert1 = []
-    insert1.append((x['gbifID'], 'bYBCUx', 'gbif', x['acceptedTaxonKey'],
+    insert1.append((x['gbifID'], sp_id, 'gbif', x['acceptedTaxonKey'],
             x['coordinateUncertaintyInMeters'], x['eventDate'],
             x['year'], x['month']))
 
@@ -321,11 +296,12 @@ conn.commit()
 ###############################################################################
 # Export occurrence circles as a shapefile (all seasons)
 cursor.execute("""SELECT ExportSHP('occs', 'circle_wgs84',
-                 '/users/nmtarr/documents/ranges/ybcu_circles', 'utf-8');""")
+                 '{0}{1}_circles', 'utf-8');""".format(outDir, sp_id))
 
 # Export occurrence 'points' as a shapefile (all seasons)
-cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 'occ_points',
-                                   'utf-8');""")
+cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 
+                                   '{0}{1}_points', 'utf-8');""".format(outDir,
+                                   sp_id))
 
 # Make occurrence shapefiles for each month
 month_dict = {'january': 1, 'february':2, 'march':3, 'april':4, 'may':5,
