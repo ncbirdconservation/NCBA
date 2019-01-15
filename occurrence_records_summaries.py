@@ -48,14 +48,12 @@ inDir = workDir + '/Inputs/'
 outDir = workDir + '/Outputs/'
 SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
 gbif_req_id = 'gbif0001'
+sp_id = 'bybcux0'
 
 
 #############################################################################
 #                              Species-concept
 #############################################################################
-# Species to investigate
-sp_id = 'bybcux0'
-
 # Get species info from requests database
 conn2 = sqlite3.connect(inDir + 'requests.sqlite')
 cursor2 = conn2.cursor()
@@ -196,7 +194,7 @@ print('{0} records exist'.format(occ_count))
 alloccs = []
 batches = range(0, occ_count, 300)
 for i in batches:
-    occ_json = occurrences.search(gbif_key,
+    occ_json = occurrences.search(gbif_id,
                               limit=300,
                               offset=i,
                               year=years,
@@ -260,6 +258,7 @@ for e in alloccs3:
             SET individualCount = {0}
             WHERE occ_id = {1};""".format(e['individualCount'], e['gbifID'])
         cursor.execute(sql2)
+conn.commit()
 
 ################################################################  BUFFER POINTS
 ###############################################################################
@@ -285,8 +284,6 @@ ALTER TABLE occs ADD COLUMN circle_wgs84 BLOB;
 UPDATE occs SET circle_wgs84 = Transform(circle_albers, 4326);
 
 SELECT RecoverGeometryColumn('occs', 'circle_wgs84', 4326, 'POLYGON', 'XY');
-
-
 """
 cursor.executescript(sql_buf)
 conn.commit()
@@ -490,11 +487,11 @@ def MapPolygonsFromSHP(map_these, title):
 
 workDir = '/Users/nmtarr/Documents/RANGES'
 
-shp1 = {'file': '/users/nmtarr/documents/ranges/inputs/ybcu_range',
+shp1 = {'file': '{0}{1}_range'.format(inDir, sp_id),
         'drawbounds': False, 'linewidth': .5, 'linecolor': 'y', 
         'fillcolor': 'y'}
 
-shp2 = {'file': '/users/nmtarr/documents/ranges/ybcu_circles',
+shp2 = {'file': '{0}{1}_circles'.format(inDir, sp_id),
         'drawbounds': True, 'linewidth': .5, 'linecolor': 'k', 
         'fillcolor': None}
 
