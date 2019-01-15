@@ -65,7 +65,7 @@ import config
 #############################################################################
 os.chdir(codeDir)
 # Get species info from requests database
-conn2 = sqlite3.connect(codeDir + 'requests.sqlite')
+conn2 = sqlite3.connect(inDir + 'requests.sqlite')
 cursor2 = conn2.cursor()
 sql_tax = """SELECT gbif_id, common_name, scientific_name
              FROM species_concepts
@@ -251,14 +251,13 @@ for x in alloccs3:
     insert1 = []
     insert1.append((x['gbifID'], sp_id, 'gbif', x['acceptedTaxonKey'],
             x['coordinateUncertaintyInMeters'], x['eventDate'],
-            x['year'], x['month'], gbif_req_id, gbif_filter_id))
+            gbif_req_id, gbif_filter_id))
 
     insert1 = tuple(insert1)[0]
 
     sql1 = """INSERT INTO occurrences ('occ_id', 'species_id', 'source',
                             'source_sp_id', 'coordinateUncertaintyInMeters',
-                            'occurrenceDate','occurrenceYear',
-                            'occurrenceMonth', 'request_id', 'filter_id',
+                            'occurrenceDate', 'request_id', 'filter_id',
                             'geom_4326')
                 VALUES {0}, GeomFromText('POINT({1} {2})',
                                             {3}))""".format(str(insert1)[:-1],
