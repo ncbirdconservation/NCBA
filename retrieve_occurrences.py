@@ -283,6 +283,21 @@ conn.commit()
 # wgs84 version will be used in plotting with Basemap.  Buffer radius is 
 # the sum of detectiondistance from requests.species_concepts and 
 # coordinate uncertainty in meters here.
+requestsDB = inDir + 'requests.sqlite'
+sql_det = """
+        ATTACH DATABASE {0} AS requests;
+        
+        UPDATE occurrences
+        SET detection_distance = (SELECT detection_distance_meters
+                                   FROM requests.species_concepts
+                                   WHERE sp_id = '{0}');
+        
+        UPDATE occurrences
+        SET radius_meters = detection_distance + coordinateUncertaintyInMeters;
+
+        DETACH DATABASE requests;
+""".format(requestsDB, sp_id)
+
 sql_buf = """
         /* Transform to albers (102008) and apply buffer */
         ALTER TABLE occurrences ADD COLUMN circle_albers BLOB;
