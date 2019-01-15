@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jan 15 11:03:56 2019
+
+@author: nmtarr
+"""
+import config
+import sqlit3
+
+##################################################  EXPORT MAPS
+###############################################################
+# Export occurrence circles as a shapefile (all seasons)
+cursor.execute("""SELECT ExportSHP('occs', 'circle_wgs84',
+                 '{0}{1}_circles', 'utf-8');""".format(outDir, summary_name))
+
+# Export occurrence 'points' as a shapefile (all seasons)
+cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 
+                                   '{0}{1}_points', 'utf-8');""".format(outDir,
+                                   summary_name))
+
+# Make occurrence shapefiles for each month
+month_dict = {'january': 1, 'february':2, 'march':3, 'april':4, 'may':5,
+              'june':6, 'july':7, 'august':8, 'september':9, 'october':10,
+              'november':11, 'december':12}
+for month in month_dict.keys():
+    print(month)
+    try:
+        sql4 = """
+        /* Create tables for each month and export as shapefiles. */
+
+        INSERT INTO range_polygons (species_id, period, range, circles)
+                        SELECT species_id, '{0}',
+                        ConcaveHull(CastToMultiPolygon(GUnion(circle_albers))),
+                        CastToMultiPolygon(GUnion(circle_albers))
+                        FROM occs
+                        WHERE occurrenceMonth = {1};
+
+        /* Pull out the period for mapping */
+        CREATE TABLE temp1 AS SELECT * FROM rangemaps
+                        WHERE period='{0}';
+
+        SELECT RecoverGeometryColumn('temp1', 'range', 102008, 'MULTIPOLYGON',
+                                     'XY');
+
+        SELECT RecoverGeometryColumn('temp1', 'circles', 102008, 'MULTIPOLYGON',
+                                     'XY');
+        
+        /* Transform back to WGS84 so that map can be displayed in ipython */
+        ALTER TABLE temp1 ADD COLUMN range_wgs84 blob;
+
+        SELECT RecoverGeometryColumn('temp1', 'range_wgs84', 4326,
+                                     'MULTIPOLYGON');
+        
+        UPDATE temp1 SET range_wgs84 = Transform(range, 4326);
+
+        ALTER TABLE temp1 ADD COLUMN circles_wgs84 blob;
+
+        SELECT RecoverGeometryColumn('temp1', 'circles_wgs84', 4326,
+                             'MULTIPOLYGON');
+
+        UPDATE temp1 SET circles_4326 = Transform(circles, 4326);
+
+        /* Export shapefiles */
+        SELECT ExportSHP('temp1', 'range_wgs84', '{0}_rng', 'utf-8');
+
+        SELECT ExportSHP('temp1', 'circles_wgs84', '{0}_occs', 'utf-8');
+
+        DROP TABLE temp1;
+
+        """.format(month, month_dict[month])
+        cursor.executescript(sql4)
+    except:
+        print(Exception)
+
+# Make range shapefiles for each season, display them too
+period_dict = {"summer": '(5,6,7,8)', "winter": '(11,12,1,2)',
+               "spring": '(3,4,5)', "fall": '(8,9,10,11)',
+               "yearly": '(1,2,3,4,5,6,7,8,9,10,11,12)'}
+for period in period_dict:
+    print(period)
+    try:
+        sql_season = """
+            /*  Insert a record for a range map, created by making polygons into
+            a multipolygon geometry and then calculating the concave hull.
+            Also, insert circles into a column for provenance */
+            INSERT INTO rangemaps (species_id, period, range, circles)
+                    SELECT species_id, '{0}',
+                    ConcaveHull(CastToMultiPolygon(GUnion(circle_albers))),
+                    CastToMultiPolygon(GUnion(circle_albers))
+                    FROM occs
+                    WHERE occurrenceMonth IN {1};
+
+            /* Pull out the period for mapping */
+            CREATE TABLE temp2 AS SELECT * FROM rangemaps
+                            WHERE period='{0}';
+
+            SELECT RecoverGeometryColumn('temp2', 'range', 102008,
+                                         'MULTIPOLYGON',
+                                         'XY');
+
+            SELECT RecoverGeometryColumn('temp2', 'circles', 102008,
+                                         'MULTIPOLYGON',
+                                         'XY');
+
+            /* Transform back to WGS84 so that map can be displayed in ipython */
+            ALTER TABLE temp2 ADD COLUMN range_wgs84 blob;
+
+            SELECT RecoverGeometryColumn('temp2', 'range_wgs84', 4326,
+                                         'MULTIPOLYGON');
+
+            UPDATE temp2 SET range_wgs84 = Transform(range, 4326);
+
+            ALTER TABLE temp2 ADD COLUMN circles_wgs84 blob;
+
+            SELECT RecoverGeometryColumn('temp2', 'circles_wgs84', 4326,
+                                         'MULTIPOLYGON');
+
+            UPDATE temp2 SET circles_wgs84 = Transform(circles, 4326);
+
+
+            SELECT ExportSHP('temp2', 'range_wgs84', '{0}_rng', 'utf-8');
+
+            SELECT ExportSHP('temp2', 'circles_wgs84', '{0}_occs', 'utf-8');
+
+            DROP TABLE temp2;
+        """.format(period, period_dict[period])
+        cursor.executescript(sql_season)
+    except:
+        print(Exception)
+conn.commit()
+
+
+###############################################  DISPLAY MAPS
+#############################################################
+
+##########################################################
+
+workDir = '/Users/nmtarr/Documents/RANGES'
+
+shp1 = {'file': '{0}{1}_range'.format(inDir, sp_id),
+        'drawbounds': False, 'linewidth': .5, 'linecolor': 'y', 
+        'fillcolor': 'y'}
+
+shp2 = {'file': '{0}{1}_circles'.format(inDir, sp_id),
+        'drawbounds': True, 'linewidth': .5, 'linecolor': 'k', 
+        'fillcolor': None}
+
+# Display occurrence polygons
+config.MapPolygonsFromSHP(map_these=[shp1, shp2],
+                   title="""Yellow-billed Cuckoo occurrence polygons
+                           and and GAP range - any month""")
+
+season_colors = {'Fall': 'red', 'Winter': 'white', 'Summer': 'magenta',
+                    'Spring': 'blue'}
+for period in ['Fall', 'Winter', 'Summer', 'Spring']: 
+     shp1 = {'file': workDir + '/{0}_rng'.format(period),
+                    'drawbounds': True, 'linewidth': 1, 
+                    'linecolor': season_colors[period], 
+                    'fillcolor': None}
+     shp2 = {'file': workDir + '/{0}_occs'.format(period),
+                    'drawbounds': True, 'linewidth': .5, 'linecolor': 'k', 
+                    'fillcolor': None}
+     title = "Yellow-billed Cuckoo occurrence polygons - {0}".format(period)  
+     try:
+         config.MapPolygonsFromSHP([shp1, shp2], title)
+     except:
+         print(period + " FAILED !!!!")
+
+###########################################  GET THE GAP RANGES
+#############################################  FROM SCIENCEBASE
