@@ -7,17 +7,24 @@ Created on Tue Jan 15 11:03:56 2019
 """
 import config
 import sqlit3
-
+"""
+/* Make a table for storing range maps for unique species-time period
+        combinations, WITH GEOMETRY */
+        CREATE TABLE IF NOT EXISTS range_polygons (
+                     rmap_id TEXT NOT NULL PRIMARY KEY AUTOINCREMENT,
+                     species_id TEXT NOT NULL,
+                     period TEXT NOT NULL);
+        
+        SELECT AddGeometryColumn('range_polygons', 'range', 102008, 
+                                 'MULTIPOLYGON', 'XY');
+        
+        SELECT AddGeometryColumn('range_polygons', 'circles', 102008, 
+                                 'MULTIPOLYGON', 'XY');
+        
+"""
 ##################################################  EXPORT MAPS
 ###############################################################
-# Export occurrence circles as a shapefile (all seasons)
-cursor.execute("""SELECT ExportSHP('occs', 'circle_wgs84',
-                 '{0}{1}_circles', 'utf-8');""".format(outDir, summary_name))
 
-# Export occurrence 'points' as a shapefile (all seasons)
-cursor.execute("""SELECT ExportSHP('occs', 'geom_4326', 
-                                   '{0}{1}_points', 'utf-8');""".format(outDir,
-                                   summary_name))
 
 # Make occurrence shapefiles for each month
 month_dict = {'january': 1, 'february':2, 'march':3, 'april':4, 'may':5,
@@ -138,18 +145,7 @@ conn.commit()
 
 workDir = '/Users/nmtarr/Documents/RANGES'
 
-shp1 = {'file': '{0}{1}_range'.format(inDir, sp_id),
-        'drawbounds': False, 'linewidth': .5, 'linecolor': 'y', 
-        'fillcolor': 'y'}
 
-shp2 = {'file': '{0}{1}_circles'.format(inDir, sp_id),
-        'drawbounds': True, 'linewidth': .5, 'linecolor': 'k', 
-        'fillcolor': None}
-
-# Display occurrence polygons
-config.MapPolygonsFromSHP(map_these=[shp1, shp2],
-                   title="""Yellow-billed Cuckoo occurrence polygons
-                           and and GAP range - any month""")
 
 season_colors = {'Fall': 'red', 'Winter': 'white', 'Summer': 'magenta',
                     'Spring': 'blue'}

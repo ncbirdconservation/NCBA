@@ -37,13 +37,14 @@ Unresolved issues:
 #############################################################################
 workDir = '/Users/nmtarr/Documents/RANGES/'
 codeDir = '/Users/nmtarr/Code/Ranger/'
-inDir = workDir + '/Inputs/'
-outDir = workDir + '/Outputs/'
+inDir = workDir + 'Inputs/'
+outDir = workDir + 'Outputs/'
 gbif_req_id = 'r001'
 gbif_filter_id = 'f001'
 sp_id = 'bybcux0'
 summary_name = 'cuckoo'  # Used in file names for output.
 SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
+
 
 #############################################################################
 #                               Processing
@@ -56,6 +57,7 @@ from pygbif import occurrences
 import os
 os.chdir('/')
 os.chdir(codeDir)
+import config
 
 
 #############################################################################
@@ -114,11 +116,12 @@ conn.executescript('''SELECT InitSpatialMetaData();
              UNIT["Meter",1],AUTHORITY["EPSG","102008"]]');''')
 conn.commit()
 
+
 ################################################# Create tables
 ###############################################################
 sql_cdb = """
         /* Create a table for occurrence records, WITH GEOMETRY */
-        CREATE TABLE IF NOT EXISTS occs (
+        CREATE TABLE IF NOT EXISTS occurrences (
                 occ_id INTEGER NOT NULL PRIMARY KEY UNIQUE,
                 species_id INTEGER NOT NULL,
                 source TEXT NOT NULL,
@@ -135,20 +138,8 @@ sql_cdb = """
                     ON UPDATE RESTRICT
                     ON DELETE NO ACTION);
         
-        SELECT AddGeometryColumn('occs', 'geom_4326', 4326, 'POINT', 'XY');
-        
-        /* Make a table for storing range maps for unique species-time period
-        combinations, WITH GEOMETRY */
-        CREATE TABLE range_polygons (
-                     rmap_id TEXT NOT NULL PRIMARY KEY AUTOINCREMENT,
-                     species_id TEXT NOT NULL,
-                     period TEXT NOT NULL);
-        
-        SELECT AddGeometryColumn('range_polygons', 'range', 102008, 
-                                 'MULTIPOLYGON', 'XY');
-        
-        SELECT AddGeometryColumn('range_polygons', 'circles', 102008, 
-                                 'MULTIPOLYGON', 'XY');
+        SELECT AddGeometryColumn('occurrences', 'geom_4326', 4326, 'POINT', 
+                                 'XY');
 """
 cursor.executescript(sql_cdb)
 
@@ -234,6 +225,7 @@ alloccs2 = []
 for x in alloccs:
     alloccs2.append(dict((y,x[y]) for y in x if y in keykeys))
 
+
 ##################################################  FILTER MORE
 ###############################################################
 #  RETRIEVE FILTER PARAMETERS
@@ -245,10 +237,14 @@ filt_coordUncertainty = cursor2.execute(sql_green).fetchone()[0]
 if filt_coordUncertainty == 1:
     alloccs3 = [x for x in alloccs2 if 'coordinateUncertaintyInMeters' 
                 in x.keys()]
-
 else:
     pass
-#  WHAT ELSE CAN WE DO ??????...
+
+########################
+########################  WHAT ELSE CAN WE DO ??????...
+########################  DEVELOP HERE
+########################
+    
 
 ###############################################  INSERT INTO DB
 ###############################################################
@@ -261,7 +257,7 @@ for x in alloccs3:
 
     insert1 = tuple(insert1)[0]
 
-    sql1 = """INSERT INTO occs ('occ_id', 'species_id', 'source',
+    sql1 = """INSERT INTO occurrences ('occ_id', 'species_id', 'source',
                             'source_sp_id', 'coordinateUncertaintyInMeters',
                             'occurrenceDate','occurrenceYear',
                             'occurrenceMonth', 'request_id', 'filter_id',
@@ -275,12 +271,12 @@ for x in alloccs3:
 # Update the individual count when it exists
 for e in alloccs3:
     if 'individualCount' in e.keys():
-        print(e)
-        sql2 = """UPDATE occs
+        sql2 = """UPDATE occurrences
             SET individualCount = {0}
             WHERE occ_id = {1};""".format(e['individualCount'], e['gbifID'])
         cursor.execute(sql2)
 conn.commit()
+
 
 ################################################  BUFFER POINTS
 ###############################################################
@@ -289,9 +285,10 @@ conn.commit()
 # wgs84 version will be used in plotting with Basemap.
 sql_buf = """
         /* Transform to albers (102008) and apply buffer */
-        ALTER TABLE occs ADD COLUMN circle_albers BLOB;
+        ALTER TABLE occurrences ADD COLUMN circle_albers BLOB;
         
-        UPDATE occs SET circle_albers = Buffer(Transform(geom_4326, 102008),
+        UPDATE occurrences SET circle_albers = Buffer(Transform(geom_4326, 
+                                                                102008),
                                         coordinateUncertaintyInMeters);
         
         /* The new geometry column needs an entry in the geometry columns 
@@ -299,21 +296,88 @@ sql_buf = """
         INSERT INTO geometry_columns (f_table_name, f_geometry_column,
                                       geometry_type, coord_dimension,
                                       srid, spatial_index_enabled)
-                    VALUES ('occs', 'circle_albers', 3, 2, 102008, 0);
+                    VALUES ('occurrences', 'circle_albers', 3, 2, 102008, 0);
         
         /* Transform back to WGS84 so it can be displayed in iPython */
-        ALTER TABLE occs ADD COLUMN circle_wgs84 BLOB;
+        ALTER TABLE occurrences ADD COLUMN circle_wgs84 BLOB;
         
-        UPDATE occs SET circle_wgs84 = Transform(circle_albers, 4326);
+        UPDATE occurrences SET circle_wgs84 = Transform(circle_albers, 4326);
         
-        SELECT RecoverGeometryColumn('occs', 'circle_wgs84', 4326, 'POLYGON', 
-                                     'XY');
+        SELECT RecoverGeometryColumn('occurrences', 'circle_wgs84', 4326, 
+                                     'POLYGON', 'XY');
 """
 cursor.executescript(sql_buf)
-conn.commit()
 
 
+#################################################  DISPLAY MAPS
+###############################################################
+# Export occurrence circles as a shapefile (all seasons)
+cursor.execute("""SELECT ExportSHP('occurrences', 'circle_wgs84',
+                 '{0}{1}_circles', 'utf-8');""".format(outDir, summary_name))
 
+# Export occurrence 'points' as a shapefile (all seasons)
+cursor.execute("""SELECT ExportSHP('occurrences', 'geom_4326', 
+                  '{0}{1}_points', 'utf-8');""".format(outDir, summary_name))
 
+shp1 = {'file': '{0}{1}_range'.format(inDir, sp_id),
+        'drawbounds': False, 'linewidth': .5, 'linecolor': 'y', 
+        'fillcolor': 'y'}
+
+shp2 = {'file': '{0}{1}_circles'.format(outDir, summary_name),
+        'drawbounds': True, 'linewidth': .5, 'linecolor': 'k', 
+        'fillcolor': None}
+
+# Display occurrence polygons
+map_these=[shp1, shp2]
+title="Yellow-billed Cuckoo occurrence polygons and and GAP range - any month"
+"""
+BELOW CODE IS FROM config.MapPolygonsFromShp(), WHICH CRASHES KERNEL IN 
+FUNCTION FORM FOR SOME UNKNOWN REASON.
+"""
+# Packages needed for plotting
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
+import numpy as np
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import PathPatch
+
+# Basemap
+fig = plt.figure(figsize=(12,8))
+ax = plt.subplot(1,1,1)
+map = Basemap(projection='aea', resolution='c', lon_0=-95.5, lat_0=39.5,
+              height=3400000, width=5000000)
+map.drawcoastlines(color='grey')
+map.drawstates(color='grey')
+map.drawcountries(color='grey')
+map.fillcontinents(color='green',lake_color='aqua')
+map.drawmapboundary(fill_color='aqua')
+
+for mapfile in map_these:
+    # Add shapefiles to the map
+    if mapfile['fillcolor'] == None:
+        map.readshapefile(mapfile['file'], 'mapfile', 
+                          drawbounds=mapfile['drawbounds'], 
+                          linewidth=mapfile['linewidth'],
+                          color=mapfile['linecolor'])
+    else:
+        map.readshapefile(mapfile['file'], 'mapfile', 
+                  drawbounds=mapfile['drawbounds'])
+        # Code for extra formatting -- filling in polygons setting border 
+        # color
+        patches = []
+        for info, shape in zip(map.mapfile_info, map.mapfile):
+            patches.append(Polygon(np.array(shape), True))
+        ax.add_collection(PatchCollection(patches, 
+                                          facecolor= mapfile['fillcolor'],
+                                          edgecolor=mapfile['linecolor'],
+                                          linewidths=mapfile['linewidth'], 
+                                          zorder=2))
+fig.suptitle(title, fontsize=20)
+
+############
+############
 conn.commit()
 conn.close()
+conn2.commit()
+conn2.close()
