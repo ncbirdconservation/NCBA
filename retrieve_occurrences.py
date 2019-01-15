@@ -130,8 +130,6 @@ sql_cdb = """
                 filter_id TEXT NOT NULL,
                 coordinateUncertaintyInMeters INTEGER,
                 occurrenceDate TEXT,
-                occurrenceYear TEXT,
-                occurrenceMonth TEXT,
                 retrievalDate TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 individualCount INTEGER DEFAULT 1,
                     FOREIGN KEY (species_id) REFERENCES taxa(species_id)
@@ -329,7 +327,8 @@ shp2 = {'file': '{0}{1}_circles'.format(outDir, summary_name),
 
 # Display occurrence polygons
 map_these=[shp1, shp2]
-title="Yellow-billed Cuckoo occurrence polygons and and GAP range - any month"
+title="Yellow-billed Cuckoo occurrence polygons and GAP range (1970-2018)"
+
 """
 BELOW CODE IS FROM config.MapPolygonsFromShp(), WHICH CRASHES KERNEL IN 
 FUNCTION FORM FOR SOME UNKNOWN REASON.
@@ -345,7 +344,7 @@ from matplotlib.patches import PathPatch
 # Basemap
 fig = plt.figure(figsize=(12,8))
 ax = plt.subplot(1,1,1)
-map = Basemap(projection='aea', resolution='c', lon_0=-95.5, lat_0=39.5,
+map = Basemap(projection='aea', resolution='i', lon_0=-95.5, lat_0=39.5,
               height=3400000, width=5000000)
 map.drawcoastlines(color='grey')
 map.drawstates(color='grey')
