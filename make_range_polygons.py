@@ -4,24 +4,52 @@
 Created on Tue Jan 15 11:03:56 2019
 
 @author: nmtarr
+
+Description: Use occurrence polygons to evaluate GAP range maps.
 """
 import config
-import sqlit3
-"""
-/* Make a table for storing range maps for unique species-time period
-        combinations, WITH GEOMETRY */
+import sqlite3
+import os
+
+workDir = '/Users/nmtarr/Documents/RANGES/'
+codeDir = '/Users/nmtarr/Code/Ranger/'
+inDir = workDir + 'Inputs/'
+outDir = workDir + 'Outputs/'
+
+# Create or connect to the database
+conn = sqlite3.connect(outDir + 'range_eval.sqlite')
+os.putenv('SPATIALITE_SECURITY', 'relaxed')
+conn.enable_load_extension(True)
+conn.execute('SELECT load_extension("mod_spatialite")')
+cursor = conn.cursor()
+
+sql_rngy = """
+        /* Make db spatial
+        SELECT InitSpatialMetadata();
+        
+        /* Make a table for storing range maps for unique species-time period
+           combinations, WITH GEOMETRY */ 
         CREATE TABLE IF NOT EXISTS range_polygons (
-                     rmap_id TEXT NOT NULL PRIMARY KEY AUTOINCREMENT,
+                     rng_polygon_id TEXT NOT NULL PRIMARY KEY,
+                     alias TEXT UNIQUE,
                      species_id TEXT NOT NULL,
-                     period TEXT NOT NULL);
+                     period TEXT NOT NULL,
+                     months TEXT,
+                     years TEXT,
+                     method TEXT,
+                     max_error_meters INTEGER,
+                     date_created TEXT,
+                     range_4326 BLOB
+                     occs_4326 BLOB
+                     );
         
-        SELECT AddGeometryColumn('range_polygons', 'range', 102008, 
+        SELECT AddGeometryColumn('range_polygons', 'range_4326', 4326, 
                                  'MULTIPOLYGON', 'XY');
         
-        SELECT AddGeometryColumn('range_polygons', 'circles', 102008, 
+        SELECT AddGeometryColumn('range_polygons', 'circles_4326', 4326, 
                                  'MULTIPOLYGON', 'XY');
-        
 """
+conn.executescript(sql_rngy)
 ##################################################  EXPORT MAPS
 ###############################################################
 
