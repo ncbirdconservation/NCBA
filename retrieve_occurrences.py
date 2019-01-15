@@ -25,8 +25,7 @@ Investigation of data availability and agreement.
 Unresolved issues:
 1.  Downloading from Sciencebase with code.
 2.  Maximize filtering.
-4.  Archiving and documenting data and process.
-5.  Incorporate detection distance.
+5.  Incorporate detection distance - fill out radius and detection in occs
 6.  Can we use EPSG:5070?
 7.  Incorporate allowable spatial error, which would vary by species.
 8.  Account for possiblity of non-4326 occurrence records in gbif?  the 
@@ -84,7 +83,7 @@ Description: Create a database for storing occurrence and species-concept
 data.  Needs to have spatial querying functionality.
 """
 # Delete the database if it already exists
-spdb = outDir + sp_id + '_occurrencess.sqlite'
+spdb = outDir + sp_id + '_occurrences.sqlite'
 if os.path.exists(spdb):
     os.remove(spdb)
 
@@ -132,6 +131,8 @@ sql_cdb = """
                 occurrenceDate TEXT,
                 retrievalDate TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 individualCount INTEGER DEFAULT 1,
+                detection_distance INTEGER,
+                radius_meters INTEGER,
                     FOREIGN KEY (species_id) REFERENCES taxa(species_id)
                     ON UPDATE RESTRICT
                     ON DELETE NO ACTION);
@@ -279,14 +280,16 @@ conn.commit()
 ###############################################################
 # Buffer the x,y locations with the coordinate uncertainty
 # in order to create circles.  Create versions in albers and wgs84.  The
-# wgs84 version will be used in plotting with Basemap.
+# wgs84 version will be used in plotting with Basemap.  Buffer radius is 
+# the sum of detectiondistance from requests.species_concepts and 
+# coordinate uncertainty in meters here.
 sql_buf = """
         /* Transform to albers (102008) and apply buffer */
         ALTER TABLE occurrences ADD COLUMN circle_albers BLOB;
         
         UPDATE occurrences SET circle_albers = Buffer(Transform(geom_4326, 
                                                                 102008),
-                                        coordinateUncertaintyInMeters);
+                                                      radius_meters);
         
         /* The new geometry column needs an entry in the geometry columns 
         table CAN THIS BE DONE WITH RecoverGeometryColumn???*/
