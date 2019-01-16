@@ -34,14 +34,16 @@ Unresolved issues:
 #############################################################################
 #                               Configuration
 #############################################################################
+sp_id = 'bybcux0'
+summary_name = 'cuckoo'
+gbif_req_id = 'r001'
+gbif_filter_id = 'f001'
+
 workDir = '/Users/nmtarr/Documents/RANGES/'
 codeDir = '/Users/nmtarr/Code/Ranger/'
 inDir = workDir + 'Inputs/'
 outDir = workDir + 'Outputs/'
-gbif_req_id = 'r001'
-gbif_filter_id = 'f001'
-sp_id = 'bybcux0'
-summary_name = 'cuckoo'  # Used in file names for output.
+# Used in file names for output.
 SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
 
 
@@ -67,7 +69,7 @@ os.chdir(codeDir)
 conn2 = sqlite3.connect(inDir + 'requests.sqlite')
 cursor2 = conn2.cursor()
 sql_tax = """SELECT gbif_id, common_name, scientific_name, 
-                    detection_distance_meters
+                    detection_distance_meters, gap_id
              FROM species_concepts
              WHERE species_id = '{0}';""".format(sp_id)
 concept = cursor2.execute(sql_tax).fetchall()[0]
@@ -75,6 +77,7 @@ gbif_id = concept[0]
 common_name = concept[1]
 scientific_name = concept[2]
 det_dist = concept[3]
+gap_id = concept[4]
 
 
 #############################################################################
@@ -334,6 +337,22 @@ cursor.execute("""SELECT ExportSHP('occurrences', 'circle_wgs84',
 # Export occurrence 'points' as a shapefile (all seasons)
 cursor.execute("""SELECT ExportSHP('occurrences', 'geom_4326', 
                   '{0}{1}_points', 'utf-8');""".format(outDir, summary_name))
+conn.commit()
+conn.close()
+conn2.commit()
+conn2.close()
+
+
+
+
+
+# Packages needed for plotting
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
+import numpy as np
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import PathPatch
 
 shp1 = {'file': '{0}{1}_range'.format(inDir, sp_id),
         'drawbounds': False, 'linewidth': .5, 'linecolor': 'y', 
@@ -346,19 +365,12 @@ shp2 = {'file': '{0}{1}_circles'.format(outDir, summary_name),
 # Display occurrence polygons
 map_these=[shp1, shp2]
 title="Yellow-billed Cuckoo occurrence polygons and GAP range (1970-2018)"
-
 """
+!!!!!!!!!!!!!!!!!!!!!!!!
 BELOW CODE IS FROM config.MapPolygonsFromShp(), WHICH CRASHES KERNEL IN 
 FUNCTION FORM FOR SOME UNKNOWN REASON.
+!!!!!!!!!!!!!!!!!!!!!!!!
 """
-# Packages needed for plotting
-import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
-import numpy as np
-from matplotlib.patches import Polygon
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import PathPatch
-
 # Basemap
 fig = plt.figure(figsize=(12,8))
 ax = plt.subplot(1,1,1)
@@ -391,10 +403,3 @@ for mapfile in map_these:
                                           linewidths=mapfile['linewidth'], 
                                           zorder=2))
 fig.suptitle(title, fontsize=20)
-
-############
-############
-conn.commit()
-conn.close()
-conn2.commit()
-conn2.close()
