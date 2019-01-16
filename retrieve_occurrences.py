@@ -54,6 +54,7 @@ import pandas as pd
 pd.set_option('display.width', 1000)
 #%matplotlib inline
 import sqlite3
+import sciencebasepy
 from pygbif import occurrences
 import os
 os.chdir('/')
