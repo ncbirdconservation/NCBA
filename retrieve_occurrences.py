@@ -66,13 +66,15 @@ os.chdir(codeDir)
 # Get species info from requests database
 conn2 = sqlite3.connect(inDir + 'requests.sqlite')
 cursor2 = conn2.cursor()
-sql_tax = """SELECT gbif_id, common_name, scientific_name
+sql_tax = """SELECT gbif_id, common_name, scientific_name, 
+                    detection_distance_meters
              FROM species_concepts
              WHERE species_id = '{0}';""".format(sp_id)
 concept = cursor2.execute(sql_tax).fetchall()[0]
 gbif_id = concept[0]
 common_name = concept[1]
 scientific_name = concept[2]
+det_dist = concept[3]
 
 
 #############################################################################
@@ -285,18 +287,17 @@ conn.commit()
 # coordinate uncertainty in meters here.
 requestsDB = inDir + 'requests.sqlite'
 sql_det = """
-        ATTACH DATABASE {0} AS requests;
+        ATTACH DATABASE '{0}' AS requests;
         
         UPDATE occurrences
-        SET detection_distance = (SELECT detection_distance_meters
-                                   FROM requests.species_concepts
-                                   WHERE sp_id = '{0}');
+        SET detection_distance = {1};
         
         UPDATE occurrences
         SET radius_meters = detection_distance + coordinateUncertaintyInMeters;
 
         DETACH DATABASE requests;
-""".format(requestsDB, sp_id)
+""".format(requestsDB, det_dist)
+cursor.executescript(sql_det)
 
 sql_buf = """
         /* Transform to albers (102008) and apply buffer */
