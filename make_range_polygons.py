@@ -6,6 +6,9 @@ Created on Tue Jan 15 11:03:56 2019
 @author: nmtarr
 
 Description: Use occurrence polygons to evaluate GAP range maps.
+
+TO DO: 
+1.  max_error_meters -> error_tolerance
 """
 #############################################################################
 #                               Configuration
@@ -93,13 +96,13 @@ sql_rngy = """
                      pad INTEGER,
                      date_created TEXT,
                      range_4326 BLOB
-                     occs_4326 BLOB
+                     occurrences_4326 BLOB
                      );
         
         SELECT AddGeometryColumn('range_polygons', 'range_4326', 4326, 
                                  'MULTIPOLYGON', 'XY');
         
-        SELECT AddGeometryColumn('range_polygons', 'circles_4326', 4326, 
+        SELECT AddGeometryColumn('range_polygons', 'occurrences_4326', 4326, 
                                  'MULTIPOLYGON', 'XY');
 """
 cursor.executescript(sql_rngy)

@@ -7,14 +7,18 @@ AS occs;
 
 /* Create range maps for each month. */
 INSERT INTO range_polygons (alias, species_id, months, years, method,
-                            max_error_meters, pad, date_created, circles)
-                SELECT 'bybcux0_april', species_id, 'fall',
-                ConcaveHull(CastToMultiPolygon(GUnion(circle_albers))),
-                CastToMultiPolygon(GUnion(circle_albers))
-                FROM occs.occurrences
-                WHERE occurrenceMonth = 4;
+                            date_created, range_4326, occurrences_4326)
+                SELECT 'bybcux0_april', 'bybcux0', '4', '1970-2018',
+                'concave hull', date('now'),
+                ConcaveHull(CastToMultiPolygon(GUnion(O.circle_albers))),
+                CastToMultiPolygon(GUnion(O.circle_albers))
+                FROM occs.occurrences AS O
+                WHERE strftime('%m', occurrenceDate) = 4;
 
-alias,
+UPDATE range_polygons
+SET max_error_meters = (SELECT error_tolerance FROM requests.species_concepts WHERE species_id = 'bybcux0'),
+    pad = (SELECT pad FROM requests.species_concepts WHERE species_id = 'bybcux0')
+WHERE species_id = 'bybcux0';
 
 
 
