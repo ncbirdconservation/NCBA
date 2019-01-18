@@ -70,8 +70,8 @@ pad = concept[5]
 #############################################################################
 # Delete the database if it already exists
 evdb = outDir + 'range_eval.sqlite'
-if os.path.exists(spdb):
-    os.remove(spdb)
+if os.path.exists(evdb):
+    os.remove(evdb)
 
 # Create or connect to the database
 conn = sqlite3.connect(evdb)
@@ -111,7 +111,7 @@ cursor.executescript(sql_rngy)
 #                          Make Some Range Polygons
 #############################################################################
 # Function for making range_polygons
-def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, workDir):
+def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, outDir, export):
     '''
     Function for creating a range polygon entry in range_eval.range_polygons.
     
@@ -120,12 +120,15 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, workDir):
     alias -- keyword to use for filenames and shorthand reference to polygon
     sp_id -- species id for this project.  Must be in requests.species_concepts.
     months -- tuple of months to include.  For example: (3,4,5,6,7)
-    years -- range of years to use.  Format as '1980-2000'
+    years -- tuple of start and end years to use.  Format as (1980,2000)
+    outDir -- working directory, where to put the output.
+    export -- True False whether to create a shapefile version in outDir.    
     
     '''
+    years = range(years[0], years[1])
     print('SRID being used is 4326')
     sql = """
-    * Attach requests database */
+    /* Attach requests database */
     ATTACH DATABASE '/Users/nmtarr/Documents/RANGES/Inputs/requests.sqlite'
     AS requests;
     
@@ -143,7 +146,8 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, workDir):
                         ConcaveHull(CastToMultiPolygon(GUnion(O.circle_wgs84))),
                         CastToMultiPolygon(GUnion(O.circle_wgs84))
                     FROM occs.occurrences AS O
-                    WHERE cast(strftime('%m', occurrenceDate) AS INT) IN {3};
+                    WHERE cast(strftime('%m', occurrenceDate) AS INT) IN {3}
+                        AND cast(strftime('%y', occurrenceDate) AS INT) IN {4};
     
     /* Update the range tolerance and pad information */
     UPDATE range_polygons
@@ -186,7 +190,9 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, workDir):
     
     DETACH DATABASE occs;
     """.format(rng_poly_id, alias, sp_id, months, years, outDir)
-    
+    cursor2.execute(sql)
+    conn2.commit()
+
     return 
     
 
@@ -196,115 +202,23 @@ month_dict = {'january': (1), 'february':(2), 'march':(3), 'april':(4),
               'september':(9), 'october':(10), 'november':(11), 
               'december':(12)}
 
-MakeConcaveHull(rng_poly_id=sp_id, alias='month', sp_id=sp_id, months=(6), 
-                years='1980-2018', workDir=workDir)
+MakeConcaveHull(rng_poly_id=sp_id, alias='testmonth', sp_id=sp_id, months=(6), 
+                years=(1980,2018), outDir=workDir)
 
 for month in month_dict.keys():
     print(month)
-    try:
-        sql4 = """
-        /* Attach an occurrences database
-
-        /* Create tables for each month and export as shapefiles. */
-        INSERT INTO range_polygons (species_id, period, range, circles)
-                        SELECT species_id, '{0}',
-                        ConcaveHull(CastToMultiPolygon(GUnion(circle_albers))),
-                        CastToMultiPolygon(GUnion(circle_albers))
-                        FROM occs
-                        WHERE occurrenceMonth = {1};
-
-        /* Pull out the period for mapping */
-        CREATE TABLE temp1 AS SELECT * FROM rangemaps
-                        WHERE period='{0}';
-
-        SELECT RecoverGeometryColumn('temp1', 'range', 102008, 'MULTIPOLYGON',
-                                     'XY');
-
-        SELECT RecoverGeometryColumn('temp1', 'circles', 102008, 'MULTIPOLYGON',
-                                     'XY');
-
-        /* Transform back to WGS84 so that map can be displayed in ipython */
-        ALTER TABLE temp1 ADD COLUMN range_wgs84 blob;
-
-        SELECT RecoverGeometryColumn('temp1', 'range_wgs84', 4326,
-                                     'MULTIPOLYGON');
-
-        UPDATE temp1 SET range_wgs84 = Transform(range, 4326);
-
-        ALTER TABLE temp1 ADD COLUMN circles_wgs84 blob;
-
-        SELECT RecoverGeometryColumn('temp1', 'circles_wgs84', 4326,
-                             'MULTIPOLYGON');
-
-        UPDATE temp1 SET circles_4326 = Transform(circles, 4326);
-
-        /* Export shapefiles */
-        SELECT ExportSHP('temp1', 'range_wgs84', '{0}_rng', 'utf-8');
-
-        SELECT ExportSHP('temp1', 'circles_wgs84', '{0}_occs', 'utf-8');
-
-        DROP TABLE temp1;
-
-        """.format(month, month_dict[month])
-        cursor.executescript(sql4)
-    except:
-        print(Exception)
+    MakeConcaveHull(rng_poly_id=sp_id, alias=month, sp_id=sp_id, 
+                    months=month_dict[month],
+                    years=(1980,2018), outDir=outDir)
+    
 
 # Make range shapefiles for each season, display them too
-period_dict = {"summer": '(5,6,7,8)', "winter": '(11,12,1,2)',
-               "spring": '(3,4,5)', "fall": '(8,9,10,11)',
-               "yearly": '(1,2,3,4,5,6,7,8,9,10,11,12)'}
+period_dict = {"summer": (5,6,7,8), "winter": (11,12,1,2),
+               "spring": (3,4,5), "fall": (8,9,10,11),
+               "yearly": (1,2,3,4,5,6,7,8,9,10,11,12)}
 for period in period_dict:
     print(period)
-    try:
-        sql_season = """
-            /*  Insert a record for a range map, created by making polygons into
-            a multipolygon geometry and then calculating the concave hull.
-            Also, insert circles into a column for provenance */
-            INSERT INTO rangemaps (species_id, period, range, circles)
-                    SELECT species_id, '{0}',
-                    ConcaveHull(CastToMultiPolygon(GUnion(circle_albers))),
-                    CastToMultiPolygon(GUnion(circle_albers))
-                    FROM occs
-                    WHERE occurrenceMonth IN {1};
-
-            /* Pull out the period for mapping */
-            CREATE TABLE temp2 AS SELECT * FROM rangemaps
-                            WHERE period='{0}';
-
-            SELECT RecoverGeometryColumn('temp2', 'range', 102008,
-                                         'MULTIPOLYGON',
-                                         'XY');
-
-            SELECT RecoverGeometryColumn('temp2', 'circles', 102008,
-                                         'MULTIPOLYGON',
-                                         'XY');
-
-            /* Transform back to WGS84 so that map can be displayed in ipython */
-            ALTER TABLE temp2 ADD COLUMN range_wgs84 blob;
-
-            SELECT RecoverGeometryColumn('temp2', 'range_wgs84', 4326,
-                                         'MULTIPOLYGON');
-
-            UPDATE temp2 SET range_wgs84 = Transform(range, 4326);
-
-            ALTER TABLE temp2 ADD COLUMN circles_wgs84 blob;
-
-            SELECT RecoverGeometryColumn('temp2', 'circles_wgs84', 4326,
-                                         'MULTIPOLYGON');
-
-            UPDATE temp2 SET circles_wgs84 = Transform(circles, 4326);
-
-
-            SELECT ExportSHP('temp2', 'range_wgs84', '{0}_rng', 'utf-8');
-
-            SELECT ExportSHP('temp2', 'circles_wgs84', '{0}_occs', 'utf-8');
-
-            DROP TABLE temp2;
-        """.format(period, period_dict[period])
-        cursor.executescript(sql_season)
-    except:
-        print(Exception)
+    
 conn.commit()
 
 
