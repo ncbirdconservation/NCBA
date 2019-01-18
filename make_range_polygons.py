@@ -127,6 +127,7 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, outDir, export):
     export -- True False whether to create a shapefile version in outDir.
     """
     years2 = str(tuple(range(years[0], years[1])))
+
     print('SRID being used is 4326')
     sql = """
     /* Attach requests database */
@@ -142,7 +143,7 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, outDir, export):
                                 months, years,
                                 method, date_created, range_4326,
                                 occurrences_4326)
-                    SELECT '{0}', '{1}', '{2}', '{3}', '{6}',
+                    SELECT '{0}', '{1}', '{2}', '{3}', '{5}',
                         'concave hull', date('now'),
                         ConcaveHull(CastToMultiPolygon(GUnion(circle_wgs84))),
                         CastToMultiPolygon(GUnion(circle_wgs84))
@@ -170,9 +171,21 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, outDir, export):
     DETACH DATABASE requests;
 
     DETACH DATABASE occs;
-    """.format(rng_poly_id, alias, sp_id, months, years2, outDir, years)
-    cursor.executescript(sql)
-    print(sql)
+    """.format(rng_poly_id, alias, sp_id, months, years2, years)
+
+    try:
+        conn = sqlite3.connect(evdb)
+        os.putenv('SPATIALITE_SECURITY', 'relaxed')
+        conn.enable_load_extension(True)
+        conn.execute('SELECT load_extension("mod_spatialite")')
+        cursor = conn.cursor()
+        cursor.executescript(sql)
+        del cursor
+        conn.close()
+    except Exception as e:
+        print(e)
+        print(sql)
+
 
     if export == True:
         sqlExp = """
@@ -193,50 +206,47 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, outDir, export):
 
         DROP TABLE temp1;""".format(alias, outDir)
 
-        cursor.executescript(sqlExp)
-        print(sqlExp)
-
-    conn.commit()
+        try:
+            conn = sqlite3.connect(evdb)
+            os.putenv('SPATIALITE_SECURITY', 'relaxed')
+            conn.enable_load_extension(True)
+            conn.execute('SELECT load_extension("mod_spatialite")')
+            cursor = conn.cursor()
+            cursor.executescript(sqlExp)
+            conn.close()
+        except:
+            print(sqlExp)
 
     return
 
 # Make occurrence shapefiles for each month
-month_dict = {'january': (1), 'february':(2), 'march':(3), 'april':(4),
-              'may':(5), 'june':(6), 'july':(7), 'august':(8),
-              'september':(9), 'october':(10), 'november':(11),
-              'december':(12)}
-for month in month_dict.keys():
-    MakeConcaveHull(rng_poly_id='rng' + month, alias=month, sp_id=sp_id,
-                months=str(month_dict[month]),
-                years=(1980,2018), outDir=outDir, export=False)
+month_dict = {'january': '(1)', 'february':'(2)', 'march':'(3)', 'april':'(4)',
+              'may':'(5)', 'june':'(6)', 'july':'(7)', 'august':'(8)',
+              'september':'(9)', 'october':'(10)', 'november':'(11)',
+              'december':'(12)'}
+#for month in list(month_dict.keys())[4:5]:
+#    MakeConcaveHull(rng_poly_id='rng' + month, alias=month, sp_id=sp_id,
+#                months=month_dict[month],
+#                years=(1980,2018), outDir=outDir, export=False)
 
-#
-#for month in month_dict.keys():
-#    print(month)
-#    MakeConcaveHull(rng_poly_id=sp_id, alias=month, sp_id=sp_id,
-#                    months=month_dict[month],
-#                    years=(1980,2018), outDir=outDir,
-#                    export=True)
-#
-#
-## Make range shapefiles for each season, display them too
-#period_dict = {"summer": (5,6,7,8), "winter": (11,12,1,2),
-#               "spring": (3,4,5), "fall": (8,9,10,11),
-#               "yearly": (1,2,3,4,5,6,7,8,9,10,11,12)}
-#for period in period_dict:
-#    print(period)
-#
-#conn.commit()
-#
-#
+# Make range shapefiles for each season, display them too
+period_dict = {"summer": '(5,6,7,8)',
+               "winter": '(11,12,1,2)',
+               "spring": '(3,4,5)',
+               "fall": '(8,9,10,11)',
+               "yearly": '(1,2,3,4,5,6,7,8,9,10,11,12)'}
+for period in period_dict:
+    print(period)
+    MakeConcaveHull(rng_poly_id='rng' + period, alias=period, sp_id=sp_id,
+                    months=period_dict[period],
+                    years=(1980,2018), outDir=outDir, export=True)
+
 ################################################  DISPLAY MAPS
 ##############################################################
 #
 ###########################################################
 #
 #workDir = '/Users/nmtarr/Documents/RANGES'
-#
-#
 #
 #season_colors = {'Fall': 'red', 'Winter': 'white', 'Summer': 'magenta',
 #                    'Spring': 'blue'}
