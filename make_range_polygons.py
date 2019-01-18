@@ -10,6 +10,7 @@ Description: Use occurrence polygons to evaluate GAP range maps.
 TO DO:
 1.  max_error_meters -> error_tolerance
 2  remove pad?
+3. filter out records with large coordinate uncertainty
 """
 #############################################################################
 #                               Configuration
@@ -70,8 +71,8 @@ pad = concept[5]
 #############################################################################
 # Delete the database if it already exists
 evdb = outDir + 'range_eval.sqlite'
-if os.path.exists(evdb):
-    os.remove(evdb)
+#if os.path.exists(evdb):
+#    os.remove(evdb)
 
 # Create or connect to the database
 conn = sqlite3.connect(evdb)
@@ -81,7 +82,7 @@ conn.execute('SELECT load_extension("mod_spatialite")')
 cursor = conn.cursor()
 
 # Make db spatial
-cursor.execute('SELECT InitSpatialMetadata();')
+#cursor.execute('SELECT InitSpatialMetadata();')
 
 sql_rngy = """
         /* Make a table for storing range maps for unique species-time period
@@ -97,14 +98,15 @@ sql_rngy = """
                      pad INTEGER,
                      date_created TEXT
                      );
-
-        SELECT AddGeometryColumn('range_polygons', 'range_4326', 4326,
-                                 'MULTIPOLYGON', 'XY');
-
-        SELECT AddGeometryColumn('range_polygons', 'occurrences_4326', 4326,
-                                 'MULTIPOLYGON', 'XY');
-"""
+            """
 cursor.executescript(sql_rngy)
+
+#sql_geom = """SELECT AddGeometryColumn('range_polygons', 'range_4326', 4326,
+#                         'MULTIPOLYGON', 'XY');
+#
+#              SELECT AddGeometryColumn('range_polygons', 'occurrences_4326', 4326,
+#                         'MULTIPOLYGON', 'XY');"""
+#cursor.executescript(sql_geom)
 
 
 #############################################################################
@@ -112,9 +114,9 @@ cursor.executescript(sql_rngy)
 #############################################################################
 # Function for making range_polygons
 def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, outDir, export):
-    '''
+    """
     Function for creating a range polygon entry in range_eval.range_polygons.
-    
+
     Arguments:
     rng_poly_id -- A unique ID to use for the range map record
     alias -- keyword to use for filenames and shorthand reference to polygon
@@ -122,130 +124,135 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, outDir, export):
     months -- tuple of months to include.  For example: (3,4,5,6,7)
     years -- tuple of start and end years to use.  Format as (1980,2000)
     outDir -- working directory, where to put the output.
-    export -- True False whether to create a shapefile version in outDir.    
-    
-    '''
-    years = range(years[0], years[1])
+    export -- True False whether to create a shapefile version in outDir.
+    """
+    years2 = str(tuple(range(years[0], years[1])))
     print('SRID being used is 4326')
     sql = """
     /* Attach requests database */
     ATTACH DATABASE '/Users/nmtarr/Documents/RANGES/Inputs/requests.sqlite'
     AS requests;
-    
+
     /* Attach an occurrences database */
-    ATTACH DATABASE '/Users/nmtarr/Documents/RANGES/Outputs/sp_id_occurrences.sqlite'
+    ATTACH DATABASE '/Users/nmtarr/Documents/RANGES/Outputs/{2}_occurrences.sqlite'
     AS occs;
-    
+
     /* Create range map for the period. */
-    INSERT INTO range_polygons (rng_poly_id, alias, species_id, 
+    INSERT INTO range_polygons (rng_polygon_id, alias, species_id,
                                 months, years,
-                                method, date_created, range_4326, 
+                                method, date_created, range_4326,
                                 occurrences_4326)
-                    SELECT '{0}', '{1}', '{2}', '{3}', '{4},
-                        concave hull', date('now'),
-                        ConcaveHull(CastToMultiPolygon(GUnion(O.circle_wgs84))),
-                        CastToMultiPolygon(GUnion(O.circle_wgs84))
-                    FROM occs.occurrences AS O
-                    WHERE cast(strftime('%m', occurrenceDate) AS INT) IN {3}
-                        AND cast(strftime('%y', occurrenceDate) AS INT) IN {4};
-    
+                    SELECT '{0}', '{1}', '{2}', '{3}', '{6}',
+                        'concave hull', date('now'),
+                        ConcaveHull(CastToMultiPolygon(GUnion(circle_wgs84))),
+                        CastToMultiPolygon(GUnion(circle_wgs84))
+                    FROM occs.occurrences
+                    WHERE cast(strftime('%m', occurrenceDate) AS INTEGER) IN {3}
+                        AND cast(strftime('%Y', occurrenceDate) AS INTEGER) IN {4};
+
     /* Update the range tolerance and pad information */
     UPDATE range_polygons
-    SET max_error_meters = (SELECT error_tolerance 
-                            FROM requests.species_concepts 
+    SET max_error_meters = (SELECT error_tolerance
+                            FROM requests.species_concepts
                             WHERE species_id = 'sp_id'),
-        pad = (SELECT pad 
-               FROM requests.species_concepts 
+        pad = (SELECT pad
+               FROM requests.species_concepts
                WHERE species_id = 'sp_id')
     WHERE species_id = 'sp_id';
-    
-    /* Recover geometry */
-    SELECT RecoverGeometryColumn('range_polygons', 'range_4326', 4326, 'MULTIPOLYGON',
-                               'XY');
-    
-    SELECT RecoverGeometryColumn('range_polygons', 'occurrences_4326', 4326, 'MULTIPOLYGON',
-                               'XY');
-    
-    
-    /* Pull out the period for mapping */
-    CREATE TABLE temp1 AS SELECT * FROM range_polygons
-                    WHERE  alias = '{1}';
-    
-    SELECT RecoverGeometryColumn('temp1', 'range_4326', 4326, 'MULTIPOLYGON',
-                                 'XY');
-    
-    SELECT RecoverGeometryColumn('temp1', 'occurrences_4326', 4326, 'MULTIPOLYGON',
-                                 'XY');
-    
-    /* Export shapefiles */
-    SELECT ExportSHP('temp1', 'range_4326',
-                     '{5}{1}_range', 'utf-8');
-    
-    SELECT ExportSHP('temp1', 'occurrences_4326',
-                     '{5}{1}_occs', 'utf-8');
-    
-    DROP TABLE temp1;
-    
-    DETACH DATABASE requests;
-    
-    DETACH DATABASE occs;
-    """.format(rng_poly_id, alias, sp_id, months, years, outDir)
-    cursor2.execute(sql)
-    conn2.commit()
 
-    return 
-    
+    /* Recover geometry */
+    SELECT RecoverGeometryColumn('range_polygons', 'range_4326', 4326,
+                                 'MULTIPOLYGON', 'XY');
+
+    SELECT RecoverGeometryColumn('range_polygons', 'occurrences_4326', 4326,
+                                 'MULTIPOLYGON', 'XY');
+
+    DETACH DATABASE requests;
+
+    DETACH DATABASE occs;
+    """.format(rng_poly_id, alias, sp_id, months, years2, outDir, years)
+    cursor.executescript(sql)
+    print(sql)
+
+    if export == True:
+        sqlExp = """
+        /* Pull out the period for mapping */
+        CREATE TABLE temp1 AS SELECT * FROM range_polygons
+                        WHERE  alias = '{0}';
+
+        SELECT RecoverGeometryColumn('temp1', 'range_4326', 4326,
+                                     'MULTIPOLYGON', 'XY');
+
+        SELECT RecoverGeometryColumn('temp1', 'occurrences_4326', 4326,
+                                     'MULTIPOLYGON', 'XY');
+
+        /* Export shapefiles */
+        SELECT ExportSHP('temp1', 'range_4326', '{1}{0}_range', 'utf-8');
+
+        SELECT ExportSHP('temp1', 'occurrences_4326', '{1}{0}_occs', 'utf-8');
+
+        DROP TABLE temp1;""".format(alias, outDir)
+
+        cursor.executescript(sqlExp)
+        print(sqlExp)
+
+    conn.commit()
+
+    return
 
 # Make occurrence shapefiles for each month
-month_dict = {'january': (1), 'february':(2), 'march':(3), 'april':(4), 
-              'may':(5), 'june':(6), 'july':(7), 'august':(8), 
-              'september':(9), 'october':(10), 'november':(11), 
+month_dict = {'january': (1), 'february':(2), 'march':(3), 'april':(4),
+              'may':(5), 'june':(6), 'july':(7), 'august':(8),
+              'september':(9), 'october':(10), 'november':(11),
               'december':(12)}
-
-MakeConcaveHull(rng_poly_id=sp_id, alias='testmonth', sp_id=sp_id, months=(6), 
-                years=(1980,2018), outDir=workDir)
-
 for month in month_dict.keys():
-    print(month)
-    MakeConcaveHull(rng_poly_id=sp_id, alias=month, sp_id=sp_id, 
-                    months=month_dict[month],
-                    years=(1980,2018), outDir=outDir)
-    
+    MakeConcaveHull(rng_poly_id='rng' + month, alias=month, sp_id=sp_id,
+                months=str(month_dict[month]),
+                years=(1980,2018), outDir=outDir, export=False)
 
-# Make range shapefiles for each season, display them too
-period_dict = {"summer": (5,6,7,8), "winter": (11,12,1,2),
-               "spring": (3,4,5), "fall": (8,9,10,11),
-               "yearly": (1,2,3,4,5,6,7,8,9,10,11,12)}
-for period in period_dict:
-    print(period)
-    
-conn.commit()
-
-
-###############################################  DISPLAY MAPS
-#############################################################
-
-##########################################################
-
-workDir = '/Users/nmtarr/Documents/RANGES'
-
-
-
-season_colors = {'Fall': 'red', 'Winter': 'white', 'Summer': 'magenta',
-                    'Spring': 'blue'}
-for period in ['Fall', 'Winter', 'Summer', 'Spring']:
-     shp1 = {'file': workDir + '/{0}_rng'.format(period),
-                    'drawbounds': True, 'linewidth': 1,
-                    'linecolor': season_colors[period],
-                    'fillcolor': None}
-     shp2 = {'file': workDir + '/{0}_occs'.format(period),
-                    'drawbounds': True, 'linewidth': .5, 'linecolor': 'k',
-                    'fillcolor': None}
-     title = "Yellow-billed Cuckoo occurrence polygons - {0}".format(period)
-     try:
-         config.MapPolygonsFromSHP([shp1, shp2], title)
-     except:
-         print(period + " FAILED !!!!")
-
-###########################################  GET THE GAP RANGES
-#############################################  FROM SCIENCEBASE
+#
+#for month in month_dict.keys():
+#    print(month)
+#    MakeConcaveHull(rng_poly_id=sp_id, alias=month, sp_id=sp_id,
+#                    months=month_dict[month],
+#                    years=(1980,2018), outDir=outDir,
+#                    export=True)
+#
+#
+## Make range shapefiles for each season, display them too
+#period_dict = {"summer": (5,6,7,8), "winter": (11,12,1,2),
+#               "spring": (3,4,5), "fall": (8,9,10,11),
+#               "yearly": (1,2,3,4,5,6,7,8,9,10,11,12)}
+#for period in period_dict:
+#    print(period)
+#
+#conn.commit()
+#
+#
+################################################  DISPLAY MAPS
+##############################################################
+#
+###########################################################
+#
+#workDir = '/Users/nmtarr/Documents/RANGES'
+#
+#
+#
+#season_colors = {'Fall': 'red', 'Winter': 'white', 'Summer': 'magenta',
+#                    'Spring': 'blue'}
+#for period in ['Fall', 'Winter', 'Summer', 'Spring']:
+#     shp1 = {'file': workDir + '/{0}_rng'.format(period),
+#                    'drawbounds': True, 'linewidth': 1,
+#                    'linecolor': season_colors[period],
+#                    'fillcolor': None}
+#     shp2 = {'file': workDir + '/{0}_occs'.format(period),
+#                    'drawbounds': True, 'linewidth': .5, 'linecolor': 'k',
+#                    'fillcolor': None}
+#     title = "Yellow-billed Cuckoo occurrence polygons - {0}".format(period)
+#     try:
+#         config.MapPolygonsFromSHP([shp1, shp2], title)
+#     except:
+#         print(period + " FAILED !!!!")
+#
+############################################  GET THE GAP RANGES
+##############################################  FROM SCIENCEBASE
