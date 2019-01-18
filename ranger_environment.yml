@@ -1,4 +1,4 @@
-name: ranger
+name: ranger2
 channels:
   - defaults
 dependencies:
@@ -99,7 +99,7 @@ dependencies:
   - pytz=2018.7=py36_0
   - pyzmq=17.1.2=py36h1de35cc_0
   - qt=5.9.7=h468cd18_1
-  - qtawesome=0.5.3=py36_0
+  - qtawesome=0.5.5=py36_0
   - qtconsole=4.4.3=py36_0
   - qtpy=1.5.2=py36_0
   - readline=7.0=h1de35cc_5
@@ -133,6 +133,6 @@ dependencies:
   - zlib=1.2.11=h1de35cc_3
   - pip:
     - pygbif==0.2.0
-    - spatialite==0.0.2
-prefix: /Users/nmtarr/miniconda3/envs/ranger
+    - sciencebasepy==1.6.2
+prefix: /Users/nmtarr/miniconda3/envs/ranger2
 
