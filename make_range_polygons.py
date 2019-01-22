@@ -10,7 +10,6 @@ Description: Use occurrence polygons to evaluate GAP range maps.
 TO DO:
 1. max_error_meters -> error_tolerance
 2  remove pad?
-3. filter out records with large coordinate uncertainty
 """
 #############################################################################
 #                               Configuration
@@ -115,7 +114,8 @@ cursor.executescript(sql_geom)
 #############################################################################
 # Function for making range_polygons
 def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
-                    max_uncertainty, outDir, export):
+                    max_uncertainty, outDir, export, factor=2,
+                    allow_holes=True):
     """
     Function for creating a range polygon entry in range_eval.range_polygons.
 
@@ -127,6 +127,8 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
     years -- tuple of start and end years to use.  Format as (1980,2000)
     max_uncertainty -- max coordinate uncertainty to allow when filtering
                             occurrences for use in polygon delineation.
+    factor -- factor to use in concave hull; defaults to 2.
+    allow_holes -- True or False for holes within the range.
     outDir -- working directory, where to put the output.
     export -- True False whether to create a shapefile version in outDir.
     """
@@ -148,7 +150,7 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
                                 method, date_created, range_4326,
                                 occurrences_4326)
                     SELECT '{0}', '{1}', '{2}', '{3}', '{5}',
-                           'concave hull', date('now'),
+                           'concave hull_{7}_{8}', date('now'),
                             CASE
                             WHEN (SELECT COUNT(circle_wgs84)
                             FROM occs.occurrences
@@ -156,7 +158,7 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
                             AND cast(strftime('%Y', occurrenceDate) AS INTEGER) IN {4}
                             AND coordinateUncertaintyInMeters < {6})
                             > 3 THEN ConcaveHull(CastToMultiPolygon(GUnion(circle_wgs84)),
-                                                 1, True)
+                                                 {7}, {8})
                             ELSE NULL
                             END range_4326,
                             CastToMultiPolygon(GUnion(circle_wgs84))
@@ -180,7 +182,7 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
 
     DETACH DATABASE occs;
     """.format(rng_poly_id, alias, sp_id, months, years2, years,
-                max_coordUncertainty)
+                max_coordUncertainty, factor, allow_holes)
 
     try:
         conn = sqlite3.connect(evdb)
@@ -255,28 +257,64 @@ for period in period_dict:
                     max_uncertainty=max_coordUncertainty,
                     outDir=outDir, export=True)
 
-################################################  DISPLAY MAPS
-##############################################################
-#
-###########################################################
-#
-#workDir = '/Users/nmtarr/Documents/RANGES'
-#
-#season_colors = {'Fall': 'red', 'Winter': 'white', 'Summer': 'magenta',
-#                    'Spring': 'blue'}
-#for period in ['Fall', 'Winter', 'Summer', 'Spring']:
-#     shp1 = {'file': workDir + '/{0}_rng'.format(period),
-#                    'drawbounds': True, 'linewidth': 1,
-#                    'linecolor': season_colors[period],
-#                    'fillcolor': None}
-#     shp2 = {'file': workDir + '/{0}_occs'.format(period),
-#                    'drawbounds': True, 'linewidth': .5, 'linecolor': 'k',
-#                    'fillcolor': None}
-#     title = "Yellow-billed Cuckoo occurrence polygons - {0}".format(period)
-#     try:
-#         config.MapPolygonsFromSHP([shp1, shp2], title)
-#     except:
-#         print(period + " FAILED !!!!")
-#
-############################################  GET THE GAP RANGES
-##############################################  FROM SCIENCEBASE
+
+#############################################################################
+#                    Display Seasonal Range Maps
+#############################################################################
+"""
+season_colors = {'fall': 'red', 'winter': 'white', 'summer': 'magenta',
+                    'spring': 'blue'}
+for period in list(season_colors.keys()):
+     title = "Yellow-billed Cuckoo occurrence polygons (1970-2018) - {0}".format(period)
+
+    # Packages needed for plotting
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.basemap import Basemap
+    import numpy as np
+    from matplotlib.patches import Polygon
+    from matplotlib.collections import PatchCollection
+    from matplotlib.patches import PathPatch
+
+    shp1 = {'file': '{0}{1}_range'.format(outDir, period),
+            'drawbounds': False, 'linewidth': .5, 'linecolor': 'y',
+            'fillcolor': 'y'}
+
+    # Display occurrence polygons
+    map_these=[shp1]
+
+    # Basemap
+    fig = plt.figure(figsize=(12,8))
+    ax = plt.subplot(1,1,1)
+    map = Basemap(projection='aea', resolution='i', lon_0=-95.5, lat_0=39.5,
+                  height=3400000, width=5000000)
+    map.drawcoastlines(color='grey')
+    map.drawstates(color='grey')
+    map.drawcountries(color='grey')
+    map.fillcontinents(color='green',lake_color='aqua')
+    map.drawmapboundary(fill_color='aqua')
+
+    for mapfile in map_these:
+        # Add shapefiles to the map
+        if mapfile['fillcolor'] == None:
+            map.readshapefile(mapfile['file'], 'mapfile',
+                              drawbounds=mapfile['drawbounds'],
+                              linewidth=mapfile['linewidth'],
+                              color=mapfile['linecolor'])
+        else:
+            map.readshapefile(mapfile['file'], 'mapfile',
+                      drawbounds=mapfile['drawbounds'])
+            # Code for extra formatting -- filling in polygons setting border
+            # color
+            patches = []
+            for info, shape in zip(map.mapfile_info, map.mapfile):
+                patches.append(Polygon(np.array(shape), True))
+            ax.add_collection(PatchCollection(patches,
+                                              facecolor= mapfile['fillcolor'],
+                                              edgecolor=mapfile['linecolor'],
+                                              linewidths=mapfile['linewidth'],
+                                              zorder=2))
+    fig.suptitle(title, fontsize=20)
+"""
+
+###########################################  GET THE GAP RANGES
+#############################################  FROM SCIENCEBASE

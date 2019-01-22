@@ -28,8 +28,8 @@ Unresolved issues:
 5.  Incorporate detection distance - fill out radius and detection in occs
 6.  Can we use EPSG:5070?
 7.  Incorporate allowable spatial error, which would vary by species.
-8.  Account for possiblity of non-4326 occurrence records in gbif?  the 
-    geometry columnis hard coded to 4326 initially.  Can this be dynamic? 
+8.  Account for possiblity of non-4326 occurrence records in gbif?  the
+    geometry columnis hard coded to 4326 initially.  Can this be dynamic?
 """
 #############################################################################
 #                               Configuration
@@ -69,7 +69,7 @@ os.chdir(codeDir)
 # Get species info from requests database
 conn2 = sqlite3.connect(inDir + 'requests.sqlite')
 cursor2 = conn2.cursor()
-sql_tax = """SELECT gbif_id, common_name, scientific_name, 
+sql_tax = """SELECT gbif_id, common_name, scientific_name,
                     detection_distance_meters, gap_id
              FROM species_concepts
              WHERE species_id = '{0}';""".format(sp_id)
@@ -142,8 +142,8 @@ sql_cdb = """
                     FOREIGN KEY (species_id) REFERENCES taxa(species_id)
                     ON UPDATE RESTRICT
                     ON DELETE NO ACTION);
-        
-        SELECT AddGeometryColumn('occurrences', 'geom_4326', 4326, 'POINT', 
+
+        SELECT AddGeometryColumn('occurrences', 'geom_4326', 4326, 'POINT',
                                  'XY');
 """
 cursor.executescript(sql_cdb)
@@ -158,31 +158,31 @@ attributes in the occurrence db.
 """
 ############################# RETRIEVE REQUEST PARAMETERS
 # Up-front filters are an opportunity to lighten the load from the start.
-sql_twi = """ SELECT lat_range FROM gbif_requests 
+sql_twi = """ SELECT lat_range FROM gbif_requests
               WHERE request_id = '{0}'""".format(gbif_req_id)
 latRange = cursor2.execute(sql_twi).fetchone()[0]
 
-sql_twi = """ SELECT lon_range FROM gbif_requests 
+sql_twi = """ SELECT lon_range FROM gbif_requests
               WHERE request_id = '{0}'""".format(gbif_req_id)
 lonRange = cursor2.execute(sql_twi).fetchone()[0]
 
-sql_twi = """ SELECT years_range FROM gbif_requests 
+sql_twi = """ SELECT years_range FROM gbif_requests
               WHERE request_id = '{0}'""".format(gbif_req_id)
 years = cursor2.execute(sql_twi).fetchone()[0]
 
-sql_twi = """ SELECT months_range FROM gbif_requests 
+sql_twi = """ SELECT months_range FROM gbif_requests
               WHERE request_id = '{0}'""".format(gbif_req_id)
 months = cursor2.execute(sql_twi).fetchone()[0]
 
-sql_twi = """ SELECT geoissue FROM gbif_requests 
+sql_twi = """ SELECT geoissue FROM gbif_requests
               WHERE request_id = '{0}'""".format(gbif_req_id)
 geoIssue = cursor2.execute(sql_twi).fetchone()[0]
 
-sql_twi = """ SELECT coordinate_issue FROM gbif_requests 
+sql_twi = """ SELECT coordinate_issue FROM gbif_requests
               WHERE request_id = '{0}'""".format(gbif_req_id)
 coordinate = cursor2.execute(sql_twi).fetchone()[0]
 
-sql_twi = """ SELECT continent FROM gbif_requests 
+sql_twi = """ SELECT continent FROM gbif_requests
               WHERE request_id = '{0}'""".format(gbif_req_id)
 continent = cursor2.execute(sql_twi).fetchone()[0]
 
@@ -236,11 +236,11 @@ for x in alloccs:
 #  RETRIEVE FILTER PARAMETERS
 sql_green = """SELECT has_coordinate_uncertainty FROM gbif_filters
                WHERE filter_id = '{0}';""".format(gbif_filter_id)
-filt_coordUncertainty = cursor2.execute(sql_green).fetchone()[0]   
-    
+filt_coordUncertainty = cursor2.execute(sql_green).fetchone()[0]
+
 # Remove if no coordinate uncertainty
 if filt_coordUncertainty == 1:
-    alloccs3 = [x for x in alloccs2 if 'coordinateUncertaintyInMeters' 
+    alloccs3 = [x for x in alloccs2 if 'coordinateUncertaintyInMeters'
                 in x.keys()]
 else:
     pass
@@ -249,7 +249,7 @@ else:
 ########################  WHAT ELSE CAN WE DO ??????...
 ########################  DEVELOP HERE
 ########################
-    
+
 
 ###############################################  INSERT INTO DB
 ###############################################################
@@ -286,16 +286,16 @@ conn.commit()
 ###############################################################
 # Buffer the x,y locations with the coordinate uncertainty
 # in order to create circles.  Create versions in albers and wgs84.  The
-# wgs84 version will be used in plotting with Basemap.  Buffer radius is 
-# the sum of detectiondistance from requests.species_concepts and 
+# wgs84 version will be used in plotting with Basemap.  Buffer radius is
+# the sum of detectiondistance from requests.species_concepts and
 # coordinate uncertainty in meters here.
 requestsDB = inDir + 'requests.sqlite'
 sql_det = """
         ATTACH DATABASE '{0}' AS requests;
-        
+
         UPDATE occurrences
         SET detection_distance = {1};
-        
+
         UPDATE occurrences
         SET radius_meters = detection_distance + coordinateUncertaintyInMeters;
 
@@ -306,24 +306,24 @@ cursor.executescript(sql_det)
 sql_buf = """
         /* Transform to albers (102008) and apply buffer */
         ALTER TABLE occurrences ADD COLUMN circle_albers BLOB;
-        
-        UPDATE occurrences SET circle_albers = Buffer(Transform(geom_4326, 
+
+        UPDATE occurrences SET circle_albers = Buffer(Transform(geom_4326,
                                                                 102008),
                                                       radius_meters);
-        
-        /* The new geometry column needs an entry in the geometry columns 
+
+        /* The new geometry column needs an entry in the geometry columns
         table CAN THIS BE DONE WITH RecoverGeometryColumn???*/
         INSERT INTO geometry_columns (f_table_name, f_geometry_column,
                                       geometry_type, coord_dimension,
                                       srid, spatial_index_enabled)
                     VALUES ('occurrences', 'circle_albers', 3, 2, 102008, 0);
-        
+
         /* Transform back to WGS84 so it can be displayed in iPython */
         ALTER TABLE occurrences ADD COLUMN circle_wgs84 BLOB;
-        
+
         UPDATE occurrences SET circle_wgs84 = Transform(circle_albers, 4326);
-        
-        SELECT RecoverGeometryColumn('occurrences', 'circle_wgs84', 4326, 
+
+        SELECT RecoverGeometryColumn('occurrences', 'circle_wgs84', 4326,
                                      'POLYGON', 'XY');
 """
 cursor.executescript(sql_buf)
@@ -336,15 +336,12 @@ cursor.execute("""SELECT ExportSHP('occurrences', 'circle_wgs84',
                  '{0}{1}_circles', 'utf-8');""".format(outDir, summary_name))
 
 # Export occurrence 'points' as a shapefile (all seasons)
-cursor.execute("""SELECT ExportSHP('occurrences', 'geom_4326', 
+cursor.execute("""SELECT ExportSHP('occurrences', 'geom_4326',
                   '{0}{1}_points', 'utf-8');""".format(outDir, summary_name))
 conn.commit()
 conn.close()
 conn2.commit()
 conn2.close()
-
-
-
 
 
 # Packages needed for plotting
@@ -356,11 +353,11 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import PathPatch
 
 shp1 = {'file': '{0}{1}_range'.format(inDir, sp_id),
-        'drawbounds': False, 'linewidth': .5, 'linecolor': 'y', 
+        'drawbounds': False, 'linewidth': .5, 'linecolor': 'y',
         'fillcolor': 'y'}
 
 shp2 = {'file': '{0}{1}_circles'.format(outDir, summary_name),
-        'drawbounds': True, 'linewidth': .5, 'linecolor': 'k', 
+        'drawbounds': True, 'linewidth': .5, 'linecolor': 'k',
         'fillcolor': None}
 
 # Display occurrence polygons
@@ -368,7 +365,7 @@ map_these=[shp1, shp2]
 title="Yellow-billed Cuckoo occurrence polygons and GAP range (1970-2018)"
 """
 !!!!!!!!!!!!!!!!!!!!!!!!
-BELOW CODE IS FROM config.MapPolygonsFromShp(), WHICH CRASHES KERNEL IN 
+BELOW CODE IS FROM config.MapPolygonsFromShp(), WHICH CRASHES KERNEL IN
 FUNCTION FORM FOR SOME UNKNOWN REASON.
 !!!!!!!!!!!!!!!!!!!!!!!!
 """
@@ -386,21 +383,21 @@ map.drawmapboundary(fill_color='aqua')
 for mapfile in map_these:
     # Add shapefiles to the map
     if mapfile['fillcolor'] == None:
-        map.readshapefile(mapfile['file'], 'mapfile', 
-                          drawbounds=mapfile['drawbounds'], 
+        map.readshapefile(mapfile['file'], 'mapfile',
+                          drawbounds=mapfile['drawbounds'],
                           linewidth=mapfile['linewidth'],
                           color=mapfile['linecolor'])
     else:
-        map.readshapefile(mapfile['file'], 'mapfile', 
+        map.readshapefile(mapfile['file'], 'mapfile',
                   drawbounds=mapfile['drawbounds'])
-        # Code for extra formatting -- filling in polygons setting border 
+        # Code for extra formatting -- filling in polygons setting border
         # color
         patches = []
         for info, shape in zip(map.mapfile_info, map.mapfile):
             patches.append(Polygon(np.array(shape), True))
-        ax.add_collection(PatchCollection(patches, 
+        ax.add_collection(PatchCollection(patches,
                                           facecolor= mapfile['fillcolor'],
                                           edgecolor=mapfile['linecolor'],
-                                          linewidths=mapfile['linewidth'], 
+                                          linewidths=mapfile['linewidth'],
                                           zorder=2))
 fig.suptitle(title, fontsize=20)
