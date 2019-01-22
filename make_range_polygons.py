@@ -19,6 +19,7 @@ sp_id = 'bybcux0'
 summary_name = 'cuckoo'
 gbif_req_id = 'r001'
 gbif_filter_id = 'f001'
+max_coordUncertainty = 10000
 
 workDir = '/Users/nmtarr/Documents/RANGES/'
 codeDir = '/Users/nmtarr/Code/Ranger/'
@@ -113,7 +114,8 @@ cursor.executescript(sql_geom)
 #                          Make Some Range Polygons
 #############################################################################
 # Function for making range_polygons
-def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, outDir, export):
+def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
+                    max_coordUncertainty, outDir, export):
     """
     Function for creating a range polygon entry in range_eval.range_polygons.
 
@@ -123,6 +125,8 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, outDir, export):
     sp_id -- species id for this project.  Must be in requests.species_concepts.
     months -- tuple of months to include.  For example: (3,4,5,6,7)
     years -- tuple of start and end years to use.  Format as (1980,2000)
+    max_coordUncertainty -- max coordinate uncertainty to allow when filtering
+                            occurrences for use in polygon delineation.
     outDir -- working directory, where to put the output.
     export -- True False whether to create a shapefile version in outDir.
     """
@@ -144,12 +148,21 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, outDir, export):
                                 method, date_created, range_4326,
                                 occurrences_4326)
                     SELECT '{0}', '{1}', '{2}', '{3}', '{5}',
-                        'concave hull', date('now'),
-                        ConcaveHull(CastToMultiPolygon(GUnion(circle_wgs84))),
-                        CastToMultiPolygon(GUnion(circle_wgs84))
+                           'concave hull', date('now'),
+                            CASE
+                            WHEN (SELECT COUNT(circle_wgs84)
+                            FROM occs.occurrences
+                            WHERE cast(strftime('%m', occurrenceDate) AS INTEGER) IN {3}
+                            AND cast(strftime('%Y', occurrenceDate) AS INTEGER) IN {4})
+                            AND coordinateUncertaintyInMeters <= {6}
+                            > 3 THEN ConcaveHull(CastToMultiPolygon(GUnion(circle_wgs84)))
+                            ELSE NULL
+                            END range_4326,
+                            CastToMultiPolygon(GUnion(circle_wgs84))
                     FROM occs.occurrences
                     WHERE cast(strftime('%m', occurrenceDate) AS INTEGER) IN {3}
-                        AND cast(strftime('%Y', occurrenceDate) AS INTEGER) IN {4};
+                        AND cast(strftime('%Y', occurrenceDate) AS INTEGER) IN {4}
+                        AND coordinateUncertaintyInMeters <= {6};
 
     /* Update the range tolerance and pad information */
     UPDATE range_polygons
@@ -171,7 +184,8 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years, outDir, export):
     DETACH DATABASE requests;
 
     DETACH DATABASE occs;
-    """.format(rng_poly_id, alias, sp_id, months, years2, years)
+    """.format(rng_poly_id, alias, sp_id, months, years2, years,
+                max_coordUncertainty)
 
     try:
         conn = sqlite3.connect(evdb)
