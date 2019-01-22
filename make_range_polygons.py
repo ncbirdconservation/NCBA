@@ -95,7 +95,7 @@ sql_rngy = """
                      months TEXT,
                      years TEXT,
                      method TEXT,
-                     max_error_meters INTEGER,
+                     max_uncertainty_meters INTEGER,
                      pad INTEGER,
                      date_created TEXT
                      );
@@ -153,25 +153,21 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
                             WHEN (SELECT COUNT(circle_wgs84)
                             FROM occs.occurrences
                             WHERE cast(strftime('%m', occurrenceDate) AS INTEGER) IN {3}
-                            AND cast(strftime('%Y', occurrenceDate) AS INTEGER) IN {4})
-                            AND coordinateUncertaintyInMeters <= {6}
-                            > 3 THEN ConcaveHull(CastToMultiPolygon(GUnion(circle_wgs84)))
+                            AND cast(strftime('%Y', occurrenceDate) AS INTEGER) IN {4}
+                            AND coordinateUncertaintyInMeters < {6})
+                            > 3 THEN ConcaveHull(CastToMultiPolygon(GUnion(circle_wgs84)),
+                                                 2, True)
                             ELSE NULL
                             END range_4326,
                             CastToMultiPolygon(GUnion(circle_wgs84))
                     FROM occs.occurrences
                     WHERE cast(strftime('%m', occurrenceDate) AS INTEGER) IN {3}
                         AND cast(strftime('%Y', occurrenceDate) AS INTEGER) IN {4}
-                        AND coordinateUncertaintyInMeters <= {6};
+                        AND coordinateUncertaintyInMeters < {6};
 
     /* Update the range tolerance and pad information */
     UPDATE range_polygons
-    SET max_error_meters = (SELECT error_tolerance
-                            FROM requests.species_concepts
-                            WHERE species_id = 'sp_id'),
-        pad = (SELECT pad
-               FROM requests.species_concepts
-               WHERE species_id = 'sp_id')
+    SET max_uncertainty_meters = {6},
     WHERE species_id = 'sp_id';
 
     /* Recover geometry */
@@ -254,7 +250,9 @@ for period in period_dict:
     print(period)
     MakeConcaveHull(rng_poly_id='rng' + period, alias=period, sp_id=sp_id,
                     months=period_dict[period],
-                    years=(1980,2018), outDir=outDir, export=True)
+                    years=(1980,2018),
+                    max_coordUncertainty=max_coordUncertainty,
+                    outDir=outDir, export=True)
 
 ################################################  DISPLAY MAPS
 ##############################################################
