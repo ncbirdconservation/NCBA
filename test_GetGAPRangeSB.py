@@ -1,40 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 16 11:31:29 2019
+def download_GAP_range_CONUS2001v1(gap_id, toDir):
+    """
+    Downloads GAP Range CONUS 2001 v1 file and returns path to the unzipped
+    file.  NOTE: doesn't include extension in returned path so that you can
+    specify if you want csv or shp or xml when you use the path.
+    """
+    import sciencebasepy
+    import os
+    import zipfile
 
-@author: nmtarr
+    # Connect
+    sb = sciencebasepy.SbSession()
 
-!!!!!!! Not working
-"""
-import sciencebasepy
-import os
-import pprint
+    # Search for gap range item in ScienceBase
+    gap_id = gap_id[0] + gap_id[1:5].upper() + gap_id[5]
+    item_search = '{0}_CONUS_2001v1 Range Map'.format(gap_id)
+    items = sb.find_items_by_any_text(item_search)
 
-sp_id = 'bybcux0'
-summary_name = 'cuckoo'
-gbif_req_id = 'r001'
-gbif_filter_id = 'f001'
-gap_id = 'bybcux'
+    # Get a public item.  No need to log in.
+    rng =  items['items'][0]['id']
+    item_json = sb.get_item(rng)
+    get_files = sb.get_item_files(item_json, toDir)
 
-workDir = '/Users/nmtarr/Documents/RANGES/'
-codeDir = '/Users/nmtarr/Code/Ranger/'
-inDir = workDir + 'Inputs/'
-outDir = workDir + 'Outputs/'
+    # Unzip
+    rng_zip = toDir + item_json['files'][0]['name']
+    zip_ref = zipfile.ZipFile(rng_zip, 'r')
+    zip_ref.extractall(toDir)
+    zip_ref.close()
 
-########################################################
-sb = sciencebasepy.SbSession()
+    # Return path to range file without extension
+    return rng_zip.replace('.zip', '')
 
-# Search for gap range item in ScienceBase
-gap_id = gap_id[0] + gap_id[1:5].upper() + gap_id[5]
-item_search = '{0}_CONUS_2001v1 Range Map'.format(gap_id)
-items = sb.find_items_by_any_text(item_search)
-
-# Get a public item.  No need to log in.
-item_json = sb.get_item(items['items'][0]['id'])
-ret = sb.get_item_files(items['items'][0]['id'], inDir)
-
-    
-
-    
-
+workDir = '/Users/nmtarr/Documents/RANGES/Inputs/'
+file_path = download_GAP_range_CONUS2001v1(gap_id='bAMROx', toDir = workDir)
