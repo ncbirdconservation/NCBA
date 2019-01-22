@@ -8,7 +8,7 @@ Created on Tue Jan 15 11:03:56 2019
 Description: Use occurrence polygons to evaluate GAP range maps.
 
 TO DO:
-1.  max_error_meters -> error_tolerance
+1. max_error_meters -> error_tolerance
 2  remove pad?
 3. filter out records with large coordinate uncertainty
 """
@@ -71,8 +71,8 @@ pad = concept[5]
 #############################################################################
 # Delete the database if it already exists
 evdb = outDir + 'range_eval.sqlite'
-#if os.path.exists(evdb):
-#    os.remove(evdb)
+if os.path.exists(evdb):
+    os.remove(evdb)
 
 # Create or connect to the database
 conn = sqlite3.connect(evdb)
@@ -82,11 +82,11 @@ conn.execute('SELECT load_extension("mod_spatialite")')
 cursor = conn.cursor()
 
 # Make db spatial
-#cursor.execute('SELECT InitSpatialMetadata();')
+cursor.execute('SELECT InitSpatialMetadata();')
 
 sql_rngy = """
         /* Make a table for storing range maps for unique species-time period
-           combinations, WITH GEOMETRY */
+           combinations, needs GEOMETRY */
         CREATE TABLE IF NOT EXISTS range_polygons (
                      rng_polygon_id TEXT NOT NULL PRIMARY KEY,
                      alias TEXT UNIQUE,
@@ -101,12 +101,12 @@ sql_rngy = """
             """
 cursor.executescript(sql_rngy)
 
-#sql_geom = """SELECT AddGeometryColumn('range_polygons', 'range_4326', 4326,
-#                         'MULTIPOLYGON', 'XY');
-#
-#              SELECT AddGeometryColumn('range_polygons', 'occurrences_4326', 4326,
-#                         'MULTIPOLYGON', 'XY');"""
-#cursor.executescript(sql_geom)
+sql_geom = """SELECT AddGeometryColumn('range_polygons', 'range_4326', 4326,
+                         'MULTIPOLYGON', 'XY');
+
+              SELECT AddGeometryColumn('range_polygons', 'occurrences_4326', 4326,
+                         'MULTIPOLYGON', 'XY');"""
+cursor.executescript(sql_geom)
 
 
 #############################################################################
@@ -235,6 +235,7 @@ period_dict = {"summer": '(5,6,7,8)',
                "spring": '(3,4,5)',
                "fall": '(8,9,10,11)',
                "yearly": '(1,2,3,4,5,6,7,8,9,10,11,12)'}
+
 for period in period_dict:
     print(period)
     MakeConcaveHull(rng_poly_id='rng' + period, alias=period, sp_id=sp_id,
