@@ -115,7 +115,7 @@ cursor.executescript(sql_geom)
 #############################################################################
 # Function for making range_polygons
 def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
-                    max_coordUncertainty, outDir, export):
+                    max_uncertainty, outDir, export):
     """
     Function for creating a range polygon entry in range_eval.range_polygons.
 
@@ -125,7 +125,7 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
     sp_id -- species id for this project.  Must be in requests.species_concepts.
     months -- tuple of months to include.  For example: (3,4,5,6,7)
     years -- tuple of start and end years to use.  Format as (1980,2000)
-    max_coordUncertainty -- max coordinate uncertainty to allow when filtering
+    max_uncertainty -- max coordinate uncertainty to allow when filtering
                             occurrences for use in polygon delineation.
     outDir -- working directory, where to put the output.
     export -- True False whether to create a shapefile version in outDir.
@@ -156,7 +156,7 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
                             AND cast(strftime('%Y', occurrenceDate) AS INTEGER) IN {4}
                             AND coordinateUncertaintyInMeters < {6})
                             > 3 THEN ConcaveHull(CastToMultiPolygon(GUnion(circle_wgs84)),
-                                                 2, True)
+                                                 1, True)
                             ELSE NULL
                             END range_4326,
                             CastToMultiPolygon(GUnion(circle_wgs84))
@@ -167,8 +167,7 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
 
     /* Update the range tolerance and pad information */
     UPDATE range_polygons
-    SET max_uncertainty_meters = {6},
-    WHERE species_id = 'sp_id';
+    SET max_uncertainty_meters = '{6}';
 
     /* Recover geometry */
     SELECT RecoverGeometryColumn('range_polygons', 'range_4326', 4326,
@@ -195,7 +194,6 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
     except Exception as e:
         print(e)
         print(sql)
-
 
     if export == True:
         sqlExp = """
@@ -234,10 +232,13 @@ month_dict = {'january': '(1)', 'february':'(2)', 'march':'(3)', 'april':'(4)',
               'may':'(5)', 'june':'(6)', 'july':'(7)', 'august':'(8)',
               'september':'(9)', 'october':'(10)', 'november':'(11)',
               'december':'(12)'}
-#for month in list(month_dict.keys())[4:5]:
-#    MakeConcaveHull(rng_poly_id='rng' + month, alias=month, sp_id=sp_id,
-#                months=month_dict[month],
-#                years=(1980,2018), outDir=outDir, export=False)
+for month in list(month_dict.keys()):
+    print(month)
+    MakeConcaveHull(rng_poly_id='rng' + month, alias=month, sp_id=sp_id,
+                    months=month_dict[month],
+                    years=(1980,2018),
+                    max_uncertainty=max_coordUncertainty,
+                    outDir=outDir, export=True)
 
 # Make range shapefiles for each season, display them too
 period_dict = {"summer": '(5,6,7,8)',
@@ -251,7 +252,7 @@ for period in period_dict:
     MakeConcaveHull(rng_poly_id='rng' + period, alias=period, sp_id=sp_id,
                     months=period_dict[period],
                     years=(1980,2018),
-                    max_coordUncertainty=max_coordUncertainty,
+                    max_uncertainty=max_coordUncertainty,
                     outDir=outDir, export=True)
 
 ################################################  DISPLAY MAPS
