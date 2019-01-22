@@ -10,6 +10,7 @@ Description: Use occurrence polygons to evaluate GAP range maps.
 TO DO:
 1. max_error_meters -> error_tolerance
 2  remove pad?
+3. Only make month and season polygons if species is migratory.
 """
 #############################################################################
 #                               Configuration
@@ -19,6 +20,7 @@ summary_name = 'cuckoo'
 gbif_req_id = 'r001'
 gbif_filter_id = 'f001'
 max_coordUncertainty = 10000
+year_range = (1980,2018)
 
 workDir = '/Users/nmtarr/Documents/RANGES/'
 codeDir = '/Users/nmtarr/Code/Ranger/'
@@ -54,7 +56,7 @@ os.chdir(codeDir)
 conn2 = sqlite3.connect(inDir + 'requests.sqlite')
 cursor2 = conn2.cursor()
 sql_tax = """SELECT gbif_id, common_name, scientific_name,
-                    error_tolerance, gap_id, pad
+                    error_tolerance, gap_id, pad, migratory
              FROM species_concepts
              WHERE species_id = '{0}';""".format(sp_id)
 concept = cursor2.execute(sql_tax).fetchall()[0]
@@ -64,6 +66,7 @@ scientific_name = concept[2]
 error_toler = concept[3]
 gap_id = concept[4]
 pad = concept[5]
+migratory = concept[6]
 
 
 #############################################################################
@@ -229,18 +232,20 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
 
     return
 
-# Make occurrence shapefiles for each month
+# Make occurrence shapefiles for each month, if migratory
 month_dict = {'january': '(1)', 'february':'(2)', 'march':'(3)', 'april':'(4)',
               'may':'(5)', 'june':'(6)', 'july':'(7)', 'august':'(8)',
               'september':'(9)', 'october':'(10)', 'november':'(11)',
               'december':'(12)'}
-for month in list(month_dict.keys()):
-    print(month)
-    MakeConcaveHull(rng_poly_id='rng' + month, alias=month, sp_id=sp_id,
-                    months=month_dict[month],
-                    years=(1980,2018),
-                    max_uncertainty=max_coordUncertainty,
-                    outDir=outDir, export=True)
+
+if migratory == 1:
+    for month in list(month_dict.keys()):
+        print(month)
+        MakeConcaveHull(rng_poly_id='rng' + month, alias=month, sp_id=sp_id,
+                        months=month_dict[month],
+                        years=year_range,
+                        max_uncertainty=max_coordUncertainty,
+                        outDir=outDir, export=True)
 
 # Make range shapefiles for each season, display them too
 period_dict = {"summer": '(5,6,7,8)',
@@ -249,14 +254,20 @@ period_dict = {"summer": '(5,6,7,8)',
                "fall": '(8,9,10,11)',
                "yearly": '(1,2,3,4,5,6,7,8,9,10,11,12)'}
 
-for period in period_dict:
-    print(period)
-    MakeConcaveHull(rng_poly_id='rng' + period, alias=period, sp_id=sp_id,
-                    months=period_dict[period],
-                    years=(1980,2018),
+if migratory == 1:
+    for period in period_dict:
+        print(period)
+        MakeConcaveHull(rng_poly_id='rng' + period, alias=period, sp_id=sp_id,
+                        months=period_dict[period],
+                        years=year_range,
+                        max_uncertainty=max_coordUncertainty,
+                        outDir=outDir, export=True)
+else:
+    MakeConcaveHull(rng_poly_id='rng' + 'yearly', alias='yearly', sp_id=sp_id,
+                    months=period_dict['yearly'],
+                    years=year_range,
                     max_uncertainty=max_coordUncertainty,
                     outDir=outDir, export=True)
-
 
 #############################################################################
 #                    Display Seasonal Range Maps
