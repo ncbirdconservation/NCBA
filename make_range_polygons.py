@@ -8,9 +8,8 @@ Created on Tue Jan 15 11:03:56 2019
 Description: Use occurrence polygons to evaluate GAP range maps.
 
 TO DO:
-1. max_error_meters -> error_tolerance
+1. max_error_meters -> spatial_error_tolerance
 2  remove pad?
-3. Only make month and season polygons if species is migratory.
 """
 #############################################################################
 #                               Configuration
@@ -238,7 +237,7 @@ month_dict = {'january': '(1)', 'february':'(2)', 'march':'(3)', 'april':'(4)',
               'september':'(9)', 'october':'(10)', 'november':'(11)',
               'december':'(12)'}
 
-if migratory == 1:
+if migratory == '1':
     for month in list(month_dict.keys()):
         print(month)
         MakeConcaveHull(rng_poly_id='rng' + month, alias=month, sp_id=sp_id,
@@ -254,7 +253,7 @@ period_dict = {"summer": '(5,6,7,8)',
                "fall": '(8,9,10,11)',
                "yearly": '(1,2,3,4,5,6,7,8,9,10,11,12)'}
 
-if migratory == 1:
+if migratory == "1":
     for period in period_dict:
         print(period)
         MakeConcaveHull(rng_poly_id='rng' + period, alias=period, sp_id=sp_id,
@@ -268,6 +267,7 @@ else:
                     years=year_range,
                     max_uncertainty=max_coordUncertainty,
                     outDir=outDir, export=True)
+
 
 #############################################################################
 #                    Display Seasonal Range Maps
