@@ -11,26 +11,24 @@ created for work in this repository) and a range shapefile.
 The primary use of code like this would be range evaluation and revision.
 
 Unresolved issues:
-1. How can overlap be handled?  As is, occurrence circles overlaping huc
-   boundaries are omitted.  Set a tolerable level of spatial error?
-2. Can the final shapefile be dissolved?
-   Code to try:
-   """Select f.field1 as field1, st_unaryunion(st_collect(f.geometry)) as geometry
-   From tableA as f
-   Group by field1;"""
 3. Can the runtime be improved with spatial indexing?  Minimum bounding rectangle?
 4. ".import" has to be worked around when this goes into python.
 5. Locations of huc files.
-6. Documenting evaluation parameters (spatial error allowed, spatial relationship
-   rules.)
+6. Add month and year filters
+
+
 */
 
 .headers on
 .mode csv
 ATTACH DATABASE '/users/nmtarr/documents/ranges/outputs/bybcux0_occurrences.sqlite'
-            AS occs;
+                AS occs;
 
-ATTACH DATABASE '/users/nmtarr/documents/ranges/inputs/requests.sqlite' AS requests;
+ATTACH DATABASE '/users/nmtarr/documents/ranges/inputs/requests.sqlite'
+                AS requests;
+
+ATTACH DATABASE '/users/nmtarr/documents/ranges/inputs/gap_range_evaluations.sqlite'
+                AS evals;
 
 SELECT load_extension('mod_spatialite');
 
@@ -38,27 +36,24 @@ SELECT load_extension('mod_spatialite');
                              Assess Agreement
  ############################################################################*/
 
-/*#################  How many overlapping circles to attribute?
-#############################################################*/
-/*  Table of overlaping circles and hucs */
-DROP TABLE green;
-
-CREATE TABLE green AS
+ /*##########################  Which HUCs contain an occurrence?
+ #############################################################*/
+/*  Intersect occurrence circles with hucs */
+CREATE TABLE tmpgreen AS
               SELECT shucs.HUC12RNG, ox.occ_id,
               CastToMultiPolygon(Intersection(shucs.geom_102008, ox.circle_albers))
                   AS geom_102008
               FROM shucs, occs.occurrences as ox
-              WHERE Intersects(shucs.geom_102008, ox.circle_albers);
+              WHERE Intersects(shucs.geom_102008, ox.circle_albers)
+                    AND strftime('%m', ox.occurrenceDate) IN
+                    (SELECT months FROM evals.evaluations WHERE id = 'eval_gbif1')
+                    AND strftime('%Y', ox.occurrenceDate) IN
+                    (SELECT years FROM evals.evaluations WHERE id = 'eval_gbif1');
 
 SELECT RecoverGeometryColumn('green', 'geom_102008', 102008, 'MULTIPOLYGON', 'XY');
 
-/* Export maps */
-SELECT ExportSHP('green', 'geom_102008',
-                 '/users/nmtarr/documents/ranges/green',
-                 'utf-8');
-
-/* Get a table of huc12 codes with count of occurrence circles with
-a suitable proportion (error tolerance) of the circle within the huc */
+/* In light of the error tolerance for the species, which occurrences can
+   be attributed to a huc?  */
 CREATE TABLE orange AS
   SELECT green.HUC12RNG, green.occ_id,
          100 * (Area(green.geom_102008) / Area(ox.circle_albers))
@@ -67,8 +62,8 @@ CREATE TABLE orange AS
        LEFT JOIN occs.occurrences AS ox
        ON green.occ_id = ox.occ_id
   WHERE proportion_circle BETWEEN (100 - (SELECT error_tolerance
-                                          FROM requests.species_concepts
-                                          WHERE species_id = 'bybcux0'))
+                                          FROM evals.evaluations
+                                          WHERE id= 'eval_gbif1'))
                                   AND 100;
 
 /*  How many occurrences in each huc that had an occurrence? */
@@ -82,17 +77,12 @@ SET eval_gbif1_cnt = (SELECT COUNT(occ_id)
 
 
 /*  Find hucs that contained gbif occurrences, but were not in gaprange and
-insert them into sp_range as new records */
+insert them into sp_range as new records.  Record the occurrence count */
 INSERT INTO sp_range (strHUC12RNG, eval_gbif1_cnt)
             SELECT orange.HUC12RNG, COUNT(occ_id)
             FROM orange LEFT JOIN sp_range ON sp_range.strHUC12RNG = orange.HUC12RNG
             WHERE sp_range.strHUC12RNG IS NULL
             GROUP BY orange.HUC12RNG;
-
-
-
-
-
 
 
 /*############################  Does HUC contain an occurrence?
@@ -104,8 +94,8 @@ of the pad for the species. */
 UPDATE sp_range
 SET eval_gbif1 = 1
 WHERE eval_gbif1_cnt >= (SELECT pad
-                        FROM requests.species_concepts
-                        WHERE species_id = 'bybcux0');
+                        FROM eval.evaluations
+                        WHERE id = 'eval_gbif1');
 
 
 /*  For new records, put zeros in GAP range attribute fields  */
@@ -134,15 +124,16 @@ WHERE eval_gbif1 = 1;
  ############################################################################*/
 /*  Create a version of sp_range with geometry  */
 CREATE TABLE sp_geom AS
-              SELECT sp_range.*, shucs.geom_102008
+              SELECT sp_range.*, shucs.geom_102008 AS geom_4326
               FROM sp_range LEFT JOIN shucs ON sp_range.strHUC12RNG = shucs.HUC12RNG;
-SELECT RecoverGeometryColumn('sp_geom', 'geom_102008', 102008, 'POLYGON');
+
+SELECT RecoverGeometryColumn('sp_geom', 'geom_4326', 4326, 'POLYGON');
 
 /* Export maps */
-SELECT ExportSHP('sp_geom', 'geom_102008',
-                 '/users/nmtarr/documents/ranges/bYBCUx_CONUS_Range_2001v1_eval2',
+SELECT ExportSHP('sp_geom', 'geom_4326',
+                 '/users/nmtarr/documents/ranges/outputs/bYBCUx_CONUS_Range_2001v1_eval',
                  'utf-8');
 
 /* Export csv */
-.output /users/nmtarr/documents/ranges/bYBCUx_CONUS_Range_2001v1_eval.csv
+.output /users/nmtarr/documents/ranges/outputs/bYBCUx_CONUS_Range_2001v1_eval.csv
 SELECT * FROM sp_range;
