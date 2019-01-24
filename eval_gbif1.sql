@@ -37,11 +37,7 @@ SELECT load_extension('mod_spatialite');
 /*#############################################################################
                              Assess Agreement
  ############################################################################*/
-/*
-Add a column to store gbif evaluation result - meaning, does the huc
-completely contain an occurrence circle?  Circles that overlap huc boundaries
-are left out of this, but could possibly be added later
-*/
+
 /*######################################  How many occurrences inside each huc?
 #############################################################################*/
 /*  Make table of circles contained within a huc */
@@ -51,7 +47,7 @@ CREATE TABLE blue AS
               WHERE Contains(shucs.geom_102008, ox.circle_albers);
 
 /*  How many occurrences in each huc that had an occurrence? */
-ALTER TABLE sp_range ADD COLUMN eval_gbif1_cnt INTEGER DEFAULT 0;
+ALTER TABLE sp_range ADD COLUMN eval_gbif1_cnt INTEGER;
 
 UPDATE sp_range
 SET eval_gbif1_cnt = (SELECT COUNT(geom_102008)
@@ -68,28 +64,31 @@ INSERT INTO sp_range (strHUC12RNG, eval_gbif1_cnt)
             GROUP BY blue.HUC12RNG;
 
 
-
 /*############################################  Does HUC contain an occurrence?
 #############################################################################*/
-/*ALTER TABLE sp_range ADD COLUMN eval_gbif1 INTEGER;*/
+ALTER TABLE sp_range ADD COLUMN eval_gbif1 INTEGER;
 
 /*  Record in sp_range that gap and gbif agreed on species presence, in light
-    of the pad for the species. */
+of the pad for the species. */
 UPDATE sp_range
 SET eval_gbif1 = 1
-WHERE eval_gbif1_cnt >= SELECT pad
+WHERE eval_gbif1_cnt >= (SELECT pad
                         FROM requests.species_concepts
-                        WHERE species_id = 'bybcux0';
+                        WHERE species_id = 'bybcux0');
+
 
 /*  For new records, put zeros in GAP range attribute fields  */
 UPDATE sp_range
 SET intGAPOrigin = 0,
     intGAPPresence = 0,
     intGAPReproduction = 0,
-    intGAPSeason = 0
-WHERE eval_gbif1 = 0;
+    intGAPSeason = 0,
+    eval_gbif1 = 0
+WHERE eval_gbif1_cnt >= 0 AND intGAPOrigin IS NULL;
 
 
+/*###########################################################  Validaton column
+#############################################################################*/
 /*  Populate a validation column.  If an evaluation supports the GAP ranges
 then it is validated */
 ALTER TABLE sp_range ADD COLUMN validated_presence INTEGER NOT NULL DEFAULT 0;

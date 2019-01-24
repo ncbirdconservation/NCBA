@@ -1,12 +1,18 @@
+.mode csv
+
+ATTACH DATABASE '/users/nmtarr/documents/ranges/outputs/bybcux_range.sqlite'
+                AS rangeDB;
+
 SELECT load_extension('mod_spatialite');
 
+SELECT InitSpatialMetadata();
 
 /*#############################################################################
                                  Load Tables
  ############################################################################*/
 /* Add the hucs shapefile to the db. */
-SELECT ImportSHP('/users/nmtarr/data/SHUCS', 'shucs', 'utf-8', 102008, 'geom_102008',
-                 'HUC12RNG', 'POLYGON');
+SELECT ImportSHP('/users/nmtarr/data/SHUCS', 'shucs', 'utf-8', 102008, 
+                 'geom_102008', 'HUC12RNG', 'POLYGON');
 
 /* Load the GAP range csv, filter out some columns, rename others */
 .import /users/nmtarr/Documents/ranges/inputs/bYBCUx_CONUS_Range_2001v1.csv sp_range
