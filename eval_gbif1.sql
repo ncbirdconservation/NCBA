@@ -36,7 +36,8 @@ SELECT load_extension('mod_spatialite');
                              Assess Agreement
  ############################################################################*/
 
- /*##########################  Which HUCs contain an occurrence?
+
+ /*#########################  Which HUCs contain an occurrence?
  #############################################################*/
 /*  Intersect occurrence circles with hucs */
 CREATE TABLE tmpgreen AS
