@@ -64,6 +64,23 @@ INSERT INTO sp_range (strHUC12RNG, eval_gbif1_cnt)
             GROUP BY blue.HUC12RNG;
 
 
+/*#################################  How many overlapping circles to attribute?
+#############################################################################*/
+/*  Table of intersection of overlaping circles and hucs */
+CREATE TABLE green AS
+              SELECT shucs.HUC12RNG, shucs.geom_102008, ox.circle_albers
+              FROM shucs, occs.occurrences as ox
+              WHERE Overlaps(shucs.geom_102008, ox.circle_albers);
+
+
+/*  Find hucs that intersected gbif occurrences, but were not in gaprange and
+insert them into sp_range as new records */
+INSERT INTO sp_range (strHUC12RNG, eval_gbif1_cnt)
+            SELECT blue.HUC12RNG, COUNT(geom_102008)
+            FROM blue LEFT JOIN sp_range ON sp_range.strHUC12RNG = blue.HUC12RNG
+            WHERE sp_range.strHUC12RNG IS NULL
+            GROUP BY blue.HUC12RNG;
+
 /*############################################  Does HUC contain an occurrence?
 #############################################################################*/
 ALTER TABLE sp_range ADD COLUMN eval_gbif1 INTEGER;
@@ -109,7 +126,8 @@ SELECT RecoverGeometryColumn('sp_geom', 'geom_102008', 102008, 'POLYGON');
 
 /* Export maps */
 SELECT ExportSHP('sp_geom', 'geom_102008',
-                 '/users/nmtarr/documents/ranges/bYBCUx_CONUS_Range_2001v1_eval', 'utf-8');
+                 '/users/nmtarr/documents/ranges/bYBCUx_CONUS_Range_2001v1_eval',
+                 'utf-8');
 
 /* Export csv */
 .output /users/nmtarr/documents/ranges/bYBCUx_CONUS_Range_2001v1_eval.csv
