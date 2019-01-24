@@ -38,51 +38,65 @@ SELECT load_extension('mod_spatialite');
                              Assess Agreement
  ############################################################################*/
 
-/*######################################  How many occurrences inside each huc?
-#############################################################################*/
-/*  Make table of circles contained within a huc */
-CREATE TABLE blue AS
-              SELECT shucs.HUC12RNG, shucs.geom_102008
+/*#################  How many overlapping circles to attribute?
+#############################################################*/
+/*  Table of overlaping circles and hucs */
+DROP TABLE green;
+
+CREATE TABLE green AS
+              SELECT shucs.HUC12RNG, ox.occ_id,
+              CastToMultiPolygon(Intersection(shucs.geom_102008, ox.circle_albers))
+                  AS geom_102008
               FROM shucs, occs.occurrences as ox
-              WHERE Contains(shucs.geom_102008, ox.circle_albers);
+              WHERE Intersects(shucs.geom_102008, ox.circle_albers);
+
+SELECT RecoverGeometryColumn('green', 'geom_102008', 102008, 'MULTIPOLYGON', 'XY');
+
+/* Export maps */
+SELECT ExportSHP('green', 'geom_102008',
+                 '/users/nmtarr/documents/ranges/green',
+                 'utf-8');
+
+/* Get a table of huc12 codes with count of occurrence circles with
+a suitable proportion (error tolerance) of the circle within the huc */
+CREATE TABLE orange AS
+  SELECT green.HUC12RNG, green.occ_id,
+         100 * (Area(green.geom_102008) / Area(ox.circle_albers))
+            AS proportion_circle
+  FROM green
+       LEFT JOIN occs.occurrences AS ox
+       ON green.occ_id = ox.occ_id
+  WHERE proportion_circle BETWEEN (100 - (SELECT error_tolerance
+                                          FROM requests.species_concepts
+                                          WHERE species_id = 'bybcux0'))
+                                  AND 100;
 
 /*  How many occurrences in each huc that had an occurrence? */
 ALTER TABLE sp_range ADD COLUMN eval_gbif1_cnt INTEGER;
 
 UPDATE sp_range
-SET eval_gbif1_cnt = (SELECT COUNT(geom_102008)
-                      FROM blue
+SET eval_gbif1_cnt = (SELECT COUNT(occ_id)
+                      FROM orange
                       WHERE HUC12RNG = sp_range.strHUC12RNG
                       GROUP BY HUC12RNG);
+
 
 /*  Find hucs that contained gbif occurrences, but were not in gaprange and
 insert them into sp_range as new records */
 INSERT INTO sp_range (strHUC12RNG, eval_gbif1_cnt)
-            SELECT blue.HUC12RNG, COUNT(geom_102008)
-            FROM blue LEFT JOIN sp_range ON sp_range.strHUC12RNG = blue.HUC12RNG
+            SELECT orange.HUC12RNG, COUNT(occ_id)
+            FROM orange LEFT JOIN sp_range ON sp_range.strHUC12RNG = orange.HUC12RNG
             WHERE sp_range.strHUC12RNG IS NULL
-            GROUP BY blue.HUC12RNG;
+            GROUP BY orange.HUC12RNG;
 
 
-/*#################################  How many overlapping circles to attribute?
-#############################################################################*/
-/*  Table of intersection of overlaping circles and hucs */
-CREATE TABLE green AS
-              SELECT shucs.HUC12RNG, shucs.geom_102008, ox.circle_albers
-              FROM shucs, occs.occurrences as ox
-              WHERE Overlaps(shucs.geom_102008, ox.circle_albers);
 
 
-/*  Find hucs that intersected gbif occurrences, but were not in gaprange and
-insert them into sp_range as new records */
-INSERT INTO sp_range (strHUC12RNG, eval_gbif1_cnt)
-            SELECT blue.HUC12RNG, COUNT(geom_102008)
-            FROM blue LEFT JOIN sp_range ON sp_range.strHUC12RNG = blue.HUC12RNG
-            WHERE sp_range.strHUC12RNG IS NULL
-            GROUP BY blue.HUC12RNG;
 
-/*############################################  Does HUC contain an occurrence?
-#############################################################################*/
+
+
+/*############################  Does HUC contain an occurrence?
+#############################################################*/
 ALTER TABLE sp_range ADD COLUMN eval_gbif1 INTEGER;
 
 /*  Record in sp_range that gap and gbif agreed on species presence, in light
@@ -104,8 +118,8 @@ SET intGAPOrigin = 0,
 WHERE eval_gbif1_cnt >= 0 AND intGAPOrigin IS NULL;
 
 
-/*###########################################################  Validaton column
-#############################################################################*/
+/*###########################################  Validaton column
+#############################################################*/
 /*  Populate a validation column.  If an evaluation supports the GAP ranges
 then it is validated */
 ALTER TABLE sp_range ADD COLUMN validated_presence INTEGER NOT NULL DEFAULT 0;
@@ -126,7 +140,7 @@ SELECT RecoverGeometryColumn('sp_geom', 'geom_102008', 102008, 'POLYGON');
 
 /* Export maps */
 SELECT ExportSHP('sp_geom', 'geom_102008',
-                 '/users/nmtarr/documents/ranges/bYBCUx_CONUS_Range_2001v1_eval',
+                 '/users/nmtarr/documents/ranges/bYBCUx_CONUS_Range_2001v1_eval2',
                  'utf-8');
 
 /* Export csv */
