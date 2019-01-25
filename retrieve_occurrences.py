@@ -40,7 +40,7 @@ gbif_req_id = 'r001'
 gbif_filter_id = 'f001'
 
 workDir = '/Users/nmtarr/Documents/RANGES/'
-codeDir = '/Users/nmtarr/Code/Ranger/'
+codeDir = '/Users/nmtarr/Code/range_map_evaluation/'
 inDir = workDir + 'Inputs/'
 outDir = workDir + 'Outputs/'
 # Used in file names for output.
@@ -58,7 +58,6 @@ import sciencebasepy
 from pygbif import occurrences
 import os
 os.chdir('/')
-os.chdir(codeDir)
 import config
 
 
@@ -67,7 +66,7 @@ import config
 #############################################################################
 os.chdir(codeDir)
 # Get species info from requests database
-conn2 = sqlite3.connect(inDir + 'requests.sqlite')
+conn2 = sqlite3.connect(inDir + 'rng_eval_params.sqlite')
 cursor2 = conn2.cursor()
 sql_tax = """SELECT gbif_id, common_name, scientific_name,
                     detection_distance_meters, gap_id
@@ -388,7 +387,7 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import PathPatch
 
-shp1 = {'file': 'gap_range',
+shp1 = {'file': gap_range,
         'drawbounds': False, 'linewidth': .5, 'linecolor': 'y',
         'fillcolor': 'y'}
 

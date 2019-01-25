@@ -13,8 +13,9 @@ The primary use of code like this would be range evaluation and revision.
 Unresolved issues:
 3. Can the runtime be improved with spatial indexing?  Minimum bounding rectangle?
 4. ".import" has to be worked around when this goes into python.
-5. Locations of huc files.
-6. Add month and year filters
+5. Locations of huc files. -- can sciencebase be used?
+6. Add month and year filters - they are currently hard-coded but need to come
+   from queries of rng_eval_params.evaluations.
 */
 
 .headers on
@@ -34,14 +35,21 @@ SELECT load_extension('mod_spatialite');
  /*#########################  Which HUCs contain an occurrence?
  #############################################################*/
 /*  Intersect occurrence circles with hucs */
-CREATE TABLE tmpgreen AS
+CREATE TABLE green AS
               SELECT shucs.HUC12RNG, ox.occ_id,
               CastToMultiPolygon(Intersection(shucs.geom_102008,
                                               ox.circle_albers)) AS geom_102008
-              FROM shucs, occs.occurrences as ox
-              WHERE Intersects(shucs.geom_102008, ox.circle_albers);
+              FROM shucs, occs.occurrences AS ox
+              WHERE Intersects(shucs.geom_102008, ox.circle_albers)
+                AND Cast(strftime('%m', ox.occurrenceDate) AS INTEGER) IN
+                (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
+                AND Cast(strftime('%Y', ox.occurrenceDate) AS INTEGER) IN (1990,
+                    1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
+                    2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+                    2011, 2012, 2013, 2014, 2015);
 
-SELECT RecoverGeometryColumn('green', 'geom_102008', 102008, 'MULTIPOLYGON', 'XY');
+SELECT RecoverGeometryColumn('green', 'geom_102008', 102008, 'MULTIPOLYGON',
+                             'XY');
 
 /* In light of the error tolerance for the species, which occurrences can
    be attributed to a huc?  */
