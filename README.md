@@ -45,4 +45,4 @@ None at this time
 Python 3 and numerous packages including sqlite3 with the spatialite extension.  An environment can be created from the .yml file included in this repository.
 
 ## Code
-All code is included in this repository.  
+All code is included in this repository.  Runtimes of discrete tasks made grouping code into separate scripts preferable.  A demonstration and explanation of the scripts' general features are included in the demonstration.ipynb.
