@@ -15,8 +15,6 @@ Unresolved issues:
 4. ".import" has to be worked around when this goes into python.
 5. Locations of huc files.
 6. Add month and year filters
-
-
 */
 
 .headers on
@@ -24,11 +22,8 @@ Unresolved issues:
 ATTACH DATABASE '/users/nmtarr/documents/ranges/outputs/bybcux0_occurrences.sqlite'
                 AS occs;
 
-ATTACH DATABASE '/users/nmtarr/documents/ranges/inputs/requests.sqlite'
-                AS requests;
-
-ATTACH DATABASE '/users/nmtarr/documents/ranges/inputs/gap_range_evaluations.sqlite'
-                AS evals;
+ATTACH DATABASE '/users/nmtarr/documents/ranges/inputs/rng_eval_params.sqlite'
+                AS params;
 
 SELECT load_extension('mod_spatialite');
 
@@ -36,20 +31,15 @@ SELECT load_extension('mod_spatialite');
                              Assess Agreement
  ############################################################################*/
 
-
  /*#########################  Which HUCs contain an occurrence?
  #############################################################*/
 /*  Intersect occurrence circles with hucs */
 CREATE TABLE tmpgreen AS
               SELECT shucs.HUC12RNG, ox.occ_id,
-              CastToMultiPolygon(Intersection(shucs.geom_102008, ox.circle_albers))
-                  AS geom_102008
+              CastToMultiPolygon(Intersection(shucs.geom_102008,
+                                              ox.circle_albers)) AS geom_102008
               FROM shucs, occs.occurrences as ox
-              WHERE Intersects(shucs.geom_102008, ox.circle_albers)
-                    AND strftime('%m', ox.occurrenceDate) IN
-                    (SELECT months FROM evals.evaluations WHERE id = 'eval_gbif1')
-                    AND strftime('%Y', ox.occurrenceDate) IN
-                    (SELECT years FROM evals.evaluations WHERE id = 'eval_gbif1');
+              WHERE Intersects(shucs.geom_102008, ox.circle_albers);
 
 SELECT RecoverGeometryColumn('green', 'geom_102008', 102008, 'MULTIPOLYGON', 'XY');
 
@@ -63,7 +53,7 @@ CREATE TABLE orange AS
        LEFT JOIN occs.occurrences AS ox
        ON green.occ_id = ox.occ_id
   WHERE proportion_circle BETWEEN (100 - (SELECT error_tolerance
-                                          FROM evals.evaluations
+                                          FROM params.evaluations
                                           WHERE id= 'eval_gbif1'))
                                   AND 100;
 
