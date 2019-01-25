@@ -5,7 +5,9 @@ Created on Tue Jan 15 11:03:56 2019
 
 @author: nmtarr
 
-Description: Use occurrence polygons to evaluate GAP range maps.
+Description: Generates range delineations based upon the retrievd and filtered
+occurrence records.  Each map is saved as a row in a table with geometry.
+Runs so far have produced worthless results because of scarcity of records.
 
 TO DO:
 1. max_error_meters -> spatial_error_tolerance
@@ -326,7 +328,3 @@ for period in list(season_colors.keys()):
                                               zorder=2))
     fig.suptitle(title, fontsize=20)
 """
-
-#############################################################################
-#                          Insert GAP Range Map
-#############################################################################

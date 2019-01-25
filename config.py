@@ -4,6 +4,11 @@
 Created on Wed Dec 19 20:52:42 2018
 
 @author: nmtarr
+
+Description:  A place to store variables and functions that are the same
+throughout the repo.
+
+!!!!!!!!!!!!!!!!!!!!! CURRENTLY INACTIVE
 """
 species = 'Coccyzus americanus'
 sp_id = 'bYBCUx0'
@@ -22,12 +27,12 @@ def MapPolygonsFromSHP(map_these, title):
     (dict, str) -> displays maps, returns matplotlib.pyplot figure
 
     Arguments:
-    map_these -- list of dictionaries for shapefiles you want to display in 
+    map_these -- list of dictionaries for shapefiles you want to display in
                 CONUS. Each dictionary should have the following format:
-                    {'file': '/path/to/your/shapfile', 
+                    {'file': '/path/to/your/shapfile',
                     'linecolor': 'k',
-                    'fillcolor': 'k', 
-                    'linewidth': 1, 
+                    'fillcolor': 'k',
+                    'linewidth': 1,
                     'drawbounds': True}
     title -- title for the map.
     """
@@ -53,28 +58,28 @@ def MapPolygonsFromSHP(map_these, title):
     for mapfile in map_these:
         # Add shapefiles to the map
         if mapfile['fillcolor'] == None:
-            map.readshapefile(mapfile['file'], 'mapfile', 
-                              drawbounds=mapfile['drawbounds'], 
+            map.readshapefile(mapfile['file'], 'mapfile',
+                              drawbounds=mapfile['drawbounds'],
                               linewidth=mapfile['linewidth'],
                               color=mapfile['linecolor'])
         else:
-            map.readshapefile(mapfile['file'], 'mapfile', 
+            map.readshapefile(mapfile['file'], 'mapfile',
                       drawbounds=mapfile['drawbounds'])
-            # Code for extra formatting -- filling in polygons setting border 
+            # Code for extra formatting -- filling in polygons setting border
             # color
             patches = []
             for info, shape in zip(map.mapfile_info, map.mapfile):
                 patches.append(Polygon(np.array(shape), True))
-            ax.add_collection(PatchCollection(patches, 
+            ax.add_collection(PatchCollection(patches,
                                               facecolor= mapfile['fillcolor'],
                                               edgecolor=mapfile['linecolor'],
-                                              linewidths=mapfile['linewidth'], 
+                                              linewidths=mapfile['linewidth'],
                                               zorder=2))
-    
+
 #    # Make a legend
 #    handles, labels = plt.gca().get_legend_handles_labels()
-#    handles.extend(['mapfile'])  
-#    labels.extend(["mapfile"])                     
+#    handles.extend(['mapfile'])
+#    labels.extend(["mapfile"])
 #    plt.legend(handles=handles, labels=labels)
 
     fig.suptitle(title, fontsize=20)
