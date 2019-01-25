@@ -93,7 +93,7 @@ of the pad for the species. */
 UPDATE sp_range
 SET eval_gbif1 = 1
 WHERE eval_gbif1_cnt >= (SELECT pad
-                        FROM eval.evaluations
+                        FROM params.evaluations
                         WHERE id = 'eval_gbif1');
 
 
