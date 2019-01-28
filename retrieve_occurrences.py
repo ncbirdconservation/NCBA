@@ -58,8 +58,6 @@ import sciencebasepy
 from pygbif import occurrences
 import os
 os.chdir('/')
-import config
-
 
 #############################################################################
 #                              Species-concept
@@ -115,6 +113,34 @@ def download_GAP_range_CONUS2001v1(gap_id, toDir):
     return rng_zip.replace('.zip', '')
 
 gap_range = download_GAP_range_CONUS2001v1(gap_id, inDir)
+
+# Reproject to WGS84 for displaying
+conn3 = sqlite3.connect(':memory:')
+os.putenv('SPATIALITE_SECURITY', 'relaxed')
+conn3.enable_load_extension(True)
+cursor3 = conn3.cursor()
+sql_repro = """
+SELECT load_extension('mod_spatialite');
+
+SELECT InitSpatialMetadata();
+
+SELECT ImportSHP('{0}{1}_conus_range_2001v1', 'rng3', 'utf-8', 5070,
+                 'geom_5070', 'HUC12RNG', 'MULTIPOLYGON');
+
+CREATE TABLE rng2 AS SELECT HUC12RNG, seasonCode, seasonName,
+                            Transform(geom_5070, 4326) AS geom_4326 FROM rng3;
+
+SELECT RecoverGeometryColumn('rng2', 'geom_4326', 4326, 'MULTIPOLYGON', 'XY');
+
+SELECT ExportSHP('rng2', 'geom_4326', '{0}{1}_range_4326', 'utf-8');
+""".format(inDir, gap_id)
+
+cursor3.executescript(sql_repro)
+conn3.close()
+del cursor3
+
+gap_range2 = "{0}{1}_range_4326".format(inDir, gap_id)
+
 
 #############################################################################
 #                           Create Occurrence Database
@@ -387,7 +413,7 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import PathPatch
 
-shp1 = {'file': gap_range,
+shp1 = {'file': gap_range2,
         'drawbounds': False, 'linewidth': .5, 'linecolor': 'y',
         'fillcolor': 'y'}
 
@@ -424,7 +450,7 @@ for mapfile in map_these:
                           color=mapfile['linecolor'])
     else:
         map.readshapefile(mapfile['file'], 'mapfile',
-                  drawbounds=mapfile['drawbounds'])
+                          drawbounds=mapfile['drawbounds'])
         # Code for extra formatting -- filling in polygons setting border
         # color
         patches = []
