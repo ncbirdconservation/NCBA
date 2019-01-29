@@ -390,7 +390,7 @@ sql_buf = """
 cursor.executescript(sql_buf)
 
 
-#################################################  DISPLAY MAPS
+##################################################  EXPORT MAPS
 ###############################################################
 # Export occurrence circles as a shapefile (all seasons)
 cursor.execute("""SELECT ExportSHP('occurrences', 'circle_wgs84',
@@ -403,62 +403,3 @@ conn.commit()
 conn.close()
 conn2.commit()
 conn2.close()
-
-
-# Packages needed for plotting
-import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
-import numpy as np
-from matplotlib.patches import Polygon
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import PathPatch
-
-shp1 = {'file': gap_range2,
-        'drawbounds': False, 'linewidth': .5, 'linecolor': 'y',
-        'fillcolor': 'y'}
-
-shp2 = {'file': '{0}{1}_circles'.format(outDir, summary_name),
-        'drawbounds': True, 'linewidth': .5, 'linecolor': 'k',
-        'fillcolor': None}
-
-# Display occurrence polygons
-map_these=[shp1, shp2]
-title="Yellow-billed Cuckoo occurrence polygons and GAP range (1970-2018)"
-"""
-!!!!!!!!!!!!!!!!!!!!!!!!
-BELOW CODE IS FROM config.MapPolygonsFromShp(), WHICH CRASHES KERNEL IN
-FUNCTION FORM FOR SOME UNKNOWN REASON.
-!!!!!!!!!!!!!!!!!!!!!!!!
-"""
-# Basemap
-fig = plt.figure(figsize=(12,8))
-ax = plt.subplot(1,1,1)
-map = Basemap(projection='aea', resolution='i', lon_0=-95.5, lat_0=39.5,
-              height=3400000, width=5000000)
-map.drawcoastlines(color='grey')
-map.drawstates(color='grey')
-map.drawcountries(color='grey')
-map.fillcontinents(color='green',lake_color='aqua')
-map.drawmapboundary(fill_color='aqua')
-
-for mapfile in map_these:
-    # Add shapefiles to the map
-    if mapfile['fillcolor'] == None:
-        map.readshapefile(mapfile['file'], 'mapfile',
-                          drawbounds=mapfile['drawbounds'],
-                          linewidth=mapfile['linewidth'],
-                          color=mapfile['linecolor'])
-    else:
-        map.readshapefile(mapfile['file'], 'mapfile',
-                          drawbounds=mapfile['drawbounds'])
-        # Code for extra formatting -- filling in polygons setting border
-        # color
-        patches = []
-        for info, shape in zip(map.mapfile_info, map.mapfile):
-            patches.append(Polygon(np.array(shape), True))
-        ax.add_collection(PatchCollection(patches,
-                                          facecolor= mapfile['fillcolor'],
-                                          edgecolor=mapfile['linecolor'],
-                                          linewidths=mapfile['linewidth'],
-                                          zorder=2))
-fig.suptitle(title, fontsize=20)
