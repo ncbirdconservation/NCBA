@@ -126,14 +126,30 @@ CREATE TABLE new_range AS
               SELECT sp_range.*, Transform(shucs.geom_102008, 4326) AS geom_4326
               FROM sp_range LEFT JOIN shucs ON sp_range.strHUC12RNG = shucs.HUC12RNG;
 
-SELECT RecoverGeometryColumn('new_range', 'geom_4326', 4326, 'MULTIPOLYGON',
-                              'XY');
+SELECT RecoverGeometryColumn('new_range', 'geom_4326', 4326, 'POLYGON', 'XY');
 
-/* Export maps */
 SELECT ExportSHP('new_range', 'geom_4326',
                  '/users/nmtarr/documents/ranges/outputs/bYBCUx_CONUS_Range_2001v1_eval',
+                 'utf-8');
+
+/* Make a shapefile of evaluation results */
+CREATE TABLE eval_gbif1 AS
+              SELECT strHUC12RNG, eval_gbif1, geom_4326
+              FROM new_range
+              WHERE eval_gbif1 >= 0;
+
+SELECT RecoverGeometryColumn('eval_gbif1', 'geom_4326', 4326, 'POLYGON', 'XY');
+
+SELECT ExportSHP('eval_gbif1', 'geom_4326',
+                 '/users/nmtarr/documents/ranges/outputs/bYBCUx_eval_gbif1',
                  'utf-8');
 
 /* Export csv */
 .output /users/nmtarr/documents/ranges/outputs/bYBCUx_CONUS_Range_2001v1_eval.csv
 SELECT * FROM sp_range;
+
+/*#############################################################################
+                             Clean Up
+#############################################################################*/
+/* sp_range is no longer needed, use new_range instead */
+DROP TABLE sp_range;
