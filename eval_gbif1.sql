@@ -122,14 +122,15 @@ WHERE eval_gbif1 = 1;
                                Export Table and Map
  ############################################################################*/
 /*  Create a version of sp_range with geometry  */
-CREATE TABLE sp_geom AS
-              SELECT sp_range.*, shucs.geom_102008 AS geom_4326
+CREATE TABLE new_range AS
+              SELECT sp_range.*, Transform(shucs.geom_102008, 4326) AS geom_4326
               FROM sp_range LEFT JOIN shucs ON sp_range.strHUC12RNG = shucs.HUC12RNG;
 
-SELECT RecoverGeometryColumn('sp_geom', 'geom_4326', 4326, 'POLYGON');
+SELECT RecoverGeometryColumn('new_range', 'geom_4326', 4326, 'MULTIPOLYGON',
+                              'XY');
 
 /* Export maps */
-SELECT ExportSHP('sp_geom', 'geom_4326',
+SELECT ExportSHP('new_range', 'geom_4326',
                  '/users/nmtarr/documents/ranges/outputs/bYBCUx_CONUS_Range_2001v1_eval',
                  'utf-8');
 
