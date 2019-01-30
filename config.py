@@ -18,7 +18,9 @@ workDir = 'Users/nmtarr/Documents/RANGES'
 def MapShapefilePolygons(map_these, title):
     """
     Displays shapefiles on a simple CONUS basemap.  Maps are plotted in the order
-    provided so put the top map last in the listself.
+    provided so put the top map last in the listself.  You can specify a column
+    to map as well as custom colors for it.  This function may not be very robust
+    to other applications.
 
     NOTE: The shapefiles have to be in WGS84 CRS.
 
@@ -27,7 +29,7 @@ def MapShapefilePolygons(map_these, title):
     Arguments:
     map_these -- list of dictionaries for shapefiles you want to display in
                 CONUS. Each dictionary should have the following format, but 
-                some are unneccesary if column doesn't = 'None'.  The critical
+                some are unneccesary if 'column' doesn't = 'None'.  The critical
                 ones are file, column, and drawbounds.  Column_colors is needed
                 if column isn't 'None'.  Others are needed if it is 'None'.
                     {'file': '/path/to/your/shapfile',
