@@ -83,4 +83,4 @@ def MapShapefilePolygons(map_these, title):
     #    plt.legend(handles=handles, labels=labels)
 
     fig.suptitle(title, fontsize=20)
-    return fig
+    return
