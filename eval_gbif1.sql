@@ -11,11 +11,13 @@ created for work in this repository) and a range shapefile.
 The primary use of code like this would be range evaluation and revision.
 
 Unresolved issues:
-3. Can the runtime be improved with spatial indexing?  Minimum bounding rectangle?
-4. ".import" has to be worked around when this goes into python.
-5. Locations of huc files. -- can sciencebase be used?
-6. Add month and year filters - they are currently hard-coded but need to come
+1. Can the runtime be improved with spatial indexing?  Minimum bounding rectangle?
+2. ".import" has to be worked around when this goes into python.
+3. Locations of huc files. -- can sciencebase be used?
+4. Add month and year filters - they are currently hard-coded but need to come
    from queries of rng_eval_params.evaluations.
+5. Condition data used on the parameters, such as filter_sets in the evaluations
+   table.
 */
 
 .headers on
@@ -153,3 +155,5 @@ SELECT * FROM sp_range;
 #############################################################################*/
 /* sp_range is no longer needed, use new_range instead */
 DROP TABLE sp_range;
+DROP TABLE green;
+DROP TABLE orange;
