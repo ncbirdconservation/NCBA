@@ -7,8 +7,6 @@ Created on Wed Dec 19 20:52:42 2018
 
 Description:  A place to store variables and functions that are the same
 throughout the repo.
-
-!!!!!!!!!!!!!!!!!!!!! CURRENTLY INACTIVE
 """
 species = 'Coccyzus americanus'
 sp_id = 'bYBCUx0'
