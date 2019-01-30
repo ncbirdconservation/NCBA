@@ -17,7 +17,7 @@ sp_TSN = 177831
 workDir = 'Users/nmtarr/Documents/RANGES'
 
 # Define a function for displaying the maps that will be created.
-def MapPolygonsFromSHP(map_these, title):
+def MapShapefilePolygons(map_these, title):
     """
     Displays shapefiles on a simple CONUS basemap.  Maps are plotted in the order
     provided so put the top map last in the listself.
@@ -76,11 +76,11 @@ def MapPolygonsFromSHP(map_these, title):
                                               linewidths=mapfile['linewidth'],
                                               zorder=2))
 
-#    # Make a legend
-#    handles, labels = plt.gca().get_legend_handles_labels()
-#    handles.extend(['mapfile'])
-#    labels.extend(["mapfile"])
-#    plt.legend(handles=handles, labels=labels)
+    #    # Make a legend
+    #    handles, labels = plt.gca().get_legend_handles_labels()
+    #    handles.extend(['mapfile'])
+    #    labels.extend(["mapfile"])
+    #    plt.legend(handles=handles, labels=labels)
 
     fig.suptitle(title, fontsize=20)
     return fig
