@@ -55,4 +55,4 @@ Python 3 and numerous packages including sqlite3 with the spatialite extension. 
 All code is included in this repository.  Runtimes of discrete tasks made grouping code into separate scripts preferable.  A demonstration and explanation of the scripts' general features are included in the Demonstration.ipynb.
 
 ## Status
-IN PROGRESS!
+Getting general framework in place and documented, with some placeholders.  Next steps are incorporating eBird records and beefing up GBIF filters.
