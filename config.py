@@ -26,8 +26,13 @@ def MapShapefilePolygons(map_these, title):
 
     Arguments:
     map_these -- list of dictionaries for shapefiles you want to display in
-                CONUS. Each dictionary should have the following format:
+                CONUS. Each dictionary should have the following format, but 
+                some are unneccesary if column doesn't = 'None'.  The critical
+                ones are file, column, and drawbounds.  Column_colors is needed
+                if column isn't 'None'.  Others are needed if it is 'None'.
                     {'file': '/path/to/your/shapfile',
+                     'column': None,
+                     'column_colors': {0: 'k', 1: 'r'}
                     'linecolor': 'k',
                     'fillcolor': 'k',
                     'linewidth': 1,
@@ -54,31 +59,38 @@ def MapShapefilePolygons(map_these, title):
     map.drawmapboundary(fill_color='aqua')
 
     for mapfile in map_these:
-        # Add shapefiles to the map
-        if mapfile['fillcolor'] == None:
-            map.readshapefile(mapfile['file'], 'mapfile',
-                              drawbounds=mapfile['drawbounds'],
-                              linewidth=mapfile['linewidth'],
-                              color=mapfile['linecolor'])
+        if mapfile['column'] == None:
+            # Add shapefiles to the map
+            if mapfile['fillcolor'] == None:
+                map.readshapefile(mapfile['file'], 'mapfile',
+                                  drawbounds=mapfile['drawbounds'],
+                                  linewidth=mapfile['linewidth'],
+                                  color=mapfile['linecolor'])
+            else:
+                map.readshapefile(mapfile['file'], 'mapfile',
+                          drawbounds=mapfile['drawbounds'])
+                # Code for extra formatting -- filling in polygons setting border
+                # color
+                patches = []
+                for info, shape in zip(map.mapfile_info, map.mapfile):
+                    patches.append(Polygon(np.array(shape), True))
+                ax.add_collection(PatchCollection(patches,
+                                                  facecolor= mapfile['fillcolor'],
+                                                  edgecolor=mapfile['linecolor'],
+                                                  linewidths=mapfile['linewidth'],
+                                                  zorder=2))            
         else:
-            map.readshapefile(mapfile['file'], 'mapfile',
-                      drawbounds=mapfile['drawbounds'])
-            # Code for extra formatting -- filling in polygons setting border
-            # color
-            patches = []
+            map.readshapefile(mapfile['file'], 'mapfile', drawbounds=mapfile['drawbounds'])
             for info, shape in zip(map.mapfile_info, map.mapfile):
-                patches.append(Polygon(np.array(shape), True))
-            ax.add_collection(PatchCollection(patches,
-                                              facecolor= mapfile['fillcolor'],
-                                              edgecolor=mapfile['linecolor'],
-                                              linewidths=mapfile['linewidth'],
-                                              zorder=2))
-
-    #    # Make a legend
-    #    handles, labels = plt.gca().get_legend_handles_labels()
-    #    handles.extend(['mapfile'])
-    #    labels.extend(["mapfile"])
-    #    plt.legend(handles=handles, labels=labels)
+                for thang in mapfile['column_colors'].keys():
+                    if info[mapfile['column']] == thang:
+                        x, y = zip(*shape)
+                        map.plot(x, y, marker=None, color=mapfile['column_colors'][thang])
+  #    # Make a legend
+                    #    handles, labels = plt.gca().get_legend_handles_labels()
+                    #    handles.extend(['mapfile'])
+                    #    labels.extend(["mapfile"])
+                    #    plt.legend(handles=handles, labels=labels)
 
     fig.suptitle(title, fontsize=20)
     return
