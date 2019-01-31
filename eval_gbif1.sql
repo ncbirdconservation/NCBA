@@ -1,9 +1,11 @@
 /*
-Description: This code uses occurrence data collected with
-'occurrence_records_summaries.py' to evaluate the GAP range map for a species.
-A table is created for the GAP range and columns reporting the results of
-evaluation and validation are populated after evaluating spatial relationships
-of occurrence records (circles) and GAP range.
+This code must be run in the sqlite3 command line interface until packaged
+within python code.
+
+Uses occurrence data collected with 'retrieve_occurrences.py' to evaluate the
+GAP range map for a species.  A table is created for the GAP range and columns
+reporting the results of evaluation and validation are populated after
+evaluating spatial relationships of occurrence records (circles) and GAP range.
 
 The results of this code are new columns in the GAP range table (in the db
 created for work in this repository) and a range shapefile.
@@ -18,6 +20,7 @@ Unresolved issues:
    from queries of rng_eval_params.evaluations.
 5. Condition data used on the parameters, such as filter_sets in the evaluations
    table.
+6. Draw from config file when possible.
 */
 
 .headers on

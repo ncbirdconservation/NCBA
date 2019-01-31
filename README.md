@@ -49,10 +49,10 @@ On a per-species basis
 None at this time
 
 ## Dependencies
-Python 3 and numerous packages including sqlite3 with the spatialite extension.  An environment can be created from the .yml file included in this repository.
+Python 3 and numerous packages including sqlite3 with the spatialite extension.  An environment can be created from the ENVIRONMENT.yml file included in this repository.
 
 ## Code
 All code is included in this repository.  Runtimes of discrete tasks made grouping code into separate scripts preferable.  A demonstration and explanation of the scripts' general features are included in the Demonstration.ipynb.
 
 ## Status
-Getting general framework in place and documented, with some placeholders.  Next steps are incorporating eBird records and beefing up GBIF filters.
+Getting general framework in place and documented, with some placeholders.  Next steps are adding map legends, incorporating eBird records, and beefing up GBIF filters.

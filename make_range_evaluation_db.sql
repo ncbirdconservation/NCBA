@@ -1,3 +1,10 @@
+/*
+This code must be run in the sqlite3 Command Line Interface (shell) until
+packaged within python code.
+
+Builds an sqlite database in which to store range evaluation information
+*/
+
 .mode csv
 
 ATTACH DATABASE '/users/nmtarr/documents/ranges/outputs/bybcux_range.sqlite'
@@ -28,9 +35,6 @@ SELECT InitSpatialMetaData();
              UNIT["Meter",1],AUTHORITY["EPSG","102008"]]');
 
 
-/*#############################################################################
-                                 Load Tables
- ############################################################################*/
 /* Add the hucs shapefile to the db. */
 SELECT ImportSHP('/users/nmtarr/data/SHUCS', 'shucs', 'utf-8', 102008,
                  'geom_102008', 'HUC12RNG', 'POLYGON');

@@ -1,4 +1,4 @@
-name: ranger2
+name: ranger
 channels:
   - defaults
 dependencies:
@@ -135,4 +135,3 @@ dependencies:
     - pygbif==0.2.0
     - sciencebasepy==1.6.2
 prefix: /Users/nmtarr/miniconda3/envs/ranger2
-

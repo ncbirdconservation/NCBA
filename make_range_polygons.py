@@ -1,17 +1,12 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Tue Jan 15 11:03:56 2019
-
-@author: nmtarr
-
-Description: Generates range delineations based upon the retrievd and filtered
+Generates range delineations based upon the retrieved and filtered
 occurrence records.  Each map is saved as a row in a table with geometry.
-Runs so far have produced worthless results because of scarcity of records.
+Runs so far have produced uninformative results because of scarcity of records.
 
 TO DO:
-1. max_error_meters -> spatial_error_tolerance
+1. change 'max_error_meters' to 'spatial_error_tolerance'
 2  remove pad?
+3. Pull from config.py when possible
 """
 #############################################################################
 #                               Configuration
@@ -44,7 +39,6 @@ import os
 os.chdir('/')
 os.chdir(codeDir)
 import config
-import config
 import sqlite3
 import os
 
@@ -74,12 +68,11 @@ migratory = concept[6]
 #                          Connect to Database
 #############################################################################
 # Delete the database if it already exists
-evdb = outDir + 'range_eval.sqlite'
-if os.path.exists(evdb):
-    os.remove(evdb)
+if os.path.exists(config.eval_db):
+    os.remove(config.eval_db)
 
 # Create or connect to the database
-conn = sqlite3.connect(evdb)
+conn = sqlite3.connect(config.eval_db)
 os.putenv('SPATIALITE_SECURITY', 'relaxed')
 conn.enable_load_extension(True)
 conn.execute('SELECT load_extension("mod_spatialite")')
@@ -189,7 +182,7 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
                 max_coordUncertainty, factor, allow_holes)
 
     try:
-        conn = sqlite3.connect(evdb)
+        conn = sqlite3.connect(config.eval_db)
         os.putenv('SPATIALITE_SECURITY', 'relaxed')
         conn.enable_load_extension(True)
         conn.execute('SELECT load_extension("mod_spatialite")')
@@ -221,7 +214,7 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
         DROP TABLE temp1;""".format(alias, outDir)
 
         try:
-            conn = sqlite3.connect(evdb)
+            conn = sqlite3.connect(config.eval_db)
             os.putenv('SPATIALITE_SECURITY', 'relaxed')
             conn.enable_load_extension(True)
             conn.execute('SELECT load_extension("mod_spatialite")')

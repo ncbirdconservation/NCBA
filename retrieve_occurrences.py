@@ -1,35 +1,16 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Thu Jan 3 08:08:59 2019
+Retrieves GAP range from ScienceBase and occurrence records from APIs. Filters
+occurrence records, stores them in a database, buffers the xy points,
+and filtering occurrence records, saving them in a database.  Finally, Exports
+some maps.
 
-author: nmtarr
-
-Description: Draft workflow for creating spatial data summaries to support
-range delineation.  This script will eventually be placed in a jupyter
-notebook or separate top-level scripts.
-
-Functionality:
-Identifying a species concept to investigate
-Retrieving and filtering occurrence records, saving them in a database
-Generating shapefiles of occurrence records by month as well as concave hull
-polygons around recordsself.
-
-Outputs:
-Maps and spatially-explicit tables within a database.
-
-Uses:
-Provide resources to consult when creating expert drawn range mapsself.
-Investigation of data availability and agreement.
-
-Unresolved issues:
-1.  Downloading from Sciencebase with code.
-2.  Maximize filtering.
-5.  Incorporate detection distance - fill out radius and detection in occs
-6.  Can we use EPSG:5070?
-7.  Incorporate allowable spatial error, which would vary by species.
-8.  Account for possiblity of non-4326 occurrence records in gbif?  the
+To do:
+1.  Maximize filtering.
+2.  Change 'geom_4326' to 'geom_xy_4326' in some tables.
+3.  Can we use EPSG:5070?
+4.  Account for possiblity of non-4326 occurrence records in gbif?  the
     geometry columnis hard coded to 4326 initially.  Can this be dynamic?
+5.  Rely upon config.py when possible
 """
 #############################################################################
 #                               Configuration
@@ -38,7 +19,6 @@ sp_id = 'bybcux0'
 summary_name = 'cuckoo'
 gbif_req_id = 'r001'
 gbif_filter_id = 'f001'
-
 workDir = '/Users/nmtarr/Documents/RANGES/'
 codeDir = '/Users/nmtarr/Code/range_map_evaluation/'
 inDir = workDir + 'Inputs/'
@@ -58,6 +38,7 @@ import sciencebasepy
 from pygbif import occurrences
 import os
 os.chdir('/')
+import config
 
 #############################################################################
 #                              Species-concept
@@ -81,40 +62,9 @@ gap_id = concept[4]
 #############################################################################
 #                      GAP Range Data From ScienceBase
 #############################################################################
-def download_GAP_range_CONUS2001v1(gap_id, toDir):
-    """
-    Downloads GAP Range CONUS 2001 v1 file and returns path to the unzipped
-    file.  NOTE: doesn't include extension in returned path so that you can
-    specify if you want csv or shp or xml when you use the path.
-    """
-    import sciencebasepy
-    import zipfile
+gap_range = config.download_GAP_range_CONUS2001v1(gap_id, inDir)
 
-    # Connect
-    sb = sciencebasepy.SbSession()
-
-    # Search for gap range item in ScienceBase
-    gap_id = gap_id[0] + gap_id[1:5].upper() + gap_id[5]
-    item_search = '{0}_CONUS_2001v1 Range Map'.format(gap_id)
-    items = sb.find_items_by_any_text(item_search)
-
-    # Get a public item.  No need to log in.
-    rng =  items['items'][0]['id']
-    item_json = sb.get_item(rng)
-    get_files = sb.get_item_files(item_json, toDir)
-
-    # Unzip
-    rng_zip = toDir + item_json['files'][0]['name']
-    zip_ref = zipfile.ZipFile(rng_zip, 'r')
-    zip_ref.extractall(toDir)
-    zip_ref.close()
-
-    # Return path to range file without extension
-    return rng_zip.replace('.zip', '')
-
-gap_range = download_GAP_range_CONUS2001v1(gap_id, inDir)
-
-# Reproject to WGS84 for displaying
+# Reproject the GAP range to WGS84 for displaying
 conn3 = sqlite3.connect(':memory:')
 os.putenv('SPATIALITE_SECURITY', 'relaxed')
 conn3.enable_load_extension(True)

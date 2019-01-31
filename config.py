@@ -1,18 +1,25 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Wed Dec 19 20:52:42 2018
-
-@author: nmtarr
-
-Description:  A place to store variables and functions that are the same
-throughout the repo.
+A place to store variables and functions that are the same throughout the repo.
 """
 species = 'Coccyzus americanus'
-sp_id = 'bYBCUx0'
 sp_gbif_key = 2496287
 sp_TSN = 177831
-workDir = 'Users/nmtarr/Documents/RANGES'
+sp_id = 'bybcux0'
+summary_name = 'cuckoo'
+gbif_req_id = 'r001'
+gbif_filter_id = 'f001'
+max_coordUncertainty = 10000
+year_range = (1980,2018)
+
+workDir = '/Users/nmtarr/Documents/RANGES/'
+codeDir = '/Users/nmtarr/Code/Ranger/'
+inDir = workDir + 'Inputs/'
+outDir = workDir + 'Outputs/'
+# Used in file names for output.
+SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
+
+eval_db = sp_id + '_range.sqlite'
+
 
 # Define a function for displaying the maps that will be created.
 def MapShapefilePolygons(map_these, title):
@@ -28,7 +35,7 @@ def MapShapefilePolygons(map_these, title):
 
     Arguments:
     map_these -- list of dictionaries for shapefiles you want to display in
-                CONUS. Each dictionary should have the following format, but 
+                CONUS. Each dictionary should have the following format, but
                 some are unneccesary if 'column' doesn't = 'None'.  The critical
                 ones are file, column, and drawbounds.  Column_colors is needed
                 if column isn't 'None'.  Others are needed if it is 'None'.
@@ -80,7 +87,7 @@ def MapShapefilePolygons(map_these, title):
                                                   facecolor= mapfile['fillcolor'],
                                                   edgecolor=mapfile['linecolor'],
                                                   linewidths=mapfile['linewidth'],
-                                                  zorder=2))            
+                                                  zorder=2))
         else:
             map.readshapefile(mapfile['file'], 'mapfile', drawbounds=mapfile['drawbounds'])
             for info, shape in zip(map.mapfile_info, map.mapfile):
@@ -96,3 +103,35 @@ def MapShapefilePolygons(map_these, title):
 
     fig.suptitle(title, fontsize=20)
     return
+
+
+def download_GAP_range_CONUS2001v1(gap_id, toDir):
+    """
+    Downloads GAP Range CONUS 2001 v1 file and returns path to the unzipped
+    file.  NOTE: doesn't include extension in returned path so that you can
+    specify if you want csv or shp or xml when you use the path.
+    """
+    import sciencebasepy
+    import zipfile
+
+    # Connect
+    sb = sciencebasepy.SbSession()
+
+    # Search for gap range item in ScienceBase
+    gap_id = gap_id[0] + gap_id[1:5].upper() + gap_id[5]
+    item_search = '{0}_CONUS_2001v1 Range Map'.format(gap_id)
+    items = sb.find_items_by_any_text(item_search)
+
+    # Get a public item.  No need to log in.
+    rng =  items['items'][0]['id']
+    item_json = sb.get_item(rng)
+    get_files = sb.get_item_files(item_json, toDir)
+
+    # Unzip
+    rng_zip = toDir + item_json['files'][0]['name']
+    zip_ref = zipfile.ZipFile(rng_zip, 'r')
+    zip_ref.extractall(toDir)
+    zip_ref.close()
+
+    # Return path to range file without extension
+    return rng_zip.replace('.zip', '')
