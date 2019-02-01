@@ -13,7 +13,7 @@ codeDir = '/Users/nmtarr/Code/range_map_evaluation/'
 inDir = workDir + 'Inputs/'
 outDir = workDir + 'Outputs/'
 SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008} # Used in file names for output.
-eval_db = sp_id + '_range.sqlite' # Name of range evaluation database for a species.
+spdb = outDir + sp_id + '_occurrences.sqlite' # Name of species occurrence db.
 
 # Define a function for displaying the maps that will be created.
 def MapShapefilePolygons(map_these, title):

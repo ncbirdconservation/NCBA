@@ -1,17 +1,38 @@
-/*
-This code must be run in the sqlite3 Command Line Interface (shell) until
-packaged within python code.
-
+"""
 Builds an sqlite database in which to store range evaluation information
-*/
 
-.mode csv
+shucloc needs to be eventually be replaced wtih ScienceBase download of shucs.
+"""
+import config
+import sqlite3
+import pandas as pd
+import os
 
-ATTACH DATABASE '/users/nmtarr/documents/ranges/outputs/bybcux_range.sqlite'
-                AS rangeDB;
+# Get gap id
+conn2 = sqlite3.connect(config.inDir + 'rng_eval_params.sqlite')
+cursor2 = conn2.cursor()
+sql_tax = """SELECT gap_id FROM species_concepts
+             WHERE species_id = '{0}';""".format(config.sp_id)
+gap_id = cursor2.execute(sql_tax).fetchone()[0]
+gap_id = gap_id[0] + gap_id[1:5] + gap_id[5]
+conn2.close()
+del cursor2
 
-SELECT load_extension('mod_spatialite');
+# Delete db if it exists
+eval_db = config.outDir + gap_id + '_range.sqlite' # Name of range evaluation database.
+if os.path.exists(config.eval_db):
+    os.remove(config.eval_db)
 
+# Create or connect to the database
+conn = sqlite3.connect(eval_db)
+os.putenv('SPATIALITE_SECURITY', 'relaxed')
+conn.enable_load_extension(True)
+conn.execute('SELECT load_extension("mod_spatialite")')
+cursor = conn.cursor()
+
+shucLoc = '/users/nmtarr/data/SHUCS'
+
+sql="""
 SELECT InitSpatialMetadata();
 
 /* Add Albers_Conic_Equal_Area 102008 to the spatial sys ref tables */
@@ -36,12 +57,19 @@ SELECT InitSpatialMetaData();
 
 
 /* Add the hucs shapefile to the db. */
-SELECT ImportSHP('/users/nmtarr/data/SHUCS', 'shucs', 'utf-8', 102008,
+SELECT ImportSHP('{0}', 'shucs', 'utf-8', 102008,
                  'geom_102008', 'HUC12RNG', 'POLYGON');
+""".format(shucLoc)
+cursor.executescript(sql)
 
-/* Load the GAP range csv, filter out some columns, rename others */
-.import /users/nmtarr/Documents/ranges/inputs/bYBCUx_CONUS_Range_2001v1.csv sp_range
+# Load the GAP range csv, filter out some columns, rename others
+csvfile = config.inDir + gap_id + "_CONUS_RANGE_2001v1.csv"
+sp_range = pd.read_csv(csvfile)
+sp_range.to_sql('sp_range', conn, if_exists='replace', index=False)
+
+sql2="""
 ALTER TABLE sp_range RENAME TO garb;
+
 CREATE TABLE sp_range AS
                       SELECT strHUC12RNG,
                              intGapOrigin AS intGAPOrigin,
@@ -54,3 +82,5 @@ CREATE TABLE sp_range AS
                              Season AS strGAPSeason
                       FROM garb;
 DROP TABLE garb;
+"""
+cursor.executescript(sql2)
