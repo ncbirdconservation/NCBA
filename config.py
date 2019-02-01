@@ -66,8 +66,8 @@ def MapShapefilePolygons(map_these, title):
     map.drawcoastlines(color='grey')
     map.drawstates(color='grey')
     map.drawcountries(color='grey')
-    map.fillcontinents(color='green',lake_color='aqua')
-    map.drawmapboundary(fill_color='aqua')
+    map.fillcontinents(color='#a2d0a2',lake_color='#a9cfdc')
+    map.drawmapboundary(fill_color='#a9cfdc')
 
     for mapfile in map_these:
         if mapfile['column'] == None:
@@ -118,7 +118,7 @@ def MapShapefilePolygons(map_these, title):
 
     # Legend -- the method that works is ridiculous but necessary; you have
     #           to add empty scatter plots with the symbology you want for
-    #           each shapefile legend entry and then call the legend.  See 
+    #           each shapefile legend entry and then call the legend.  See
     #           plt.scatter(...) lines above.
     plt.legend(scatterpoints=1, frameon=True, labelspacing=1, loc='lower left',
                framealpha=1, fontsize='x-large')
