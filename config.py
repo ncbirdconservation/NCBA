@@ -1,25 +1,19 @@
 """
 A place to store variables and functions that are the same throughout the repo.
 """
-species = 'Coccyzus americanus'
-sp_gbif_key = 2496287
-sp_TSN = 177831
 sp_id = 'bybcux0'
 summary_name = 'cuckoo'
 gbif_req_id = 'r001'
 gbif_filter_id = 'f001'
-max_coordUncertainty = 10000
-year_range = (1980,2018)
+evaluation = 'eval_gbif1'
 
+##############################################
 workDir = '/Users/nmtarr/Documents/RANGES/'
 codeDir = '/Users/nmtarr/Code/range_map_evaluation/'
 inDir = workDir + 'Inputs/'
 outDir = workDir + 'Outputs/'
-# Used in file names for output.
-SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
-
-eval_db = sp_id + '_range.sqlite'
-
+SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008} # Used in file names for output.
+eval_db = sp_id + '_range.sqlite' # Name of range evaluation database for a species.
 
 # Define a function for displaying the maps that will be created.
 def MapShapefilePolygons(map_these, title):

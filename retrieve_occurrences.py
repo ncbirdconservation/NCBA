@@ -13,7 +13,6 @@ To do:
 """
 import pandas as pd
 pd.set_option('display.width', 1000)
-#%matplotlib inline
 import sqlite3
 import sciencebasepy
 from pygbif import occurrences
@@ -135,7 +134,7 @@ sql_cdb = """
                     ON UPDATE RESTRICT
                     ON DELETE NO ACTION);
 
-        SELECT AddGeometryColumn('occurrences', 'geom_4326', 4326, 'POINT',
+        SELECT AddGeometryColumn('occurrences', 'geom_xy4326', 4326, 'POINT',
                                  'XY');
 """
 cursor.executescript(sql_cdb)
@@ -257,7 +256,7 @@ for x in alloccs3:
     sql1 = """INSERT INTO occurrences ('occ_id', 'species_id', 'source',
                             'source_sp_id', 'coordinateUncertaintyInMeters',
                             'occurrenceDate', 'request_id', 'filter_id',
-                            'geom_4326')
+                            'geom_xy4326')
                 VALUES {0}, GeomFromText('POINT({1} {2})',
                                             {3}))""".format(str(insert1)[:-1],
                 x['decimalLongitude'], x['decimalLatitude'],
@@ -299,16 +298,12 @@ sql_buf = """
         /* Transform to albers (102008) and apply buffer */
         ALTER TABLE occurrences ADD COLUMN circle_albers BLOB;
 
-        UPDATE occurrences SET circle_albers = Buffer(Transform(geom_4326,
+        UPDATE occurrences SET circle_albers = Buffer(Transform(geom_xy4326,
                                                                 102008),
                                                       radius_meters);
 
-        /* The new geometry column needs an entry in the geometry columns
-        table CAN THIS BE DONE WITH RecoverGeometryColumn???*/
-        INSERT INTO geometry_columns (f_table_name, f_geometry_column,
-                                      geometry_type, coord_dimension,
-                                      srid, spatial_index_enabled)
-                    VALUES ('occurrences', 'circle_albers', 3, 2, 102008, 0);
+        SELECT RecoverGeometryColumn('occurrences', 'circle_albers', 102008,
+                                     'POLYGON', 'XY');
 
         /* Transform back to WGS84 so it can be displayed in iPython */
         ALTER TABLE occurrences ADD COLUMN circle_wgs84 BLOB;
