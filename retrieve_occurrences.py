@@ -10,26 +10,7 @@ To do:
 3.  Can we use EPSG:5070?
 4.  Account for possiblity of non-4326 occurrence records in gbif?  the
     geometry columnis hard coded to 4326 initially.  Can this be dynamic?
-5.  Rely upon config.py when possible
 """
-#############################################################################
-#                               Configuration
-#############################################################################
-sp_id = 'bybcux0'
-summary_name = 'cuckoo'
-gbif_req_id = 'r001'
-gbif_filter_id = 'f001'
-workDir = '/Users/nmtarr/Documents/RANGES/'
-codeDir = '/Users/nmtarr/Code/range_map_evaluation/'
-inDir = workDir + 'Inputs/'
-outDir = workDir + 'Outputs/'
-# Used in file names for output.
-SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008}
-
-
-#############################################################################
-#                               Processing
-#############################################################################
 import pandas as pd
 pd.set_option('display.width', 1000)
 #%matplotlib inline
@@ -43,14 +24,14 @@ import config
 #############################################################################
 #                              Species-concept
 #############################################################################
-os.chdir(codeDir)
+os.chdir(config.codeDir)
 # Get species info from requests database
-conn2 = sqlite3.connect(inDir + 'rng_eval_params.sqlite')
+conn2 = sqlite3.connect(config.inDir + 'rng_eval_params.sqlite')
 cursor2 = conn2.cursor()
 sql_tax = """SELECT gbif_id, common_name, scientific_name,
                     detection_distance_meters, gap_id
              FROM species_concepts
-             WHERE species_id = '{0}';""".format(sp_id)
+             WHERE species_id = '{0}';""".format(config.sp_id)
 concept = cursor2.execute(sql_tax).fetchall()[0]
 gbif_id = concept[0]
 common_name = concept[1]
@@ -62,7 +43,7 @@ gap_id = concept[4]
 #############################################################################
 #                      GAP Range Data From ScienceBase
 #############################################################################
-gap_range = config.download_GAP_range_CONUS2001v1(gap_id, inDir)
+gap_range = config.download_GAP_range_CONUS2001v1(gap_id, config.inDir)
 
 # Reproject the GAP range to WGS84 for displaying
 conn3 = sqlite3.connect(':memory:')
@@ -83,13 +64,13 @@ CREATE TABLE rng2 AS SELECT HUC12RNG, seasonCode, seasonName,
 SELECT RecoverGeometryColumn('rng2', 'geom_4326', 4326, 'MULTIPOLYGON', 'XY');
 
 SELECT ExportSHP('rng2', 'geom_4326', '{0}{1}_range_4326', 'utf-8');
-""".format(inDir, gap_id)
+""".format(config.inDir, gap_id)
 
 cursor3.executescript(sql_repro)
 conn3.close()
 del cursor3
 
-gap_range2 = "{0}{1}_range_4326".format(inDir, gap_id)
+gap_range2 = "{0}{1}_range_4326".format(config.inDir, gap_id)
 
 
 #############################################################################
@@ -100,7 +81,7 @@ Description: Create a database for storing occurrence and species-concept
 data.  Needs to have spatial querying functionality.
 """
 # Delete the database if it already exists
-spdb = outDir + sp_id + '_occurrences.sqlite'
+spdb = config.outDir + config.sp_id + '_occurrences.sqlite'
 if os.path.exists(spdb):
     os.remove(spdb)
 
@@ -170,31 +151,31 @@ attributes in the occurrence db.
 ############################# RETRIEVE REQUEST PARAMETERS
 # Up-front filters are an opportunity to lighten the load from the start.
 sql_twi = """ SELECT lat_range FROM gbif_requests
-              WHERE request_id = '{0}'""".format(gbif_req_id)
+              WHERE request_id = '{0}'""".format(config.gbif_req_id)
 latRange = cursor2.execute(sql_twi).fetchone()[0]
 
 sql_twi = """ SELECT lon_range FROM gbif_requests
-              WHERE request_id = '{0}'""".format(gbif_req_id)
+              WHERE request_id = '{0}'""".format(config.gbif_req_id)
 lonRange = cursor2.execute(sql_twi).fetchone()[0]
 
 sql_twi = """ SELECT years_range FROM gbif_requests
-              WHERE request_id = '{0}'""".format(gbif_req_id)
+              WHERE request_id = '{0}'""".format(config.gbif_req_id)
 years = cursor2.execute(sql_twi).fetchone()[0]
 
 sql_twi = """ SELECT months_range FROM gbif_requests
-              WHERE request_id = '{0}'""".format(gbif_req_id)
+              WHERE request_id = '{0}'""".format(config.gbif_req_id)
 months = cursor2.execute(sql_twi).fetchone()[0]
 
 sql_twi = """ SELECT geoissue FROM gbif_requests
-              WHERE request_id = '{0}'""".format(gbif_req_id)
+              WHERE request_id = '{0}'""".format(config.gbif_req_id)
 geoIssue = cursor2.execute(sql_twi).fetchone()[0]
 
 sql_twi = """ SELECT coordinate_issue FROM gbif_requests
-              WHERE request_id = '{0}'""".format(gbif_req_id)
+              WHERE request_id = '{0}'""".format(config.gbif_req_id)
 coordinate = cursor2.execute(sql_twi).fetchone()[0]
 
 sql_twi = """ SELECT continent FROM gbif_requests
-              WHERE request_id = '{0}'""".format(gbif_req_id)
+              WHERE request_id = '{0}'""".format(config.gbif_req_id)
 continent = cursor2.execute(sql_twi).fetchone()[0]
 
 #################### REQUEST RECORDS ACCORDING TO REQUEST PARAMS
@@ -246,7 +227,7 @@ for x in alloccs:
 ###############################################################
 #  RETRIEVE FILTER PARAMETERS
 sql_green = """SELECT has_coordinate_uncertainty FROM gbif_filters
-               WHERE filter_id = '{0}';""".format(gbif_filter_id)
+               WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_coordUncertainty = cursor2.execute(sql_green).fetchone()[0]
 
 # Remove if no coordinate uncertainty
@@ -267,9 +248,9 @@ else:
 # Insert the records
 for x in alloccs3:
     insert1 = []
-    insert1.append((x['gbifID'], sp_id, 'gbif', x['acceptedTaxonKey'],
+    insert1.append((x['gbifID'], config.sp_id, 'gbif', x['acceptedTaxonKey'],
             x['coordinateUncertaintyInMeters'], x['eventDate'],
-            gbif_req_id, gbif_filter_id))
+            config.gbif_req_id, config.gbif_filter_id))
 
     insert1 = tuple(insert1)[0]
 
@@ -280,7 +261,7 @@ for x in alloccs3:
                 VALUES {0}, GeomFromText('POINT({1} {2})',
                                             {3}))""".format(str(insert1)[:-1],
                 x['decimalLongitude'], x['decimalLatitude'],
-                SRID_dict[x['geodeticDatum']])
+                config.SRID_dict[x['geodeticDatum']])
     cursor.executescript(sql1)
 
 # Update the individual count when it exists
@@ -300,7 +281,7 @@ conn.commit()
 # wgs84 version will be used in plotting with Basemap.  Buffer radius is
 # the sum of detectiondistance from requests.species_concepts and
 # coordinate uncertainty in meters here.
-requestsDB = inDir + 'requests.sqlite'
+requestsDB = config.inDir + 'requests.sqlite'
 sql_det = """
         ATTACH DATABASE '{0}' AS requests;
 
@@ -344,11 +325,13 @@ cursor.executescript(sql_buf)
 ###############################################################
 # Export occurrence circles as a shapefile (all seasons)
 cursor.execute("""SELECT ExportSHP('occurrences', 'circle_wgs84',
-                 '{0}{1}_circles', 'utf-8');""".format(outDir, summary_name))
+                 '{0}{1}_circles', 'utf-8');""".format(config.outDir,
+                                                       config.summary_name))
 
 # Export occurrence 'points' as a shapefile (all seasons)
 cursor.execute("""SELECT ExportSHP('occurrences', 'geom_4326',
-                  '{0}{1}_points', 'utf-8');""".format(outDir, summary_name))
+                  '{0}{1}_points', 'utf-8');""".format(config.outDir,
+                                                       config.summary_name))
 conn.commit()
 conn.close()
 conn2.commit()

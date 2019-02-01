@@ -12,7 +12,7 @@ max_coordUncertainty = 10000
 year_range = (1980,2018)
 
 workDir = '/Users/nmtarr/Documents/RANGES/'
-codeDir = '/Users/nmtarr/Code/Ranger/'
+codeDir = '/Users/nmtarr/Code/range_map_evaluation/'
 inDir = workDir + 'Inputs/'
 outDir = workDir + 'Outputs/'
 # Used in file names for output.
