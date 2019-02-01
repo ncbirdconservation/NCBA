@@ -40,12 +40,14 @@ def MapShapefilePolygons(map_these, title):
                 ones are file, column, and drawbounds.  Column_colors is needed
                 if column isn't 'None'.  Others are needed if it is 'None'.
                     {'file': '/path/to/your/shapfile',
+                     'alias': 'my layer'
                      'column': None,
                      'column_colors': {0: 'k', 1: 'r'}
                     'linecolor': 'k',
                     'fillcolor': 'k',
                     'linewidth': 1,
-                    'drawbounds': True}
+                    'drawbounds': True
+                    'marker': 's'}
     title -- title for the map.
     """
     # Packages needed for plotting
@@ -57,10 +59,10 @@ def MapShapefilePolygons(map_these, title):
     from matplotlib.patches import PathPatch
 
     # Basemap
-    fig = plt.figure(figsize=(12,8))
+    fig = plt.figure(figsize=(15,12))
     ax = plt.subplot(1,1,1)
-    map = Basemap(projection='aea', resolution='c', lon_0=-95.5, lat_0=39.5,
-                  height=3400000, width=5000000)
+    map = Basemap(projection='aea', resolution='l', lon_0=-95.5, lat_0=39.0,
+                  height=3200000, width=5000000)
     map.drawcoastlines(color='grey')
     map.drawstates(color='grey')
     map.drawcountries(color='grey')
@@ -75,6 +77,11 @@ def MapShapefilePolygons(map_these, title):
                                   drawbounds=mapfile['drawbounds'],
                                   linewidth=mapfile['linewidth'],
                                   color=mapfile['linecolor'])
+                # Empty scatter plot for the legend
+                plt.scatter([], [], c='', edgecolor=mapfile['linecolor'],
+                            alpha=1, label=mapfile['alias'], s=100,
+                            marker=mapfile['marker'])
+
             else:
                 map.readshapefile(mapfile['file'], 'mapfile',
                           drawbounds=mapfile['drawbounds'])
@@ -88,6 +95,12 @@ def MapShapefilePolygons(map_these, title):
                                                   edgecolor=mapfile['linecolor'],
                                                   linewidths=mapfile['linewidth'],
                                                   zorder=2))
+                # Empty scatter plot for the legend
+                plt.scatter([], [], c=mapfile['fillcolor'],
+                            edgecolors=mapfile['linecolor'],
+                            alpha=1, label=mapfile['alias'], s=100,
+                            marker=mapfile['marker'])
+
         else:
             map.readshapefile(mapfile['file'], 'mapfile', drawbounds=mapfile['drawbounds'])
             for info, shape in zip(map.mapfile_info, map.mapfile):
@@ -95,13 +108,23 @@ def MapShapefilePolygons(map_these, title):
                     if info[mapfile['column']] == thang:
                         x, y = zip(*shape)
                         map.plot(x, y, marker=None, color=mapfile['column_colors'][thang])
-  #    # Make a legend
-                    #    handles, labels = plt.gca().get_legend_handles_labels()
-                    #    handles.extend(['mapfile'])
-                    #    labels.extend(["mapfile"])
-                    #    plt.legend(handles=handles, labels=labels)
 
-    fig.suptitle(title, fontsize=20)
+            # Empty scatter plot for the legend
+            for seal in mapfile['column_colors'].keys():
+                plt.scatter([], [], c=mapfile['column_colors'][seal],
+                            edgecolors=mapfile['column_colors'][seal],
+                            alpha=1, label=mapfile['value_alias'][seal],
+                            s=100, marker=mapfile['marker'])
+
+    # Legend -- the method that works is ridiculous but necessary; you have
+    #           to add empty scatter plots with the symbology you want for
+    #           each shapefile legend entry and then call the legend.  See 
+    #           plt.scatter(...) lines above.
+    plt.legend(scatterpoints=1, frameon=True, labelspacing=1, loc='lower left',
+               framealpha=1, fontsize='x-large')
+
+    # Title
+    plt.title(title, fontsize=20, pad=-40, backgroundcolor='w')
     return
 
 
