@@ -1,5 +1,5 @@
 """
-Builds an sqlite database in which to store range evaluation information
+Builds an sqlite database in which to store range evaluation information.
 
 shucloc needs to be eventually be replaced wtih ScienceBase download of shucs.
 """
@@ -20,8 +20,8 @@ del cursor2
 
 # Delete db if it exists
 eval_db = config.outDir + gap_id + '_range.sqlite' # Name of range evaluation database.
-if os.path.exists(config.eval_db):
-    os.remove(config.eval_db)
+if os.path.exists(eval_db):
+    os.remove(eval_db)
 
 # Create or connect to the database
 conn = sqlite3.connect(eval_db)

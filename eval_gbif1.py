@@ -1,4 +1,4 @@
-/*
+"""
 This code must be run in the sqlite3 command line interface until packaged
 within python code.
 
@@ -16,28 +16,57 @@ Unresolved issues:
 1. Can the runtime be improved with spatial indexing?  Minimum bounding rectangle?
 2. ".import" has to be worked around when this goes into python.
 3. Locations of huc files. -- can sciencebase be used?
-4. Add month and year filters - they are currently hard-coded but need to come
-   from queries of rng_eval_params.evaluations.
-5. Condition data used on the parameters, such as filter_sets in the evaluations
+4. Condition data used on the parameters, such as filter_sets in the evaluations
    table.
-6. Draw from config file when possible.
-*/
+"""
+import sqlite3
+import config
+import os
 
-.headers on
-.mode csv
-ATTACH DATABASE '/users/nmtarr/documents/ranges/outputs/bybcux0_occurrences.sqlite'
+# Get evaluation paramaters
+sp_id = config.sp_id
+summary_name = config.summary_name
+gbif_req_id = config.gbif_req_id
+gbif_filter_id = config.gbif_filter_id
+outDir = config.outDir
+shucLoc = '/users/nmtarr/data/SHUCS'
+
+# Create or connect to the range_evaluation database and eval parameters db
+conn2 = sqlite3.connect(config.inDir + 'rng_eval_params.sqlite')
+cursor2 = conn2.cursor()
+sql_tax = """SELECT gap_id FROM species_concepts
+             WHERE species_id = '{0}';""".format(config.sp_id)
+gap_id = cursor2.execute(sql_tax).fetchone()[0]
+gap_id = gap_id[0] + gap_id[1:5] + gap_id[5]
+
+# Range evaluation database.
+eval_db = outDir + gap_id + '_range.sqlite'
+conn = sqlite3.connect(eval_db)
+os.putenv('SPATIALITE_SECURITY', 'relaxed')
+conn.enable_load_extension(True)
+conn.execute('SELECT load_extension("mod_spatialite")')
+cursor = conn.cursor()
+
+# Get eval_gbif1 months and years
+months = cursor2.execute("SELECT months "
+                        "FROM evaluations "
+                        "WHERE evaluation_id = 'eval_gbif1'").fetchone()[0]
+years = cursor2.execute("SELECT years "
+                        "FROM evaluations "
+                        "WHERE evaluation_id = 'eval_gbif1'").fetchone()[0]
+
+sql="""
+ATTACH DATABASE '/users/nmtarr/documents/ranges/outputs/{0}_occurrences.sqlite'
                 AS occs;
 
 ATTACH DATABASE '/users/nmtarr/documents/ranges/inputs/rng_eval_params.sqlite'
                 AS params;
 
-SELECT load_extension('mod_spatialite');
-
 /*#############################################################################
                              Assess Agreement
  ############################################################################*/
 
- /*#########################  Which HUCs contain an occurrence?
+/*#########################  Which HUCs contain an occurrence?
  #############################################################*/
 /*  Intersect occurrence circles with hucs */
 CREATE TABLE green AS
@@ -46,12 +75,8 @@ CREATE TABLE green AS
                                               ox.circle_albers)) AS geom_102008
               FROM shucs, occs.occurrences AS ox
               WHERE Intersects(shucs.geom_102008, ox.circle_albers)
-                AND Cast(strftime('%m', ox.occurrenceDate) AS INTEGER) IN
-                (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
-                AND Cast(strftime('%Y', ox.occurrenceDate) AS INTEGER) IN (1990,
-                    1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-                    2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-                    2011, 2012, 2013, 2014, 2015);
+                AND Cast(strftime('%m', ox.occurrenceDate) AS INTEGER) IN ({1})
+                AND Cast(strftime('%Y', ox.occurrenceDate) AS INTEGER) IN ({2});
 
 SELECT RecoverGeometryColumn('green', 'geom_102008', 102008, 'MULTIPOLYGON',
                              'XY');
@@ -67,8 +92,8 @@ CREATE TABLE orange AS
        ON green.occ_id = ox.occ_id
   WHERE proportion_circle BETWEEN (100 - (SELECT error_tolerance
                                           FROM params.evaluations
-                                          WHERE id= 'eval_gbif1'))
-                                  AND 100;
+                                          WHERE evaluation_id= 'eval_gbif1'))
+                          AND 100;
 
 /*  How many occurrences in each huc that had an occurrence? */
 ALTER TABLE sp_range ADD COLUMN eval_gbif1_cnt INTEGER;
@@ -99,7 +124,7 @@ UPDATE sp_range
 SET eval_gbif1 = 1
 WHERE eval_gbif1_cnt >= (SELECT pad
                         FROM params.evaluations
-                        WHERE id = 'eval_gbif1');
+                        WHERE evaluation_id = 'eval_gbif1');
 
 
 /*  For new records, put zeros in GAP range attribute fields  */
@@ -133,8 +158,7 @@ CREATE TABLE new_range AS
 
 SELECT RecoverGeometryColumn('new_range', 'geom_4326', 4326, 'POLYGON', 'XY');
 
-SELECT ExportSHP('new_range', 'geom_4326',
-                 '/users/nmtarr/documents/ranges/outputs/bYBCUx_CONUS_Range_2001v1_eval',
+SELECT ExportSHP('new_range', 'geom_4326', '{3}{4}_CONUS_Range_2001v1_eval',
                  'utf-8');
 
 /* Make a shapefile of evaluation results */
@@ -145,9 +169,7 @@ CREATE TABLE eval_gbif1 AS
 
 SELECT RecoverGeometryColumn('eval_gbif1', 'geom_4326', 4326, 'POLYGON', 'XY');
 
-SELECT ExportSHP('eval_gbif1', 'geom_4326',
-                 '/users/nmtarr/documents/ranges/outputs/bYBCUx_eval_gbif1',
-                 'utf-8');
+SELECT ExportSHP('eval_gbif1', 'geom_4326', '{3}{4}_eval_gbif1', 'utf-8');
 
 /* Export csv */
 .output /users/nmtarr/documents/ranges/outputs/bYBCUx_CONUS_Range_2001v1_eval.csv
@@ -160,3 +182,10 @@ SELECT * FROM sp_range;
 DROP TABLE sp_range;
 DROP TABLE green;
 DROP TABLE orange;
+""".format(sp_id, months, years, outDir, gap_id)
+cursor.executescript(sql)
+
+conn.close()
+conn2.close()
+del cursor
+del cursor2
