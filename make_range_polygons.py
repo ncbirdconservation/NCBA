@@ -5,7 +5,7 @@ Runs so far have produced uninformative results because of scarcity of records.
 
 TO DO:
 1. change 'max_error_meters' to 'spatial_error_tolerance'
-2  remove pad?
+2  remove min_count?
 3. Pull from config.py when possible
 """
 #############################################################################
@@ -51,7 +51,7 @@ os.chdir(codeDir)
 conn2 = sqlite3.connect(inDir + 'requests.sqlite')
 cursor2 = conn2.cursor()
 sql_tax = """SELECT gbif_id, common_name, scientific_name,
-                    error_tolerance, gap_id, pad, migratory
+                    error_tolerance, gap_id, min_count, migratory
              FROM species_concepts
              WHERE species_id = '{0}';""".format(sp_id)
 concept = cursor2.execute(sql_tax).fetchall()[0]
@@ -60,7 +60,7 @@ common_name = concept[1]
 scientific_name = concept[2]
 error_toler = concept[3]
 gap_id = concept[4]
-pad = concept[5]
+min_count = concept[5]
 migratory = concept[6]
 
 
@@ -92,7 +92,7 @@ sql_rngy = """
                      years TEXT,
                      method TEXT,
                      max_uncertainty_meters INTEGER,
-                     pad INTEGER,
+                     min_count INTEGER,
                      date_created TEXT
                      );
             """
@@ -164,7 +164,7 @@ def MakeConcaveHull(rng_poly_id, alias, sp_id, months, years,
                         AND cast(strftime('%Y', occurrenceDate) AS INTEGER) IN {4}
                         AND coordinateUncertaintyInMeters < {6};
 
-    /* Update the range tolerance and pad information */
+    /* Update the range tolerance and min_count information */
     UPDATE range_polygons
     SET max_uncertainty_meters = '{6}';
 

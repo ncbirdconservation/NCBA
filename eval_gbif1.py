@@ -14,7 +14,6 @@ The primary use of code like this would be range evaluation and revision.
 
 Unresolved issues:
 1. Can the runtime be improved with spatial indexing?  Minimum bounding rectangle?
-2. ".import" has to be worked around when this goes into python.
 3. Locations of huc files. -- can sciencebase be used?
 4. Condition data used on the parameters, such as filter_sets in the evaluations
    table.
@@ -119,10 +118,10 @@ INSERT INTO sp_range (strHUC12RNG, eval_gbif1_cnt)
 ALTER TABLE sp_range ADD COLUMN eval_gbif1 INTEGER;
 
 /*  Record in sp_range that gap and gbif agreed on species presence, in light
-of the pad for the species. */
+of the min_count for the species. */
 UPDATE sp_range
 SET eval_gbif1 = 1
-WHERE eval_gbif1_cnt >= (SELECT pad
+WHERE eval_gbif1_cnt >= (SELECT min_count
                         FROM params.evaluations
                         WHERE evaluation_id = 'eval_gbif1');
 
@@ -149,7 +148,7 @@ WHERE eval_gbif1 = 1;
 
 
 /*#############################################################################
-                               Export Table and Map
+                               Export Maps
  ############################################################################*/
 /*  Create a version of sp_range with geometry  */
 CREATE TABLE new_range AS
@@ -171,9 +170,6 @@ SELECT RecoverGeometryColumn('eval_gbif1', 'geom_4326', 4326, 'POLYGON', 'XY');
 
 SELECT ExportSHP('eval_gbif1', 'geom_4326', '{3}{4}_eval_gbif1', 'utf-8');
 
-/* Export csv */
-.output /users/nmtarr/documents/ranges/outputs/bYBCUx_CONUS_Range_2001v1_eval.csv
-SELECT * FROM sp_range;
 
 /*#############################################################################
                              Clean Up
