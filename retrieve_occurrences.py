@@ -235,7 +235,7 @@ if filt_coordUncertainty == 1:
     alloccs3 = [x for x in alloccs2 if 'coordinateUncertaintyInMeters'
                 in x.keys()]
 else:
-    pass
+    alloccs3 = alloccs2
 
 ########################
 ########################  WHAT ELSE CAN WE DO ??????...
