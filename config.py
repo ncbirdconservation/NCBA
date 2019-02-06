@@ -3,8 +3,10 @@ A place to store variables and functions that are the same throughout the repo.
 """
 sp_id = 'bybcux0'
 summary_name = 'cuckoo'
-gbif_req_id = 'r001'
-gbif_filter_id = 'f001'
+gbif_req_id = 'r002'
+gbif_filter_id = 'f002'
+ebird_req_id = None
+ebird_filter_id = None
 evaluation = 'eval_gbif1'
 
 ##############################################

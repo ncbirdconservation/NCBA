@@ -79,8 +79,8 @@ gap_range2 = "{0}{1}_range_4326".format(config.inDir, gap_id)
 Description: Create a database for storing occurrence and species-concept
 data.  Needs to have spatial querying functionality.
 """
-# Delete the database if it already exists
 spdb = config.spdb
+# Delete the database if it already exists
 if os.path.exists(spdb):
     os.remove(spdb)
 
