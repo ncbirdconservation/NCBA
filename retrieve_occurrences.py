@@ -227,22 +227,19 @@ for x in alloccs:
 
 ##################################################  FILTER MORE
 ###############################################################
-#  RETRIEVE FILTER PARAMETERS
+
+#  COORDINATE UNCERTAINTY
 sql_green = """SELECT has_coordinate_uncertainty FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_coordUncertainty = cursor2.execute(sql_green).fetchone()[0]
 
-# Remove if no coordinate uncertainty
 if filt_coordUncertainty == 1:
     alloccs3 = [x for x in alloccs2 if 'coordinateUncertaintyInMeters'
                 in x.keys()]
 if filt_coordUncertainty == 0:
     alloccs3 = alloccs2
 
-print("HERE")
-pprint.pprint(alloccs3[:4])
-
-
+# OTHERS?
 ########################
 ########################  WHAT ELSE CAN WE DO ??????...
 ########################  DEVELOP HERE
