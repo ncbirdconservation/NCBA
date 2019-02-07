@@ -18,6 +18,8 @@ from pygbif import occurrences
 import os
 os.chdir('/')
 import config
+import repo_functions as functions
+import pprint
 
 
 #############################################################################
@@ -42,7 +44,7 @@ gap_id = concept[4]
 #############################################################################
 #                      GAP Range Data From ScienceBase
 #############################################################################
-gap_range = config.download_GAP_range_CONUS2001v1(gap_id, config.inDir)
+gap_range = functions.download_GAP_range_CONUS2001v1(gap_id, config.inDir)
 
 # Reproject the GAP range to WGS84 for displaying
 conn3 = sqlite3.connect(':memory:')
@@ -238,7 +240,7 @@ if filt_coordUncertainty == 0:
     alloccs3 = alloccs2
 
 print("HERE")
-print(alloccs3[:4])
+pprint.pprint(alloccs3[:4])
 
 
 ########################
@@ -248,13 +250,20 @@ print(alloccs3[:4])
 
 ###############################################  INSERT INTO DB
 ###############################################################
-# Insert the records
+# Insert the records   !!!! needs to assess if coord uncertainty is present and act accordingly because insert statement depends on if it's present.
 for x in alloccs3:
-    insert1 = []
-    insert1.append((x['gbifID'], config.sp_id, 'gbif', x['acceptedTaxonKey'],
-            x['coordinateUncertaintyInMeters'], x['eventDate'],
-            config.gbif_req_id, config.gbif_filter_id))
-
+    if filt_coordUncertainty == 1:
+        insert1 = []
+        insert1.append((x['gbifID'], config.sp_id,
+                        'gbif', x['acceptedTaxonKey'],
+                        x['coordinateUncertaintyInMeters'], x['eventDate'],
+                        config.gbif_req_id, config.gbif_filter_id))
+    if filt_coordUncertainty == 0:
+        insert1 = []
+        insert1.append((x['gbifID'], config.sp_id,
+                        'gbif', x['acceptedTaxonKey'],
+                        config.default_coordUncertainty, x['eventDate'],
+                        config.gbif_req_id, config.gbif_filter_id))
     insert1 = tuple(insert1)[0]
 
     sql1 = """INSERT INTO occurrences ('occ_id', 'species_id', 'source',
