@@ -234,14 +234,17 @@ filt_coordUncertainty = cursor2.execute(sql_green).fetchone()[0]
 if filt_coordUncertainty == 1:
     alloccs3 = [x for x in alloccs2 if 'coordinateUncertaintyInMeters'
                 in x.keys()]
-else:
+if filt_coordUncertainty == 0:
     alloccs3 = alloccs2
+
+print("HERE")
+print(alloccs3[:4])
+
 
 ########################
 ########################  WHAT ELSE CAN WE DO ??????...
 ########################  DEVELOP HERE
 ########################
-
 
 ###############################################  INSERT INTO DB
 ###############################################################
