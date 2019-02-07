@@ -172,7 +172,7 @@ sql_twi = """ SELECT geoissue FROM gbif_requests
               WHERE request_id = '{0}'""".format(config.gbif_req_id)
 geoIssue = cursor2.execute(sql_twi).fetchone()[0]
 
-sql_twi = """ SELECT coordinate_issue FROM gbif_requests
+sql_twi = """ SELECT coordinate FROM gbif_requests
               WHERE request_id = '{0}'""".format(config.gbif_req_id)
 coordinate = cursor2.execute(sql_twi).fetchone()[0]
 
@@ -182,7 +182,7 @@ continent = cursor2.execute(sql_twi).fetchone()[0]
 
 #################### REQUEST RECORDS ACCORDING TO REQUEST PARAMS
 # First, find out how many records there are that meet criteria
-if geoissue == True or geoissue == False:
+if geoIssue == True or geoIssue == False:
     occ_search = occurrences.search(gbif_id,
                                     year=years,
                                     month=months,
@@ -260,7 +260,7 @@ for x in alloccs:
 ##################################################  FILTER MORE
 ###############################################################
 
-#  COORDINATE UNCERTAINTY
+#  COORDINATE UNCERTAINTY !!!!!!!!!!! !!! THIS DOESNT work right.  should assess on basis of record not filter set.
 sql_green = """SELECT has_coordinate_uncertainty FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_coordUncertainty = cursor2.execute(sql_green).fetchone()[0]
