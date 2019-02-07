@@ -182,33 +182,65 @@ continent = cursor2.execute(sql_twi).fetchone()[0]
 
 #################### REQUEST RECORDS ACCORDING TO REQUEST PARAMS
 # First, find out how many records there are that meet criteria
-occ_search = occurrences.search(gbif_id,
-                          year=years,
-                          month=months,
-                          decimelLatitude=latRange,
-                          decimelLongitude=lonRange,
-                          hasGeospatialIssue=geoIssue,
-                          hasCoordinate=coordinate,
-                          continent=continent)
-occ_count=occ_search['count']
-print('{0} records exist'.format(occ_count))
+if geoissue == True or geoissue == False:
+    occ_search = occurrences.search(gbif_id,
+                                    year=years,
+                                    month=months,
+                                    decimelLatitude=latRange,
+                                    decimelLongitude=lonRange,
+                                    hasGeospatialIssue=geoIssue,
+                                    hasCoordinate=coordinate,
+                                    continent=continent)
+    occ_count=occ_search['count']
+    print('{0} records exist'.format(occ_count))
 
-# Get occurrences in batches, saving into master list
-alloccs = []
-batches = range(0, occ_count, 300)
-for i in batches:
-    occ_json = occurrences.search(gbif_id,
-                              limit=300,
-                              offset=i,
-                              year=years,
-                              month=months,
-                              decimelLatitude=latRange,
-                              decimelLongitude=lonRange,
-                              hasGeospatialIssue=geoIssue,
-                              hasCoordinate=coordinate,
-                              continent=continent)
-    occs = occ_json['results']
-    alloccs = alloccs + occs
+    # Get occurrences in batches, saving into master list
+    alloccs = []
+    batches = range(0, occ_count, 300)
+    for i in batches:
+        occ_json = occurrences.search(gbif_id,
+                                      limit=300,
+                                      offset=i,
+                                      year=years,
+                                      month=months,
+                                      decimelLatitude=latRange,
+                                      decimelLongitude=lonRange,
+                                      hasGeospatialIssue=geoIssue,
+                                      hasCoordinate=coordinate,
+                                      continent=continent)
+        occs = occ_json['results']
+        alloccs = alloccs + occs
+
+else:
+    occ_search = occurrences.search(gbif_id,
+                                    year=years,
+                                    month=months,
+                                    decimelLatitude=latRange,
+                                    decimelLongitude=lonRange,
+                                    hasCoordinate=coordinate,
+                                    continent=continent)
+    occ_count=occ_search['count']
+    print('{0} records exist'.format(occ_count))
+
+    # Get occurrences in batches, saving into master list
+    alloccs = []
+    batches = range(0, occ_count, 300)
+    for i in batches:
+        occ_json = occurrences.search(gbif_id,
+                                      limit=300,
+                                      offset=i,
+                                      year=years,
+                                      month=months,
+                                      decimelLatitude=latRange,
+                                      decimelLongitude=lonRange,
+                                      hasCoordinate=coordinate,
+                                      continent=continent)
+        occs = occ_json['results']
+        alloccs = alloccs + occs
+
+
+# Save json of keys returned for examination later in notebooks.
+
 
 # Pull out relevant attributes from occurrence dictionaries.  Filtering
 # will be performed with info from these keys.
