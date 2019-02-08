@@ -1,8 +1,8 @@
 #NOTE! this is overwritten by some notebooks, so update everywhere, if adding lines.
 sp_id = 'bybcux0'
 summary_name = 'cuckoo'
-gbif_req_id = 'r001'
-gbif_filter_id = 'f001'
+gbif_req_id = 'GBIF_r4'
+gbif_filter_id = 'GBIF_f2'
 ebird_req_id = None
 ebird_filter_id = None
 evaluation = 'eval_gbif1'
