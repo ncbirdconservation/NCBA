@@ -20,6 +20,7 @@ os.chdir('/')
 import config
 import repo_functions as functions
 import pprint
+import json
 
 
 #############################################################################
@@ -124,7 +125,6 @@ sql_cdb = """
                 occ_id INTEGER NOT NULL PRIMARY KEY UNIQUE,
                 species_id INTEGER NOT NULL,
                 source TEXT NOT NULL,
-                source_sp_id TEXT NOT NULL,
                 request_id TEXT NOT NULL,
                 filter_id TEXT NOT NULL,
                 coordinateUncertaintyInMeters INTEGER,
@@ -239,7 +239,25 @@ else:
         alloccs = alloccs + occs
 
 
-# Save json of keys returned for examination later in notebooks.
+# Save table of keys that were returned
+keys = [list(x.keys()) for x in alloccs]
+keys2 = set([])
+for x in keys:
+    keys2 = keys2 | set(x)
+dfK = pd.DataFrame(index=keys2, columns=['included(n)', 'populated(n)'])
+dfK['included(n)'] = 0
+dfK['populated(n)'] = 0
+for t in alloccs:
+    for y in t.keys():
+        dfK.loc[y, 'included(n)'] += 1
+        try:
+            int(t[y])
+            dfK.loc[y, 'populated(n)'] += 1
+        except:
+            if len(t[y]) > 0:
+                dfK.loc[y, 'populated(n)'] += 1
+dfK.sort_index(inplace=True)
+dfK.to_csv(config.outDir + "fields_returned.csv", index_label='fields')
 
 
 # Pull out relevant attributes from occurrence dictionaries.  Filtering
@@ -260,7 +278,7 @@ for x in alloccs:
 ##################################################  FILTER MORE
 ###############################################################
 
-#  COORDINATE UNCERTAINTY !!!!!!!!!!! !!! THIS DOESNT work right.  should assess on basis of record not filter set.
+#  COORDINATE UNCERTAINTY
 sql_green = """SELECT has_coordinate_uncertainty FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_coordUncertainty = cursor2.execute(sql_green).fetchone()[0]
@@ -271,23 +289,19 @@ if filt_coordUncertainty == 1:
 if filt_coordUncertainty == 0:
     alloccs3 = alloccs2
 
-# OTHERS?
-########################
-########################  WHAT ELSE CAN WE DO ??????...
-########################  DEVELOP HERE
-########################
-
 ###############################################  INSERT INTO DB
 ###############################################################
 # Insert the records   !!!! needs to assess if coord uncertainty is present and act accordingly because insert statement depends on if it's present.
 for x in alloccs3:
-    if filt_coordUncertainty == 1:
+    if 'coordinateUncertaintyInMeters' in x.keys() and x['coordinateUncertaintyInMeters'] > 0:
         insert1 = []
         insert1.append((x['gbifID'], config.sp_id,
                         'gbif', x['acceptedTaxonKey'],
                         x['coordinateUncertaintyInMeters'], x['eventDate'],
                         config.gbif_req_id, config.gbif_filter_id))
-    if filt_coordUncertainty == 0:
+    else:
+        print("No coordinate uncertainty - "
+              "using default value of {0}".format(config.default_coordUncertainty))
         insert1 = []
         insert1.append((x['gbifID'], config.sp_id,
                         'gbif', x['acceptedTaxonKey'],
