@@ -295,22 +295,20 @@ if filt_coordUncertainty == 0:
 for x in alloccs3:
     if 'coordinateUncertaintyInMeters' in x.keys() and x['coordinateUncertaintyInMeters'] > 0:
         insert1 = []
-        insert1.append((x['gbifID'], config.sp_id,
-                        'gbif', x['acceptedTaxonKey'],
+        insert1.append((x['gbifID'], config.sp_id, 'gbif',
                         x['coordinateUncertaintyInMeters'], x['eventDate'],
                         config.gbif_req_id, config.gbif_filter_id))
     else:
         print("No coordinate uncertainty - "
               "using default value of {0}".format(config.default_coordUncertainty))
         insert1 = []
-        insert1.append((x['gbifID'], config.sp_id,
-                        'gbif', x['acceptedTaxonKey'],
+        insert1.append((x['gbifID'], config.sp_id, 'gbif',
                         config.default_coordUncertainty, x['eventDate'],
                         config.gbif_req_id, config.gbif_filter_id))
     insert1 = tuple(insert1)[0]
 
     sql1 = """INSERT INTO occurrences ('occ_id', 'species_id', 'source',
-                            'source_sp_id', 'coordinateUncertaintyInMeters',
+                            'coordinateUncertaintyInMeters',
                             'occurrenceDate', 'request_id', 'filter_id',
                             'geom_xy4326')
                 VALUES {0}, GeomFromText('POINT({1} {2})',
