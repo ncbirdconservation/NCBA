@@ -171,6 +171,8 @@ months = cursor2.execute(sql_twi).fetchone()[0]
 sql_twi = """ SELECT geoissue FROM gbif_requests
               WHERE request_id = '{0}'""".format(config.gbif_req_id)
 geoIssue = cursor2.execute(sql_twi).fetchone()[0]
+if geoIssue == 'None':
+    geoIssue = None
 
 sql_twi = """ SELECT coordinate FROM gbif_requests
               WHERE request_id = '{0}'""".format(config.gbif_req_id)
@@ -179,64 +181,38 @@ coordinate = cursor2.execute(sql_twi).fetchone()[0]
 sql_twi = """ SELECT continent FROM gbif_requests
               WHERE request_id = '{0}'""".format(config.gbif_req_id)
 continent = cursor2.execute(sql_twi).fetchone()[0]
+if continent == "None":
+    continent = None
 
 #################### REQUEST RECORDS ACCORDING TO REQUEST PARAMS
 # First, find out how many records there are that meet criteria
-if geoIssue == True or geoIssue == False:
-    occ_search = occurrences.search(gbif_id,
-                                    year=years,
-                                    month=months,
-                                    decimelLatitude=latRange,
-                                    decimelLongitude=lonRange,
-                                    hasGeospatialIssue=geoIssue,
-                                    hasCoordinate=coordinate,
-                                    continent=continent)
-    occ_count=occ_search['count']
-    print('{0} records exist'.format(occ_count))
+occ_search = occurrences.search(gbif_id,
+                                year=years,
+                                month=months,
+                                decimelLatitude=latRange,
+                                decimelLongitude=lonRange,
+                                hasGeospatialIssue=geoIssue,
+                                hasCoordinate=coordinate,
+                                continent=continent)
+occ_count=occ_search['count']
+print('{0} records exist'.format(occ_count))
 
-    # Get occurrences in batches, saving into master list
-    alloccs = []
-    batches = range(0, occ_count, 300)
-    for i in batches:
-        occ_json = occurrences.search(gbif_id,
-                                      limit=300,
-                                      offset=i,
-                                      year=years,
-                                      month=months,
-                                      decimelLatitude=latRange,
-                                      decimelLongitude=lonRange,
-                                      hasGeospatialIssue=geoIssue,
-                                      hasCoordinate=coordinate,
-                                      continent=continent)
-        occs = occ_json['results']
-        alloccs = alloccs + occs
-
-else:
-    occ_search = occurrences.search(gbif_id,
-                                    year=years,
-                                    month=months,
-                                    decimelLatitude=latRange,
-                                    decimelLongitude=lonRange,
-                                    hasCoordinate=coordinate,
-                                    continent=continent)
-    occ_count=occ_search['count']
-    print('{0} records exist'.format(occ_count))
-
-    # Get occurrences in batches, saving into master list
-    alloccs = []
-    batches = range(0, occ_count, 300)
-    for i in batches:
-        occ_json = occurrences.search(gbif_id,
-                                      limit=300,
-                                      offset=i,
-                                      year=years,
-                                      month=months,
-                                      decimelLatitude=latRange,
-                                      decimelLongitude=lonRange,
-                                      hasCoordinate=coordinate,
-                                      continent=continent)
-        occs = occ_json['results']
-        alloccs = alloccs + occs
+# Get occurrences in batches, saving into master list
+alloccs = []
+batches = range(0, occ_count, 300)
+for i in batches:
+    occ_json = occurrences.search(gbif_id,
+                                  limit=300,
+                                  offset=i,
+                                  year=years,
+                                  month=months,
+                                  decimelLatitude=latRange,
+                                  decimelLongitude=lonRange,
+                                  hasGeospatialIssue=geoIssue,
+                                  hasCoordinate=coordinate,
+                                  continent=continent)
+    occs = occ_json['results']
+    alloccs = alloccs + occs
 
 
 # Save table of keys that were returned
@@ -254,7 +230,9 @@ for t in alloccs:
             int(t[y])
             dfK.loc[y, 'populated(n)'] += 1
         except:
-            if len(t[y]) > 0:
+            if t[y] == None:
+                pass
+            elif len(t[y]) > 0:
                 dfK.loc[y, 'populated(n)'] += 1
 dfK.sort_index(inplace=True)
 dfK.to_csv(config.outDir + "fields_returned.csv", index_label='fields')
