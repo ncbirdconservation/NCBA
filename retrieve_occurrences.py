@@ -318,8 +318,6 @@ for x in alloccs3:
                         x['coordinateUncertaintyInMeters'], x['eventDate'],
                         config.gbif_req_id, config.gbif_filter_id))
     else:
-        print("No coordinate uncertainty - "
-              "using default value of {0}".format(config.default_coordUncertainty))
         insert1 = []
         insert1.append((x['gbifID'], config.sp_id, 'gbif',
                         config.default_coordUncertainty, x['eventDate'],
