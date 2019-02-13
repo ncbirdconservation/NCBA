@@ -122,7 +122,7 @@ conn.commit()
 sql_cdb = """
         /* Create a table for occurrence records, WITH GEOMETRY */
         CREATE TABLE IF NOT EXISTS occurrences (
-                occ_id INTEGER NOT NULL PRIMARY KEY UNIQUE,
+                occ_id INTEGER NOT NULL PRIMARY KEY,
                 species_id INTEGER NOT NULL,
                 source TEXT NOT NULL,
                 request_id TEXT NOT NULL,
