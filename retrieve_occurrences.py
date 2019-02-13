@@ -28,7 +28,7 @@ import json
 #############################################################################
 os.chdir(config.codeDir)
 # Get species info from requests database
-conn2 = sqlite3.connect(config.inDir + 'parameters.sqlite')
+conn2 = sqlite3.connect(config.codeDir + 'parameters.sqlite')
 cursor2 = conn2.cursor()
 sql_tax = """SELECT gbif_id, common_name, scientific_name,
                     detection_distance_meters, gap_id
@@ -276,7 +276,6 @@ for occdict in alloccs:
 cursor.executescript("""CREATE TABLE values_of_interest (field TEXT, vals TEXT);""")
 for x in summary.keys():
     stmt = """INSERT INTO values_of_interest (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
-    print(stmt)
     cursor.execute(stmt)
 
 # Pull out relevant attributes from occurrence dictionaries.  Filtering
