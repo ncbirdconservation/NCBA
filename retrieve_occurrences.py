@@ -235,7 +235,7 @@ for t in alloccs:
             elif len(t[y]) > 0:
                 dfK.loc[y, 'populated(n)'] += 1
 dfK.sort_index(inplace=True)
-dfK.to_csv(config.outDir + "gbif_fields_returned.csv", index_label='fields')
+dfK.to_sql(name='gbif_fields_returned', con=conn, if_exists='replace')
 
 ##################################### SAVE SUMMARY OF VALUES RETURNED
 summary = {'datums': ['WGS84'],
@@ -271,13 +271,13 @@ for occdict in alloccs:
         summary['collections'] = summary['collections'] + [co]
     except:
         pass
-# Remove duplicates, make lists.  Sets can't be json'd
-for x in summary.keys():
-    summary[x] = list(set(summary[x]))
-summary_file = config.outDir + "gbif_results_summary.json"
-with open(summary_file, "w") as outfile:
-    json.dump(summary, outfile)
 
+# Remove duplicates, make strings for entry into table
+cursor.executescript("""CREATE TABLE values_of_interest (field TEXT, vals TEXT);""")
+for x in summary.keys():
+    stmt = """INSERT INTO values_of_interest (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace(";", ""))
+    print(stmt)
+    cursor.execute(stmt)
 
 # Pull out relevant attributes from occurrence dictionaries.  Filtering
 # will be performed with info from these keys.
