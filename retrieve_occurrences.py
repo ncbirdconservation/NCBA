@@ -246,35 +246,34 @@ summary = {'datums': ['WGS84'],
 for occdict in alloccs:
     # datums
     if occdict['geodeticDatum'] != 'WGS84':
-        summary['datums'] = summary['datums'].append(occdict['geodeticDatum'])
+        summary['datums'] = summary['datums'] + occdict['geodeticDatum']
     # issues
-    summary['issues'] = issues | set(occdict['issues'])
+    summary['issues'] = summary['issues'] | set(occdict['issues'])
     # basis or record
     BOR = occdict['basisOfRecord']
     if BOR == "" or BOR == None:
-        summary['bases'] = summary['bases'].append("UNKNOWN")
+        summary['bases'] = summary['bases'] + ["UNKNOWN"]
     else:
-        summary['bases'] = summary['bases'].append(BOR)
+        summary['bases'] = summary['bases'] + [BOR]
     # institution
     try:
         try:
             who = occdict['institutionID']
-            summary['institutions'] = summary['institutions'].append(who)
+            summary['institutions'] = summary['institutions'] + [who]
         except:
             who = occdict['institutionCode']
-            summary['institutions'] = summary['institutions'].append(who)
+            summary['institutions'] = summary['institutions'] + [who]
     except:
-        summary['institutions'] = summary['institutions'].append('UNKNOWN')
+        summary['institutions'] = summary['institutions'] + ['UNKNOWN']
     # collections
     try:
-        who = occdict['collectionCode']
-        summary['collections'] = summary['collections'].append(who)
+        co = occdict['collectionCode']
+        summary['collections'] = summary['collections'] + [co]
     except:
         pass
-summary['datums'] = list(set(summary['datums']))
-summary['bases'] = list(set(summary['bases']))
-summary['institutions'] = list(set(summary['institutions']))
-summary['collections'] = list(set(summary['collections']))
+# Remove duplicates, make lists.  Sets can't be json'd
+for x in summary.keys():
+    summary[x] = list(set(summary[x]))
 summary_file = config.outDir + "gbif_results_summary.json"
 with open(summary_file, "w") as outfile:
     json.dump(summary, outfile)
