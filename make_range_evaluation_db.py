@@ -9,7 +9,7 @@ import pandas as pd
 import os
 
 # Get gap id
-conn2 = sqlite3.connect(config.inDir + 'rng_eval_params.sqlite')
+conn2 = sqlite3.connect(config.inDir + 'parameters.sqlite')
 cursor2 = conn2.cursor()
 sql_tax = """SELECT gap_id FROM species_concepts
              WHERE species_id = '{0}';""".format(config.sp_id)

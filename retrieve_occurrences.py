@@ -28,7 +28,7 @@ import json
 #############################################################################
 os.chdir(config.codeDir)
 # Get species info from requests database
-conn2 = sqlite3.connect(config.inDir + 'rng_eval_params.sqlite')
+conn2 = sqlite3.connect(config.inDir + 'parameters.sqlite')
 cursor2 = conn2.cursor()
 sql_tax = """SELECT gbif_id, common_name, scientific_name,
                     detection_distance_meters, gap_id

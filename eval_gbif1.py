@@ -31,7 +31,7 @@ outDir = config.outDir
 shucLoc = '/users/nmtarr/data/SHUCS'
 
 # Create or connect to the range_evaluation database and eval parameters db
-conn2 = sqlite3.connect(config.inDir + 'rng_eval_params.sqlite')
+conn2 = sqlite3.connect(config.inDir + 'parameters.sqlite')
 cursor2 = conn2.cursor()
 sql_tax = """SELECT gap_id FROM species_concepts
              WHERE species_id = '{0}';""".format(config.sp_id)
@@ -58,7 +58,7 @@ sql="""
 ATTACH DATABASE '/users/nmtarr/documents/ranges/outputs/{0}_occurrences.sqlite'
                 AS occs;
 
-ATTACH DATABASE '/users/nmtarr/documents/ranges/inputs/rng_eval_params.sqlite'
+ATTACH DATABASE '/users/nmtarr/code/range_map_evaluation/parameters.sqlite'
                 AS params;
 
 /*#############################################################################
