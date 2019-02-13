@@ -215,7 +215,7 @@ for i in batches:
     alloccs = alloccs + occs
 
 
-# Save table of keys that were returned
+######################### CREATE SUMMARY TABLE OF KEYS/FIELDS RETURNED
 keys = [list(x.keys()) for x in alloccs]
 keys2 = set([])
 for x in keys:
@@ -235,7 +235,49 @@ for t in alloccs:
             elif len(t[y]) > 0:
                 dfK.loc[y, 'populated(n)'] += 1
 dfK.sort_index(inplace=True)
-dfK.to_csv(config.outDir + "fields_returned.csv", index_label='fields')
+dfK.to_csv(config.outDir + "gbif_fields_returned.csv", index_label='fields')
+
+##################################### SAVE SUMMARY OF VALUES RETURNED
+summary = {'datums': ['WGS84'],
+           'issues': set([]),
+           'bases': [],
+           'institutions': [],
+           'collections': []}
+for occdict in alloccs:
+    # datums
+    if occdict['geodeticDatum'] != 'WGS84':
+        summary['datums'] = summary['datums'].append(occdict['geodeticDatum'])
+    # issues
+    summary['issues'] = issues | set(occdict['issues'])
+    # basis or record
+    BOR = occdict['basisOfRecord']
+    if BOR == "" or BOR == None:
+        summary['bases'] = summary['bases'].append("UNKNOWN")
+    else:
+        summary['bases'] = summary['bases'].append(BOR)
+    # institution
+    try:
+        try:
+            who = occdict['institutionID']
+            summary['institutions'] = summary['institutions'].append(who)
+        except:
+            who = occdict['institutionCode']
+            summary['institutions'] = summary['institutions'].append(who)
+    except:
+        summary['institutions'] = summary['institutions'].append('UNKNOWN')
+    # collections
+    try:
+        who = occdict['collectionCode']
+        summary['collections'] = summary['collections'].append(who)
+    except:
+        pass
+summary['datums'] = list(set(summary['datums']))
+summary['bases'] = list(set(summary['bases']))
+summary['institutions'] = list(set(summary['institutions']))
+summary['collections'] = list(set(summary['collections']))
+summary_file = config.outDir + "gbif_results_summary.json"
+with open(summary_file, "w") as outfile:
+    json.dump(summary, outfile)
 
 
 # Pull out relevant attributes from occurrence dictionaries.  Filtering
@@ -308,7 +350,7 @@ conn.commit()
 #############################################################################
 #                            EBIRD Records
 #############################################################################
-
+# ENTER HERE
 #############################################################################
 
 ################################################  BUFFER POINTS
