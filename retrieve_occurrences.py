@@ -275,7 +275,7 @@ for occdict in alloccs:
 # Remove duplicates, make strings for entry into table
 cursor.executescript("""CREATE TABLE values_of_interest (field TEXT, vals TEXT);""")
 for x in summary.keys():
-    stmt = """INSERT INTO values_of_interest (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace(";", ""))
+    stmt = """INSERT INTO values_of_interest (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
     print(stmt)
     cursor.execute(stmt)
 
