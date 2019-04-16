@@ -1,7 +1,7 @@
 #NOTE! this is overwritten by some notebooks, so update everywhere, if adding lines.
-sp_id = 'ramalx0'
-summary_name = 'gator'
-gbif_req_id = 'GBIFr7'
+sp_id = 'anrwax0'
+summary_name = 'waterdog'
+gbif_req_id = 'GBIFr8'
 gbif_filter_id = 'GBIFf2'
 ebird_req_id = None
 ebird_filter_id = None
