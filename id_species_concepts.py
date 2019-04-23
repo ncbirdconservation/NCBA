@@ -12,3 +12,4 @@ a database.
 For now, a single species has been manually entered into species-concepts
 for development.
 """
+from pygbif import species
