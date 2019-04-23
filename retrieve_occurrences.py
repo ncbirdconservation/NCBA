@@ -18,6 +18,9 @@ from pygbif import occurrences
 import os
 os.chdir('/')
 import config
+import repo_functions as functions
+import pprint
+import json
 
 
 #############################################################################
@@ -25,7 +28,7 @@ import config
 #############################################################################
 os.chdir(config.codeDir)
 # Get species info from requests database
-conn2 = sqlite3.connect(config.inDir + 'rng_eval_params.sqlite')
+conn2 = sqlite3.connect(config.codeDir + 'parameters.sqlite')
 cursor2 = conn2.cursor()
 sql_tax = """SELECT gbif_id, common_name, scientific_name,
                     detection_distance_meters, gap_id
@@ -42,7 +45,7 @@ gap_id = concept[4]
 #############################################################################
 #                      GAP Range Data From ScienceBase
 #############################################################################
-gap_range = config.download_GAP_range_CONUS2001v1(gap_id, config.inDir)
+gap_range = functions.download_GAP_range_CONUS2001v1(gap_id, config.inDir)
 
 # Reproject the GAP range to WGS84 for displaying
 conn3 = sqlite3.connect(':memory:')
@@ -79,8 +82,8 @@ gap_range2 = "{0}{1}_range_4326".format(config.inDir, gap_id)
 Description: Create a database for storing occurrence and species-concept
 data.  Needs to have spatial querying functionality.
 """
-# Delete the database if it already exists
 spdb = config.spdb
+# Delete the database if it already exists
 if os.path.exists(spdb):
     os.remove(spdb)
 
@@ -119,10 +122,9 @@ conn.commit()
 sql_cdb = """
         /* Create a table for occurrence records, WITH GEOMETRY */
         CREATE TABLE IF NOT EXISTS occurrences (
-                occ_id INTEGER NOT NULL PRIMARY KEY UNIQUE,
+                occ_id INTEGER NOT NULL PRIMARY KEY,
                 species_id INTEGER NOT NULL,
                 source TEXT NOT NULL,
-                source_sp_id TEXT NOT NULL,
                 request_id TEXT NOT NULL,
                 filter_id TEXT NOT NULL,
                 coordinateUncertaintyInMeters INTEGER,
@@ -142,7 +144,7 @@ cursor.executescript(sql_cdb)
 
 
 #############################################################################
-#                            Get GBIF Records
+#                              GBIF Records
 #############################################################################
 """
 Retrieve GBIF records for a species and save appropriate
@@ -169,25 +171,29 @@ months = cursor2.execute(sql_twi).fetchone()[0]
 sql_twi = """ SELECT geoissue FROM gbif_requests
               WHERE request_id = '{0}'""".format(config.gbif_req_id)
 geoIssue = cursor2.execute(sql_twi).fetchone()[0]
+if geoIssue == 'None':
+    geoIssue = None
 
-sql_twi = """ SELECT coordinate_issue FROM gbif_requests
+sql_twi = """ SELECT coordinate FROM gbif_requests
               WHERE request_id = '{0}'""".format(config.gbif_req_id)
 coordinate = cursor2.execute(sql_twi).fetchone()[0]
 
 sql_twi = """ SELECT continent FROM gbif_requests
               WHERE request_id = '{0}'""".format(config.gbif_req_id)
 continent = cursor2.execute(sql_twi).fetchone()[0]
+if continent == "None":
+    continent = None
 
 #################### REQUEST RECORDS ACCORDING TO REQUEST PARAMS
 # First, find out how many records there are that meet criteria
 occ_search = occurrences.search(gbif_id,
-                          year=years,
-                          month=months,
-                          decimelLatitude=latRange,
-                          decimelLongitude=lonRange,
-                          hasGeospatialIssue=geoIssue,
-                          hasCoordinate=coordinate,
-                          continent=continent)
+                                year=years,
+                                month=months,
+                                decimelLatitude=latRange,
+                                decimelLongitude=lonRange,
+                                hasGeospatialIssue=geoIssue,
+                                hasCoordinate=coordinate,
+                                continent=continent)
 occ_count=occ_search['count']
 print('{0} records exist'.format(occ_count))
 
@@ -196,17 +202,81 @@ alloccs = []
 batches = range(0, occ_count, 300)
 for i in batches:
     occ_json = occurrences.search(gbif_id,
-                              limit=300,
-                              offset=i,
-                              year=years,
-                              month=months,
-                              decimelLatitude=latRange,
-                              decimelLongitude=lonRange,
-                              hasGeospatialIssue=geoIssue,
-                              hasCoordinate=coordinate,
-                              continent=continent)
+                                  limit=300,
+                                  offset=i,
+                                  year=years,
+                                  month=months,
+                                  decimelLatitude=latRange,
+                                  decimelLongitude=lonRange,
+                                  hasGeospatialIssue=geoIssue,
+                                  hasCoordinate=coordinate,
+                                  continent=continent)
     occs = occ_json['results']
     alloccs = alloccs + occs
+
+
+######################### CREATE SUMMARY TABLE OF KEYS/FIELDS RETURNED
+keys = [list(x.keys()) for x in alloccs]
+keys2 = set([])
+for x in keys:
+    keys2 = keys2 | set(x)
+dfK = pd.DataFrame(index=keys2, columns=['included(n)', 'populated(n)'])
+dfK['included(n)'] = 0
+dfK['populated(n)'] = 0
+for t in alloccs:
+    for y in t.keys():
+        dfK.loc[y, 'included(n)'] += 1
+        try:
+            int(t[y])
+            dfK.loc[y, 'populated(n)'] += 1
+        except:
+            if t[y] == None:
+                pass
+            elif len(t[y]) > 0:
+                dfK.loc[y, 'populated(n)'] += 1
+dfK.sort_index(inplace=True)
+dfK.to_sql(name='gbif_fields_returned', con=conn, if_exists='replace')
+
+##################################### SAVE SUMMARY OF VALUES RETURNED
+summary = {'datums': ['WGS84'],
+           'issues': set([]),
+           'bases': [],
+           'institutions': [],
+           'collections': []}
+for occdict in alloccs:
+    # datums
+    if occdict['geodeticDatum'] != 'WGS84':
+        summary['datums'] = summary['datums'] + occdict['geodeticDatum']
+    # issues
+    summary['issues'] = summary['issues'] | set(occdict['issues'])
+    # basis or record
+    BOR = occdict['basisOfRecord']
+    if BOR == "" or BOR == None:
+        summary['bases'] = summary['bases'] + ["UNKNOWN"]
+    else:
+        summary['bases'] = summary['bases'] + [BOR]
+    # institution
+    try:
+        try:
+            who = occdict['institutionID']
+            summary['institutions'] = summary['institutions'] + [who]
+        except:
+            who = occdict['institutionCode']
+            summary['institutions'] = summary['institutions'] + [who]
+    except:
+        summary['institutions'] = summary['institutions'] + ['UNKNOWN']
+    # collections
+    try:
+        co = occdict['collectionCode']
+        summary['collections'] = summary['collections'] + [co]
+    except:
+        pass
+
+# Remove duplicates, make strings for entry into table
+cursor.executescript("""CREATE TABLE values_of_interest (field TEXT, vals TEXT);""")
+for x in summary.keys():
+    stmt = """INSERT INTO values_of_interest (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
+    cursor.execute(stmt)
 
 # Pull out relevant attributes from occurrence dictionaries.  Filtering
 # will be performed with info from these keys.
@@ -225,37 +295,36 @@ for x in alloccs:
 
 ##################################################  FILTER MORE
 ###############################################################
-#  RETRIEVE FILTER PARAMETERS
+
+#  COORDINATE UNCERTAINTY
 sql_green = """SELECT has_coordinate_uncertainty FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_coordUncertainty = cursor2.execute(sql_green).fetchone()[0]
 
-# Remove if no coordinate uncertainty
 if filt_coordUncertainty == 1:
     alloccs3 = [x for x in alloccs2 if 'coordinateUncertaintyInMeters'
                 in x.keys()]
-else:
-    pass
-
-########################
-########################  WHAT ELSE CAN WE DO ??????...
-########################  DEVELOP HERE
-########################
-
+if filt_coordUncertainty == 0:
+    alloccs3 = alloccs2
 
 ###############################################  INSERT INTO DB
 ###############################################################
-# Insert the records
+# Insert the records   !!!! needs to assess if coord uncertainty is present and act accordingly because insert statement depends on if it's present.
 for x in alloccs3:
-    insert1 = []
-    insert1.append((x['gbifID'], config.sp_id, 'gbif', x['acceptedTaxonKey'],
-            x['coordinateUncertaintyInMeters'], x['eventDate'],
-            config.gbif_req_id, config.gbif_filter_id))
-
+    if 'coordinateUncertaintyInMeters' in x.keys() and x['coordinateUncertaintyInMeters'] > 0:
+        insert1 = []
+        insert1.append((x['gbifID'], config.sp_id, 'gbif',
+                        x['coordinateUncertaintyInMeters'], x['eventDate'],
+                        config.gbif_req_id, config.gbif_filter_id))
+    else:
+        insert1 = []
+        insert1.append((x['gbifID'], config.sp_id, 'gbif',
+                        config.default_coordUncertainty, x['eventDate'],
+                        config.gbif_req_id, config.gbif_filter_id))
     insert1 = tuple(insert1)[0]
 
     sql1 = """INSERT INTO occurrences ('occ_id', 'species_id', 'source',
-                            'source_sp_id', 'coordinateUncertaintyInMeters',
+                            'coordinateUncertaintyInMeters',
                             'occurrenceDate', 'request_id', 'filter_id',
                             'geom_xy4326')
                 VALUES {0}, GeomFromText('POINT({1} {2})',
@@ -273,6 +342,12 @@ for e in alloccs3:
         cursor.execute(sql2)
 conn.commit()
 
+
+#############################################################################
+#                            EBIRD Records
+#############################################################################
+# ENTER HERE
+#############################################################################
 
 ################################################  BUFFER POINTS
 ###############################################################
