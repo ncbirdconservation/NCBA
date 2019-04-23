@@ -1,13 +1,13 @@
 #NOTE! this is overwritten by some notebooks, so update everywhere, if adding lines.
-sp_id = 'reisnx0'
-summary_name = 'indigo'
-gbif_req_id = 'GBIFr9'
+sp_id = 'anrwax0'
+summary_name = 'waterdog'
+gbif_req_id = 'GBIFr8'
 gbif_filter_id = 'GBIFf2'
 ebird_req_id = None
 ebird_filter_id = None
 evaluation = 'eval_gbif1'
-workDir = '/Users/nmtarr/Documents/RANGES/'
-codeDir = '/Users/nmtarr/Code/range_map_evaluation/'
+workDir = 'T:/RANGES/'
+codeDir = 'T:/Scripts/RangeMapEvaluation/'
 inDir = workDir + 'Inputs/'
 outDir = workDir + 'Outputs/'
 default_coordUncertainty = 200
