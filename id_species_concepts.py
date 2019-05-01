@@ -13,6 +13,5 @@ For now, a single species has been manually entered into species-concepts
 for development.
 """
 from pygbif import species
-key0 = species.name_backbone(name="Drymarchon couperi", rank='species')
-key = species.name_backbone(name = 'Ursus americanus', rank='species')['usageKey']
-occurrences.search(taxonKey = key)
+key = species.name_backbone(name = 'Pterodroma hasitata', rank='species')['usageKey']
+print(key)
