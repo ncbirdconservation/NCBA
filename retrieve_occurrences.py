@@ -45,35 +45,37 @@ gap_id = concept[4]
 #############################################################################
 #                      GAP Range Data From ScienceBase
 #############################################################################
-gap_range = functions.download_GAP_range_CONUS2001v1(gap_id, config.inDir)
+try:
+    gap_range = functions.download_GAP_range_CONUS2001v1(gap_id, config.inDir)
 
-# Reproject the GAP range to WGS84 for displaying
-conn3 = sqlite3.connect(':memory:')
-os.putenv('SPATIALITE_SECURITY', 'relaxed')
-conn3.enable_load_extension(True)
-cursor3 = conn3.cursor()
-sql_repro = """
-SELECT load_extension('mod_spatialite');
+    # Reproject the GAP range to WGS84 for displaying
+    conn3 = sqlite3.connect(':memory:')
+    os.putenv('SPATIALITE_SECURITY', 'relaxed')
+    conn3.enable_load_extension(True)
+    cursor3 = conn3.cursor()
+    sql_repro = """
+    SELECT load_extension('mod_spatialite');
 
-SELECT InitSpatialMetadata();
+    SELECT InitSpatialMetadata();
 
-SELECT ImportSHP('{0}{1}_conus_range_2001v1', 'rng3', 'utf-8', 5070,
-                 'geom_5070', 'HUC12RNG', 'MULTIPOLYGON');
+    SELECT ImportSHP('{0}{1}_conus_range_2001v1', 'rng3', 'utf-8', 5070,
+                     'geom_5070', 'HUC12RNG', 'MULTIPOLYGON');
 
-CREATE TABLE rng2 AS SELECT HUC12RNG, seasonCode, seasonName,
-                            Transform(geom_5070, 4326) AS geom_4326 FROM rng3;
+    CREATE TABLE rng2 AS SELECT HUC12RNG, seasonCode, seasonName,
+                                Transform(geom_5070, 4326) AS geom_4326 FROM rng3;
 
-SELECT RecoverGeometryColumn('rng2', 'geom_4326', 4326, 'MULTIPOLYGON', 'XY');
+    SELECT RecoverGeometryColumn('rng2', 'geom_4326', 4326, 'MULTIPOLYGON', 'XY');
 
-SELECT ExportSHP('rng2', 'geom_4326', '{0}{1}_range_4326', 'utf-8');
-""".format(config.inDir, gap_id)
+    SELECT ExportSHP('rng2', 'geom_4326', '{0}{1}_range_4326', 'utf-8');
+    """.format(config.inDir, gap_id)
 
-cursor3.executescript(sql_repro)
-conn3.close()
-del cursor3
+    cursor3.executescript(sql_repro)
+    conn3.close()
+    del cursor3
 
-gap_range2 = "{0}{1}_range_4326".format(config.inDir, gap_id)
-
+    gap_range2 = "{0}{1}_range_4326".format(config.inDir, gap_id)
+except:
+    print("No GAP range was retrieved.")
 
 #############################################################################
 #                           Create Occurrence Database
