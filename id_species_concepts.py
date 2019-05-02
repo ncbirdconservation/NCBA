@@ -13,5 +13,5 @@ For now, a single species has been manually entered into species-concepts
 for development.
 """
 from pygbif import species
-key = species.name_backbone(name = 'Pterodroma hasitata', rank='species')['usageKey']
+key = species.name_backbone(name = 'Ammodramus maritimus macgillivraii', rank='species')['usageKey']
 print(key)

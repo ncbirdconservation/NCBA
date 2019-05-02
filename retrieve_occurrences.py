@@ -311,29 +311,34 @@ if filt_coordUncertainty == 0:
 
 ###############################################  INSERT INTO DB
 ###############################################################
-# Insert the records   !!!! needs to assess if coord uncertainty is present and act accordingly because insert statement depends on if it's present.
+# Insert the records   !!!! needs to assess if coord uncertainty is present
+# and act accordingly because insert statement depends on if it's present.
 for x in alloccs3:
-    if 'coordinateUncertaintyInMeters' in x.keys() and x['coordinateUncertaintyInMeters'] > 0:
-        insert1 = []
-        insert1.append((x['gbifID'], config.sp_id, 'gbif',
-                        x['coordinateUncertaintyInMeters'], x['eventDate'],
-                        config.gbif_req_id, config.gbif_filter_id))
-    else:
-        insert1 = []
-        insert1.append((x['gbifID'], config.sp_id, 'gbif',
-                        config.default_coordUncertainty, x['eventDate'],
-                        config.gbif_req_id, config.gbif_filter_id))
-    insert1 = tuple(insert1)[0]
+    try:
+        if 'coordinateUncertaintyInMeters' in x.keys() and x['coordinateUncertaintyInMeters'] > 0:
+            insert1 = []
+            insert1.append((x['gbifID'], config.sp_id, 'gbif',
+                            x['coordinateUncertaintyInMeters'], x['eventDate'],
+                            config.gbif_req_id, config.gbif_filter_id))
+        else:
+            insert1 = []
+            insert1.append((x['gbifID'], config.sp_id, 'gbif',
+                            config.default_coordUncertainty, x['eventDate'],
+                            config.gbif_req_id, config.gbif_filter_id))
+        insert1 = tuple(insert1)[0]
 
-    sql1 = """INSERT INTO occurrences ('occ_id', 'species_id', 'source',
-                            'coordinateUncertaintyInMeters',
-                            'occurrenceDate', 'request_id', 'filter_id',
-                            'geom_xy4326')
-                VALUES {0}, GeomFromText('POINT({1} {2})',
-                                            {3}))""".format(str(insert1)[:-1],
-                x['decimalLongitude'], x['decimalLatitude'],
-                config.SRID_dict[x['geodeticDatum']])
-    cursor.executescript(sql1)
+        sql1 = """INSERT INTO occurrences ('occ_id', 'species_id', 'source',
+                                'coordinateUncertaintyInMeters',
+                                'occurrenceDate', 'request_id', 'filter_id',
+                                'geom_xy4326')
+                    VALUES {0}, GeomFromText('POINT({1} {2})',
+                                                {3}))""".format(str(insert1)[:-1],
+                    x['decimalLongitude'], x['decimalLatitude'],
+                    config.SRID_dict[x['geodeticDatum']])
+        cursor.executescript(sql1)
+    except Exception as e:
+        print(e)
+        print(x)
 
 # Update the individual count when it exists
 for e in alloccs3:
