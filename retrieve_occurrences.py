@@ -133,6 +133,8 @@ sql_cdb = """
                 occurrenceDate TEXT,
                 retrievalDate TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 individualCount INTEGER DEFAULT 1,
+                generalizations TEXT,
+                remarks TEXT,
                 detection_distance INTEGER,
                 radius_meters INTEGER,
                     FOREIGN KEY (species_id) REFERENCES taxa(species_id)
@@ -289,10 +291,17 @@ keykeys = ['basisOfRecord', 'individualCount', 'acceptedTaxonKey',
            'month', 'day', 'eventDate', 'issues','geodeticDatum',
            'gbifID', 'type', 'preparations', 'occurrenceStatus',
            'georeferenceProtocol', 'georeferenceVerificationStatus',
-           'occurrenceID']
+           'occurrenceID', 'dataGeneralizations', 'eventRemarks', 'locality',
+           'locationRemarks', 'occurrenceRemarks']
 alloccs2 = []
 for x in alloccs:
     alloccs2.append(dict((y,x[y]) for y in x if y in keykeys))
+
+# Combine remarks FIELDS
+for x in alloccs:
+    alloccs2['remarks'] = alloccs2['eventRemarks'],";",alloccs2['locality'],
+                            ";",alloccs2['locationRemarks'],";",
+                            alloccs2['occurrenceRemarks']
 
 
 ##################################################  FILTER MORE
@@ -319,18 +328,21 @@ for x in alloccs3:
             insert1 = []
             insert1.append((x['gbifID'], config.sp_id, 'gbif',
                             x['coordinateUncertaintyInMeters'], x['eventDate'],
-                            config.gbif_req_id, config.gbif_filter_id))
+                            config.gbif_req_id, config.gbif_filter_id),
+                            x['dataGeneralizations'], x['remarks'])
         else:
             insert1 = []
             insert1.append((x['gbifID'], config.sp_id, 'gbif',
                             config.default_coordUncertainty, x['eventDate'],
-                            config.gbif_req_id, config.gbif_filter_id))
+                            config.gbif_req_id, config.gbif_filter_id),
+                            x['dataGeneralizations'], x['remarks'])
         insert1 = tuple(insert1)[0]
 
         sql1 = """INSERT INTO occurrences ('occ_id', 'species_id', 'source',
-                                'coordinateUncertaintyInMeters',
-                                'occurrenceDate', 'request_id', 'filter_id',
-                                'geom_xy4326')
+                                           'coordinateUncertaintyInMeters',
+                                           'occurrenceDate', 'request_id',
+                                           'filter_id', 'generalizations',
+                                           'remarks', 'geom_xy4326')
                     VALUES {0}, GeomFromText('POINT({1} {2})',
                                                 {3}))""".format(str(insert1)[:-1],
                     x['decimalLongitude'], x['decimalLatitude'],
