@@ -326,7 +326,6 @@ for x in alloccs2:
 
     try:
         x['remarks'] = remarks
-        print(remarks)
     except Exception as e:
         x['remarks'] = ""
 
