@@ -298,11 +298,37 @@ for x in alloccs:
     alloccs2.append(dict((y,x[y]) for y in x if y in keykeys))
 
 # Combine remarks FIELDS
-for x in alloccs:
-    alloccs2['remarks'] = alloccs2['eventRemarks'],";",alloccs2['locality'],
-                            ";",alloccs2['locationRemarks'],";",
-                            alloccs2['occurrenceRemarks']
+for x in alloccs2:
+    remarks = str()
+    try:
+        put = x['locality']
+        remarks = remarks + "; " + put
+    except:
+        pass
 
+    try:
+        these = x['eventRemarks']
+        remarks = remarks + "; " + these
+    except:
+        pass
+
+    try:
+        tog = x['locationRemarks']
+        remarks = remarks + "; " + tog
+    except:
+        pass
+
+    try:
+        ether = x['occurrenceRemarks']
+        remarks = remarks + ether
+    except:
+        pass
+
+    try:
+        x['remarks'] = remarks
+        print(remarks)
+    except Exception as e:
+        print(e)
 
 ##################################################  FILTER MORE
 ###############################################################
