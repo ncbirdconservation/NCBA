@@ -246,7 +246,13 @@ summary = {'datums': ['WGS84'],
            'issues': set([]),
            'bases': [],
            'institutions': [],
-           'collections': []}
+           'collections': [],
+           'generalizations': set([]),
+           'remarks': set([]),
+           'establishment': set([]),
+           'IDqualifier': set([]),
+           'protocols': set([])}
+
 for occdict in alloccs:
     # datums
     if occdict['geodeticDatum'] != 'WGS84':
@@ -273,6 +279,29 @@ for occdict in alloccs:
     try:
         co = occdict['collectionCode']
         summary['collections'] = summary['collections'] + [co]
+    except:
+        pass
+    # establishment means
+    try:
+        est = occdict['establishmentMeans']
+        summary['establishment'] = summary['establishment'] | set([est])
+    except:
+        pass
+    # identification qualifier
+    try:
+        qual = occdict['identificationQualifier']
+        summary['IDqualifier'] = summary['IDqualifier'] | set([qual])
+    except:
+        pass
+    # protocols
+    try:
+        proto = occdict['protocol']
+        summary['protocols'] = summary['protocols'] | set([proto])
+    except:
+        pass
+    try:
+        samproto = occdict['samplingProtocol']
+        summary['protocols'] = summary['protocols'] | set([samproto])
     except:
         pass
 
