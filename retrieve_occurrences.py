@@ -328,7 +328,12 @@ for x in alloccs2:
         x['remarks'] = remarks
         print(remarks)
     except Exception as e:
-        print(e)
+        x['remarks'] = ""
+
+# Identify data generalizations
+for x in alloccs2:
+    if 'dataGeneralizations' not in x.keys():
+        x['dataGeneralizations'] = ""
 
 ##################################################  FILTER MORE
 ###############################################################
@@ -346,22 +351,22 @@ if filt_coordUncertainty == 0:
 
 ###############################################  INSERT INTO DB
 ###############################################################
-# Insert the records   !!!! needs to assess if coord uncertainty is present
-# and act accordingly because insert statement depends on if it's present.
+# Insert the records   !needs to assess if coord uncertainty is present
+# and act accordingly because insert statement depends on if it's present!
 for x in alloccs3:
     try:
         if 'coordinateUncertaintyInMeters' in x.keys() and x['coordinateUncertaintyInMeters'] > 0:
             insert1 = []
             insert1.append((x['gbifID'], config.sp_id, 'gbif',
                             x['coordinateUncertaintyInMeters'], x['eventDate'],
-                            config.gbif_req_id, config.gbif_filter_id),
-                            x['dataGeneralizations'], x['remarks'])
+                            config.gbif_req_id, config.gbif_filter_id,
+                            x['dataGeneralizations'], x['remarks']))
         else:
             insert1 = []
             insert1.append((x['gbifID'], config.sp_id, 'gbif',
                             config.default_coordUncertainty, x['eventDate'],
-                            config.gbif_req_id, config.gbif_filter_id),
-                            x['dataGeneralizations'], x['remarks'])
+                            config.gbif_req_id, config.gbif_filter_id,
+                            x['dataGeneralizations'], x['remarks']))
         insert1 = tuple(insert1)[0]
 
         sql1 = """INSERT INTO occurrences ('occ_id', 'species_id', 'source',
