@@ -366,22 +366,75 @@ for x in alloccs2:
 ##################################################  FILTER MORE
 ###############################################################
 
-#  COORDINATE UNCERTAINTY
+# HAS COORDINATE UNCERTAINTY
 sql_green = """SELECT has_coordinate_uncertainty FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_coordUncertainty = cursor2.execute(sql_green).fetchone()[0]
-
+print(filt_coordUncertainty)
 if filt_coordUncertainty == 1:
     alloccs3 = [x for x in alloccs2 if 'coordinateUncertaintyInMeters'
                 in x.keys()]
 if filt_coordUncertainty == 0:
     alloccs3 = alloccs2
+del alloccs2
+
+# MAXIMUM COORDINATE UNCERTAINTY
+sql_maxcoord = """SELECT max_coordinate_uncertainty FROM gbif_filters
+               WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
+filt_maxcoord = cursor2.execute(sql_maxcoord).fetchone()[0]
+print(filt_maxcoord)
+print(type(filt_maxcoord))
+
+alloccs4 = []
+for x in alloccs3:
+    if 'coordinateUncertaintyInMeters' not in x.keys():
+        alloccs4.append(x)
+    elif x['coordinateUncertaintyInMeters'] <= filt_maxcoord:
+        alloccs4.append(x)
+    else:
+        pass
+del allocss3
+
+# COLLECTION CODES
+sql_collection = """SELECT collection_codes_omit FROM gbif_filters
+               WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
+filt_collection = cursor2.execute(sql_collection).fetchone()[0]
+print(filt_collection)
+print(type(filt_collection))
+
+# INSTITUTIONS
+sql_instit = """SELECT institutions_omit FROM gbif_filters
+               WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
+filt_instit = cursor2.execute(sql_instit).fetchone()[0]
+print(filt_instit)
+print(type(filt_instit))
+
+# BASES
+sql_bases = """SELECT bases_omit FROM gbif_filters
+               WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
+filt_bases = cursor2.execute(sql_bases).fetchone()[0]
+print(filt_bases)
+print(type(filt_bases))
+
+# PROTOCOLS
+sql_protocols = """SELECT protocols_omit FROM gbif_filters
+               WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
+filt_protocols = cursor2.execute(sql_protocols).fetchone()[0]
+print(filt_protocols)
+print(type(filt_protocols))
+
+# SAMPLING PROTOCOL
+sql_sampling = """SELECT sampling_protocols_omit FROM gbif_filters
+               WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
+filt_sampling = cursor2.execute(sql_sampling).fetchone()[0]
+print(filt_sampling)
+print(type(filt_sampling))
 
 ###############################################  INSERT INTO DB
 ###############################################################
 # Insert the records   !needs to assess if coord uncertainty is present
 # and act accordingly because insert statement depends on if it's present!
-for x in alloccs3:
+for x in alloccs4:
     try:
         if 'coordinateUncertaintyInMeters' in x.keys() and x['coordinateUncertaintyInMeters'] > 0:
             insert1 = []
@@ -412,20 +465,13 @@ for x in alloccs3:
         print(x)
 
 # Update the individual count when it exists
-for e in alloccs3:
+for e in alloccs4:
     if 'individualCount' in e.keys():
         sql2 = """UPDATE occurrences
             SET individualCount = {0}
             WHERE occ_id = {1};""".format(e['individualCount'], e['gbifID'])
         cursor.execute(sql2)
 conn.commit()
-
-
-#############################################################################
-#                            EBIRD Records
-#############################################################################
-# ENTER HERE
-#############################################################################
 
 ################################################  BUFFER POINTS
 ###############################################################
