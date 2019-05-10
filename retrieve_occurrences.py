@@ -219,98 +219,6 @@ for i in batches:
     alloccs = alloccs + occs
 
 
-######################### CREATE SUMMARY TABLE OF KEYS/FIELDS RETURNED
-keys = [list(x.keys()) for x in alloccs]
-keys2 = set([])
-for x in keys:
-    keys2 = keys2 | set(x)
-dfK = pd.DataFrame(index=keys2, columns=['included(n)', 'populated(n)'])
-dfK['included(n)'] = 0
-dfK['populated(n)'] = 0
-for t in alloccs:
-    for y in t.keys():
-        dfK.loc[y, 'included(n)'] += 1
-        try:
-            int(t[y])
-            dfK.loc[y, 'populated(n)'] += 1
-        except:
-            if t[y] == None:
-                pass
-            elif len(t[y]) > 0:
-                dfK.loc[y, 'populated(n)'] += 1
-dfK.sort_index(inplace=True)
-dfK.to_sql(name='gbif_fields_returned', con=conn, if_exists='replace')
-
-##################################### SAVE SUMMARY OF VALUES RETURNED
-summary = {'datums': ['WGS84'],
-           'issues': set([]),
-           'bases': [],
-           'institutions': [],
-           'collections': [],
-           'generalizations': set([]),
-           'remarks': set([]),
-           'establishment': set([]),
-           'IDqualifier': set([]),
-           'protocols': set([])}
-
-for occdict in alloccs:
-    # datums
-    if occdict['geodeticDatum'] != 'WGS84':
-        summary['datums'] = summary['datums'] + occdict['geodeticDatum']
-    # issues
-    summary['issues'] = summary['issues'] | set(occdict['issues'])
-    # basis or record
-    BOR = occdict['basisOfRecord']
-    if BOR == "" or BOR == None:
-        summary['bases'] = summary['bases'] + ["UNKNOWN"]
-    else:
-        summary['bases'] = summary['bases'] + [BOR]
-    # institution
-    try:
-        try:
-            who = occdict['institutionID']
-            summary['institutions'] = summary['institutions'] + [who]
-        except:
-            who = occdict['institutionCode']
-            summary['institutions'] = summary['institutions'] + [who]
-    except:
-        summary['institutions'] = summary['institutions'] + ['UNKNOWN']
-    # collections
-    try:
-        co = occdict['collectionCode']
-        summary['collections'] = summary['collections'] + [co]
-    except:
-        pass
-    # establishment means
-    try:
-        est = occdict['establishmentMeans']
-        summary['establishment'] = summary['establishment'] | set([est])
-    except:
-        pass
-    # identification qualifier
-    try:
-        qual = occdict['identificationQualifier']
-        summary['IDqualifier'] = summary['IDqualifier'] | set([qual])
-    except:
-        pass
-    # protocols
-    try:
-        proto = occdict['protocol']
-        summary['protocols'] = summary['protocols'] | set([proto])
-    except:
-        pass
-    try:
-        samproto = occdict['samplingProtocol']
-        summary['protocols'] = summary['protocols'] | set([samproto])
-    except:
-        pass
-
-# Remove duplicates, make strings for entry into table
-cursor.executescript("""CREATE TABLE values_of_interest (field TEXT, vals TEXT);""")
-for x in summary.keys():
-    stmt = """INSERT INTO values_of_interest (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
-    cursor.execute(stmt)
-
 # Pull out relevant attributes from occurrence dictionaries.  Filtering
 # will be performed with info from these keys.
 keykeys = ['basisOfRecord', 'individualCount', 'acceptedTaxonKey',
@@ -321,7 +229,8 @@ keykeys = ['basisOfRecord', 'individualCount', 'acceptedTaxonKey',
            'gbifID', 'type', 'preparations', 'occurrenceStatus',
            'georeferenceProtocol', 'georeferenceVerificationStatus',
            'occurrenceID', 'dataGeneralizations', 'eventRemarks', 'locality',
-           'locationRemarks', 'occurrenceRemarks']
+           'locationRemarks', 'occurrenceRemarks', 'collectionCode',
+           'protocol', 'samplingProtocol', 'institutionCode']
 alloccs2 = []
 for x in alloccs:
     alloccs2.append(dict((y,x[y]) for y in x if y in keykeys))
@@ -393,48 +302,189 @@ for x in alloccs3:
         alloccs4.append(x)
     else:
         pass
-del allocss3
+del alloccs3
 
 # COLLECTION CODES
 sql_collection = """SELECT collection_codes_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
-filt_collection = cursor2.execute(sql_collection).fetchone()[0]
+filt_collection = list(cursor2.execute(sql_collection).fetchone()[0].split(', '))
 print(filt_collection)
 print(type(filt_collection))
+
+
+alloccs5 = []
+for x in alloccs4:
+    if x['collectionCode'] not in list(filt_collection):
+        alloccs5.append(x)
+    elif 'collectionCode' not in x.keys():
+        alloccs5.append(x)
+    else:
+        pass
+del alloccs4
 
 # INSTITUTIONS
 sql_instit = """SELECT institutions_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
-filt_instit = cursor2.execute(sql_instit).fetchone()[0]
+filt_instit = list(cursor2.execute(sql_instit).fetchone()[0].split(', '))
 print(filt_instit)
 print(type(filt_instit))
+
+alloccs6 = []
+for x in alloccs5:
+    if x['institutionCode'] not in list(filt_instit):
+        alloccs6.append(x)
+    elif 'institutionCode' not in x.keys():
+        alloccs6.append(x)
+    else:
+        pass
+del alloccs5
 
 # BASES
 sql_bases = """SELECT bases_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
-filt_bases = cursor2.execute(sql_bases).fetchone()[0]
+filt_bases = list(cursor2.execute(sql_bases).fetchone()[0].split(', '))
 print(filt_bases)
 print(type(filt_bases))
+
+alloccs7 = []
+for x in alloccs6:
+     if x['basisOfRecord'] not in list(filt_bases):
+         alloccs7.append(x)
+     elif 'basisOfRecord' not in x.keys():
+         alloccs7.append(x)
+     else:
+         pass
+del alloccs6
 
 # PROTOCOLS
 sql_protocols = """SELECT protocols_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
-filt_protocols = cursor2.execute(sql_protocols).fetchone()[0]
+filt_protocols = list(cursor2.execute(sql_protocols).fetchone()[0].split(', '))
 print(filt_protocols)
 print(type(filt_protocols))
+
+alloccs8 = []
+for x in alloccs7:
+    if x['protocol'] not in list(filt_protocols):
+        alloccs8.append(x)
+    elif 'protocol' not in x.keys():
+        alloccs8.append(x)
+    else:
+        pass
+del alloccs7
 
 # SAMPLING PROTOCOL
 sql_sampling = """SELECT sampling_protocols_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
-filt_sampling = cursor2.execute(sql_sampling).fetchone()[0]
+filt_sampling = list(cursor2.execute(sql_sampling).fetchone()[0].split(', '))
 print(filt_sampling)
 print(type(filt_sampling))
 
+alloccsX = []
+for x in alloccs8:
+    if 'samplingProtocol' in x.keys() and x['samplingProtocol'] not in list(filt_sampling):
+        alloccsX.append(x)
+    elif 'samplingProtocol' not in x.keys():
+        alloccsX.append(x)
+    else:
+        pass
+
+######################### CREATE SUMMARY TABLE OF KEYS/FIELDS RETURNED
+keys = [list(x.keys()) for x in alloccsX]
+keys2 = set([])
+for x in keys:
+    keys2 = keys2 | set(x)
+dfK = pd.DataFrame(index=keys2, columns=['included(n)', 'populated(n)'])
+dfK['included(n)'] = 0
+dfK['populated(n)'] = 0
+for t in alloccsX:
+    for y in t.keys():
+        dfK.loc[y, 'included(n)'] += 1
+        try:
+            int(t[y])
+            dfK.loc[y, 'populated(n)'] += 1
+        except:
+            if t[y] == None:
+                pass
+            elif len(t[y]) > 0:
+                dfK.loc[y, 'populated(n)'] += 1
+dfK.sort_index(inplace=True)
+dfK.to_sql(name='gbif_fields_returned', con=conn, if_exists='replace')
+
+##################################### SAVE SUMMARY OF VALUES RETURNED
+summary = {'datums': ['WGS84'],
+           'issues': set([]),
+           'bases': [],
+           'institutions': [],
+           'collections': [],
+           'generalizations': set([]),
+           'remarks': set([]),
+           'establishment': set([]),
+           'IDqualifier': set([]),
+           'protocols': set([])}
+
+for occdict in alloccsX:
+    # datums
+    if occdict['geodeticDatum'] != 'WGS84':
+        summary['datums'] = summary['datums'] + occdict['geodeticDatum']
+    # issues
+    summary['issues'] = summary['issues'] | set(occdict['issues'])
+    # basis or record
+    BOR = occdict['basisOfRecord']
+    if BOR == "" or BOR == None:
+        summary['bases'] = summary['bases'] + ["UNKNOWN"]
+    else:
+        summary['bases'] = summary['bases'] + [BOR]
+    # institution
+    try:
+        try:
+            who = occdict['institutionID']
+            summary['institutions'] = summary['institutions'] + [who]
+        except:
+            who = occdict['institutionCode']
+            summary['institutions'] = summary['institutions'] + [who]
+    except:
+        summary['institutions'] = summary['institutions'] + ['UNKNOWN']
+    # collections
+    try:
+        co = occdict['collectionCode']
+        summary['collections'] = summary['collections'] + [co]
+    except:
+        pass
+    # establishment means
+    try:
+        est = occdict['establishmentMeans']
+        summary['establishment'] = summary['establishment'] | set([est])
+    except:
+        pass
+    # identification qualifier
+    try:
+        qual = occdict['identificationQualifier']
+        summary['IDqualifier'] = summary['IDqualifier'] | set([qual])
+    except:
+        pass
+    # protocols
+    try:
+        proto = occdict['protocol']
+        summary['protocols'] = summary['protocols'] | set([proto])
+    except:
+        pass
+    try:
+        samproto = occdict['samplingProtocol']
+        summary['protocols'] = summary['protocols'] | set([samproto])
+    except:
+        pass
+
+# Remove duplicates, make strings for entry into table
+cursor.executescript("""CREATE TABLE values_of_interest (field TEXT, vals TEXT);""")
+for x in summary.keys():
+    stmt = """INSERT INTO values_of_interest (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
+    cursor.execute(stmt)
 ###############################################  INSERT INTO DB
 ###############################################################
 # Insert the records   !needs to assess if coord uncertainty is present
 # and act accordingly because insert statement depends on if it's present!
-for x in alloccs4:
+for x in alloccsX:
     try:
         if 'coordinateUncertaintyInMeters' in x.keys() and x['coordinateUncertaintyInMeters'] > 0:
             insert1 = []
@@ -465,7 +515,7 @@ for x in alloccs4:
         print(x)
 
 # Update the individual count when it exists
-for e in alloccs4:
+for e in alloccsX:
     if 'individualCount' in e.keys():
         sql2 = """UPDATE occurrences
             SET individualCount = {0}
