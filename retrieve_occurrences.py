@@ -372,7 +372,7 @@ for x in alloccs2:
 sql_green = """SELECT has_coordinate_uncertainty FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_coordUncertainty = cursor2.execute(sql_green).fetchone()[0]
-print(filt_coordUncertainty)
+
 if filt_coordUncertainty == 1:
     alloccs3 = [x for x in alloccs2 if 'coordinateUncertaintyInMeters'
                 in x.keys()]
@@ -384,9 +384,6 @@ del alloccs2
 sql_maxcoord = """SELECT max_coordinate_uncertainty FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_maxcoord = cursor2.execute(sql_maxcoord).fetchone()[0]
-print(filt_maxcoord)
-print(type(filt_maxcoord))
-
 alloccs4 = []
 for x in alloccs3:
     if 'coordinateUncertaintyInMeters' not in x.keys():
@@ -401,10 +398,6 @@ del alloccs3
 sql_collection = """SELECT collection_codes_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_collection = list(cursor2.execute(sql_collection).fetchone()[0].split(', '))
-print(filt_collection)
-print(type(filt_collection))
-
-
 alloccs5 = []
 for x in alloccs4:
     if x['collectionCode'] not in list(filt_collection):
@@ -419,9 +412,6 @@ del alloccs4
 sql_instit = """SELECT institutions_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_instit = list(cursor2.execute(sql_instit).fetchone()[0].split(', '))
-print(filt_instit)
-print(type(filt_instit))
-
 alloccs6 = []
 for x in alloccs5:
     if x['institutionCode'] not in list(filt_instit):
@@ -436,9 +426,6 @@ del alloccs5
 sql_bases = """SELECT bases_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_bases = list(cursor2.execute(sql_bases).fetchone()[0].split(', '))
-print(filt_bases)
-print(type(filt_bases))
-
 alloccs7 = []
 for x in alloccs6:
      if x['basisOfRecord'] not in list(filt_bases):
@@ -453,9 +440,6 @@ del alloccs6
 sql_protocols = """SELECT protocols_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_protocols = list(cursor2.execute(sql_protocols).fetchone()[0].split(', '))
-print(filt_protocols)
-print(type(filt_protocols))
-
 alloccs8 = []
 for x in alloccs7:
     if x['protocol'] not in list(filt_protocols):
@@ -470,9 +454,6 @@ del alloccs7
 sql_sampling = """SELECT sampling_protocols_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_sampling = list(cursor2.execute(sql_sampling).fetchone()[0].split(', '))
-print(filt_sampling)
-print(type(filt_sampling))
-
 alloccsX = []
 for x in alloccs8:
     if 'samplingProtocol' in x.keys() and x['samplingProtocol'] not in list(filt_sampling):
@@ -549,7 +530,7 @@ for occdict in alloccsX:
 # Remove duplicates, make strings for entry into table
 cursor.executescript("""CREATE TABLE post_filter_attributes (field TEXT, vals TEXT);""")
 for x in summary2.keys():
-    stmt = """INSERT INTO post_filter_attributes (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
+    stmt = """INSERT INTO post_filter_attributes (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary2[x]))).replace('"', ''))
     cursor.execute(stmt)
 
 
