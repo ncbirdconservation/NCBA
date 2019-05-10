@@ -219,6 +219,98 @@ for i in batches:
     alloccs = alloccs + occs
 
 
+######################### CREATE SUMMARY TABLE OF KEYS/FIELDS RETURNED
+keys = [list(x.keys()) for x in alloccs]
+keys2 = set([])
+for x in keys:
+    keys2 = keys2 | set(x)
+dfK = pd.DataFrame(index=keys2, columns=['included(n)', 'populated(n)'])
+dfK['included(n)'] = 0
+dfK['populated(n)'] = 0
+for t in alloccs:
+    for y in t.keys():
+        dfK.loc[y, 'included(n)'] += 1
+        try:
+            int(t[y])
+            dfK.loc[y, 'populated(n)'] += 1
+        except:
+            if t[y] == None:
+                pass
+            elif len(t[y]) > 0:
+                dfK.loc[y, 'populated(n)'] += 1
+dfK.sort_index(inplace=True)
+dfK.to_sql(name='gbif_fields_returned', con=conn, if_exists='replace')
+
+##################################### SAVE SUMMARY OF VALUES RETURNED
+summary = {'datums': ['WGS84'],
+           'issues': set([]),
+           'bases': [],
+           'institutions': [],
+           'collections': [],
+           'generalizations': set([]),
+           'remarks': set([]),
+           'establishment': set([]),
+           'IDqualifier': set([]),
+           'protocols': set([])}
+
+for occdict in alloccs:
+    # datums
+    if occdict['geodeticDatum'] != 'WGS84':
+        summary['datums'] = summary['datums'] + occdict['geodeticDatum']
+    # issues
+    summary['issues'] = summary['issues'] | set(occdict['issues'])
+    # basis or record
+    BOR = occdict['basisOfRecord']
+    if BOR == "" or BOR == None:
+        summary['bases'] = summary['bases'] + ["UNKNOWN"]
+    else:
+        summary['bases'] = summary['bases'] + [BOR]
+    # institution
+    try:
+        try:
+            who = occdict['institutionID']
+            summary['institutions'] = summary['institutions'] + [who]
+        except:
+            who = occdict['institutionCode']
+            summary['institutions'] = summary['institutions'] + [who]
+    except:
+        summary['institutions'] = summary['institutions'] + ['UNKNOWN']
+    # collections
+    try:
+        co = occdict['collectionCode']
+        summary['collections'] = summary['collections'] + [co]
+    except:
+        pass
+    # establishment means
+    try:
+        est = occdict['establishmentMeans']
+        summary['establishment'] = summary['establishment'] | set([est])
+    except:
+        pass
+    # identification qualifier
+    try:
+        qual = occdict['identificationQualifier']
+        summary['IDqualifier'] = summary['IDqualifier'] | set([qual])
+    except:
+        pass
+    # protocols
+    try:
+        proto = occdict['protocol']
+        summary['protocols'] = summary['protocols'] | set([proto])
+    except:
+        pass
+    try:
+        samproto = occdict['samplingProtocol']
+        summary['protocols'] = summary['protocols'] | set([samproto])
+    except:
+        pass
+
+# Remove duplicates, make strings for entry into table
+cursor.executescript("""CREATE TABLE values_of_interest (field TEXT, vals TEXT);""")
+for x in summary.keys():
+    stmt = """INSERT INTO values_of_interest (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
+    cursor.execute(stmt)
+
 # Pull out relevant attributes from occurrence dictionaries.  Filtering
 # will be performed with info from these keys.
 keykeys = ['basisOfRecord', 'individualCount', 'acceptedTaxonKey',
@@ -389,97 +481,7 @@ for x in alloccs8:
     else:
         pass
 
-######################### CREATE SUMMARY TABLE OF KEYS/FIELDS RETURNED
-keys = [list(x.keys()) for x in alloccsX]
-keys2 = set([])
-for x in keys:
-    keys2 = keys2 | set(x)
-dfK = pd.DataFrame(index=keys2, columns=['included(n)', 'populated(n)'])
-dfK['included(n)'] = 0
-dfK['populated(n)'] = 0
-for t in alloccsX:
-    for y in t.keys():
-        dfK.loc[y, 'included(n)'] += 1
-        try:
-            int(t[y])
-            dfK.loc[y, 'populated(n)'] += 1
-        except:
-            if t[y] == None:
-                pass
-            elif len(t[y]) > 0:
-                dfK.loc[y, 'populated(n)'] += 1
-dfK.sort_index(inplace=True)
-dfK.to_sql(name='gbif_fields_returned', con=conn, if_exists='replace')
 
-##################################### SAVE SUMMARY OF VALUES RETURNED
-summary = {'datums': ['WGS84'],
-           'issues': set([]),
-           'bases': [],
-           'institutions': [],
-           'collections': [],
-           'generalizations': set([]),
-           'remarks': set([]),
-           'establishment': set([]),
-           'IDqualifier': set([]),
-           'protocols': set([])}
-
-for occdict in alloccsX:
-    # datums
-    if occdict['geodeticDatum'] != 'WGS84':
-        summary['datums'] = summary['datums'] + occdict['geodeticDatum']
-    # issues
-    summary['issues'] = summary['issues'] | set(occdict['issues'])
-    # basis or record
-    BOR = occdict['basisOfRecord']
-    if BOR == "" or BOR == None:
-        summary['bases'] = summary['bases'] + ["UNKNOWN"]
-    else:
-        summary['bases'] = summary['bases'] + [BOR]
-    # institution
-    try:
-        try:
-            who = occdict['institutionID']
-            summary['institutions'] = summary['institutions'] + [who]
-        except:
-            who = occdict['institutionCode']
-            summary['institutions'] = summary['institutions'] + [who]
-    except:
-        summary['institutions'] = summary['institutions'] + ['UNKNOWN']
-    # collections
-    try:
-        co = occdict['collectionCode']
-        summary['collections'] = summary['collections'] + [co]
-    except:
-        pass
-    # establishment means
-    try:
-        est = occdict['establishmentMeans']
-        summary['establishment'] = summary['establishment'] | set([est])
-    except:
-        pass
-    # identification qualifier
-    try:
-        qual = occdict['identificationQualifier']
-        summary['IDqualifier'] = summary['IDqualifier'] | set([qual])
-    except:
-        pass
-    # protocols
-    try:
-        proto = occdict['protocol']
-        summary['protocols'] = summary['protocols'] | set([proto])
-    except:
-        pass
-    try:
-        samproto = occdict['samplingProtocol']
-        summary['protocols'] = summary['protocols'] | set([samproto])
-    except:
-        pass
-
-# Remove duplicates, make strings for entry into table
-cursor.executescript("""CREATE TABLE values_of_interest (field TEXT, vals TEXT);""")
-for x in summary.keys():
-    stmt = """INSERT INTO values_of_interest (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
-    cursor.execute(stmt)
 ###############################################  INSERT INTO DB
 ###############################################################
 # Insert the records   !needs to assess if coord uncertainty is present
