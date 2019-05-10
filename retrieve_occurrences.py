@@ -199,7 +199,7 @@ occ_search = occurrences.search(gbif_id,
                                 hasCoordinate=coordinate,
                                 continent=continent)
 occ_count=occ_search['count']
-print('{0} records exist'.format(occ_count))
+print('{0} records exist with the request parameters'.format(occ_count))
 
 # Get occurrences in batches, saving into master list
 alloccs = []
@@ -306,9 +306,9 @@ for occdict in alloccs:
         pass
 
 # Remove duplicates, make strings for entry into table
-cursor.executescript("""CREATE TABLE values_of_interest (field TEXT, vals TEXT);""")
+cursor.executescript("""CREATE TABLE post_request_attributes (field TEXT, vals TEXT);""")
 for x in summary.keys():
-    stmt = """INSERT INTO values_of_interest (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
+    stmt = """INSERT INTO post_request_attributes (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
     cursor.execute(stmt)
 
 # Pull out relevant attributes from occurrence dictionaries.  Filtering
