@@ -241,7 +241,7 @@ for t in alloccs:
 dfK.sort_index(inplace=True)
 dfK.to_sql(name='gbif_fields_returned', con=conn, if_exists='replace')
 
-##################################### SAVE SUMMARY OF VALUES RETURNED
+############################# SAVE SUMMARY OF VALUES RETURNED (REQUEST)
 summary = {'datums': ['WGS84'],
            'issues': set([]),
            'bases': [],
@@ -311,6 +311,9 @@ for x in summary.keys():
     stmt = """INSERT INTO post_request_attributes (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
     cursor.execute(stmt)
 
+
+##################################################  FILTER MORE
+###############################################################
 # Pull out relevant attributes from occurrence dictionaries.  Filtering
 # will be performed with info from these keys.
 keykeys = ['basisOfRecord', 'individualCount', 'acceptedTaxonKey',
@@ -364,8 +367,6 @@ for x in alloccs2:
     if 'dataGeneralizations' not in x.keys():
         x['dataGeneralizations'] = ""
 
-##################################################  FILTER MORE
-###############################################################
 
 # HAS COORDINATE UNCERTAINTY
 sql_green = """SELECT has_coordinate_uncertainty FROM gbif_filters
@@ -480,6 +481,76 @@ for x in alloccs8:
         alloccsX.append(x)
     else:
         pass
+
+############################# SAVE SUMMARY OF VALUES KEPT (FILTER)
+summary2 = {'datums': ['WGS84'],
+           'issues': set([]),
+           'bases': [],
+           'institutions': [],
+           'collections': [],
+           'generalizations': set([]),
+           'remarks': set([]),
+           'establishment': set([]),
+           'IDqualifier': set([]),
+           'protocols': set([])}
+
+for occdict in alloccsX:
+    # datums
+    if occdict['geodeticDatum'] != 'WGS84':
+        summary2['datums'] = summary2['datums'] + occdict['geodeticDatum']
+    # issues
+    summary2['issues'] = summary2['issues'] | set(occdict['issues'])
+    # basis or record
+    BOR = occdict['basisOfRecord']
+    if BOR == "" or BOR == None:
+        summary2['bases'] = summary2['bases'] + ["UNKNOWN"]
+    else:
+        summary2['bases'] = summary2['bases'] + [BOR]
+    # institution
+    try:
+        try:
+            who = occdict['institutionID']
+            summary2['institutions'] = summary2['institutions'] + [who]
+        except:
+            who = occdict['institutionCode']
+            summary2['institutions'] = summary2['institutions'] + [who]
+    except:
+        summary2['institutions'] = summary2['institutions'] + ['UNKNOWN']
+    # collections
+    try:
+        co = occdict['collectionCode']
+        summary2['collections'] = summary2['collections'] + [co]
+    except:
+        pass
+    # establishment means
+    try:
+        est = occdict['establishmentMeans']
+        summary2['establishment'] = summary2['establishment'] | set([est])
+    except:
+        pass
+    # identification qualifier
+    try:
+        qual = occdict['identificationQualifier']
+        summary2['IDqualifier'] = summary2['IDqualifier'] | set([qual])
+    except:
+        pass
+    # protocols
+    try:
+        proto = occdict['protocol']
+        summary2['protocols'] = summary2['protocols'] | set([proto])
+    except:
+        pass
+    try:
+        samproto = occdict['samplingProtocol']
+        summary2['protocols'] = summary2['protocols'] | set([samproto])
+    except:
+        pass
+
+# Remove duplicates, make strings for entry into table
+cursor.executescript("""CREATE TABLE post_filter_attributes (field TEXT, vals TEXT);""")
+for x in summary2.keys():
+    stmt = """INSERT INTO post_filter_attributes (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
+    cursor.execute(stmt)
 
 
 ###############################################  INSERT INTO DB
