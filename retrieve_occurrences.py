@@ -257,7 +257,8 @@ value_summaries = {'bases': {},
                   'datums': {'WGS84': 0},
                   'issues': {},
                   'institutions': {},
-                  'collections': {}}
+                  'collections': {},
+                  'protocols': {}}
 
 for occdict in alloccs:
     # datums
@@ -331,12 +332,17 @@ for occdict in alloccs:
     except:
         pass
 
-    # protocols --NOTE this essentially combines two fields
+    # protocols -- NOTE this essentially combines two fields
     try:
         proto = occdict['protocol']
     except:
         proto = 'UNKNOWN'
     summary['protocols'] = summary['protocols'] | set([proto])
+
+    if proto in value_summaries['protocols'].keys():
+        value_summaries['protocols'][proto] += 1
+    else:
+        value_summaries['protocols'][proto] = 1
 
     try:
         samproto = occdict['samplingProtocol']
@@ -344,12 +350,13 @@ for occdict in alloccs:
         samproto = 'UKNOWN'
     summary['protocols'] = summary['protocols'] | set([samproto])
 
-    for p in [proto, samproto]:
-        print(p)
-        if p in value_summaries['protocols'].keys():
-            value_summaries['protocols'][p] += 1
-        else:
-            value_summaries['protocols'][p] = 1
+    if samproto in value_summaries['protocols'].keys():
+        value_summaries['protocols'][samproto] += 1
+    else:
+        value_summaries['protocols'][samproto] = 1
+
+print(value_summaries)
+
 
 
 # Remove duplicates, make strings for entry into table
