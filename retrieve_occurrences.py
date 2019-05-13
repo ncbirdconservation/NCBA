@@ -345,13 +345,11 @@ for occdict in alloccs:
     summary['protocols'] = summary['protocols'] | set([samproto])
 
     for p in [proto, samproto]:
-        try:
-            if p in value_summaries['protocols'].keys():
-                value_summaries['protocols'][p] += 1
-            else:
-                value_summaries['protocols'][p] = 1
-        except:
-            print("Protocol or sampling protocol error")
+        print(p)
+        if p in value_summaries['protocols'].keys():
+            value_summaries['protocols'][p] += 1
+        else:
+            value_summaries['protocols'][p] = 1
 
 
 # Remove duplicates, make strings for entry into table
