@@ -278,11 +278,15 @@ for occdict in alloccs:
 
     # basis or record
     BOR = occdict['basisOfRecord']
-    print(BOR)
     if BOR == "" or BOR == None:
-        summary['bases'] = summary['bases'] + ["UNKNOWN"]
+        BOR = 'UNKNOWN'
+    summary['bases'] = summary['bases'] + [BOR]
+
+    if BOR in value_summaries['bases'].keys():
+        value_summaries['bases'][BOR] += 1
     else:
-        summary['bases'] = summary['bases'] + [BOR]
+        value_summaries['bases'][BOR] == 1
+    print(value_summaries['bases'])
 
     # institution
     try:
