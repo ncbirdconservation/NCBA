@@ -412,6 +412,8 @@ del alloccs4
 sql_instit = """SELECT institutions_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_instit = list(cursor2.execute(sql_instit).fetchone()[0].split(', '))
+print(filt_instit)
+print(type(filt_instit))
 alloccs6 = []
 for x in alloccs5:
     if x['institutionCode'] not in list(filt_instit):
