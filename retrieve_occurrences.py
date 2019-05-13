@@ -253,10 +253,21 @@ summary = {'datums': ['WGS84'],
            'IDqualifier': set([]),
            'protocols': set([])}
 
+value_summaries = {'bases': {},
+                  'datums': {'WGS84': 0}}
+
 for occdict in alloccs:
     # datums
     if occdict['geodeticDatum'] != 'WGS84':
         summary['datums'] = summary['datums'] + occdict['geodeticDatum']
+        if occdict['geodeticDatum'] not in value_summaries['datums'].keys():
+            value_summaries['datums'][occdict['geodeticDatum']] = 0
+        else:
+            value_summaries['datums'][occdict['geodeticDatum']] += 1
+    if occdict['geodeticDatum'] == 'WGS84':
+        value_summaries['datums']['WGS84'] += 1
+    print(value_summaries['datums'])
+
     # issues
     summary['issues'] = summary['issues'] | set(occdict['issues'])
     # basis or record
