@@ -331,17 +331,28 @@ for occdict in alloccs:
     except:
         pass
 
-    # protocols
+    # protocols --NOTE this essentially combines two fields
     try:
         proto = occdict['protocol']
-        summary['protocols'] = summary['protocols'] | set([proto])
     except:
-        pass
+        proto = 'UNKNOWN'
+    summary['protocols'] = summary['protocols'] | set([proto])
+
     try:
         samproto = occdict['samplingProtocol']
-        summary['protocols'] = summary['protocols'] | set([samproto])
     except:
-        pass
+        samproto = 'UKNOWN'
+    summary['protocols'] = summary['protocols'] | set([samproto])
+
+    for p in [proto, samproto]:
+        try:
+            if p in value_summaries['protocols'].keys():
+                value_summaries['protocols'][p] += 1
+            else:
+                value_summaries['protocols'][p] = 1
+        except:
+            print("Protocol or sampling protocol error")
+
 
 # Remove duplicates, make strings for entry into table
 cursor.executescript("""CREATE TABLE post_request_attributes (field TEXT, vals TEXT);""")
