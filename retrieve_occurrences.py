@@ -255,7 +255,9 @@ summary = {'datums': ['WGS84'],
 
 value_summaries = {'bases': {},
                   'datums': {'WGS84': 0},
-                  'issues': {}}
+                  'issues': {},
+                  'institutions': {},
+                  'collections': {}}
 
 for occdict in alloccs:
     # datums
@@ -285,37 +287,50 @@ for occdict in alloccs:
     if BOR in value_summaries['bases'].keys():
         value_summaries['bases'][BOR] += 1
     else:
-        value_summaries['bases'][BOR] == 1
-    print(value_summaries['bases'])
+        value_summaries['bases'][BOR] = 1
 
     # institution
     try:
-        try:
-            who = occdict['institutionID']
-            summary['institutions'] = summary['institutions'] + [who]
-        except:
-            who = occdict['institutionCode']
-            summary['institutions'] = summary['institutions'] + [who]
+        who = occdict['institutionID']
     except:
-        summary['institutions'] = summary['institutions'] + ['UNKNOWN']
+        try:
+            who = occdict['institutionCode']
+        except:
+            who = 'unknown'
+
+    summary['institutions'] = summary['institutions'] + [who]
+
+    if who in value_summaries['institutions'].keys():
+        value_summaries['institutions'][who] += 1
+    else:
+        value_summaries['institutions'][who] = 1
+
     # collections
     try:
         co = occdict['collectionCode']
-        summary['collections'] = summary['collections'] + [co]
     except:
-        pass
+        co = 'UNKNOWN'
+
+    summary['collections'] = summary['collections'] + [co]
+    if co in value_summaries['collections'].keys():
+        value_summaries['collections'][who] += 1
+    else:
+        value_summaries['collections'][who] = 1
+
     # establishment means
     try:
         est = occdict['establishmentMeans']
         summary['establishment'] = summary['establishment'] | set([est])
     except:
         pass
+
     # identification qualifier
     try:
         qual = occdict['identificationQualifier']
         summary['IDqualifier'] = summary['IDqualifier'] | set([qual])
     except:
         pass
+
     # protocols
     try:
         proto = occdict['protocol']
