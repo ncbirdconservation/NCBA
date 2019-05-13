@@ -397,7 +397,12 @@ del alloccs3
 # COLLECTION CODES
 sql_collection = """SELECT collection_codes_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
-filt_collection = list(cursor2.execute(sql_collection).fetchone()[0].split(', '))
+filt_collection = cursor2.execute(sql_collection).fetchone()[0]
+if type(filt_collection) == str:
+    filt_collection = list(filt_collection.split(', '))
+else:
+    filt_collection = []
+
 alloccs5 = []
 for x in alloccs4:
     if x['collectionCode'] not in list(filt_collection):
@@ -411,9 +416,12 @@ del alloccs4
 # INSTITUTIONS
 sql_instit = """SELECT institutions_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
-filt_instit = list(cursor2.execute(sql_instit).fetchone()[0].split(', '))
-print(filt_instit)
-print(type(filt_instit))
+filt_instit = cursor2.execute(sql_instit).fetchone()[0]
+if type(filt_instit) == str:
+    filt_instit = list(filt_instit.split(', '))
+else:
+    filt_instit = []
+
 alloccs6 = []
 for x in alloccs5:
     if x['institutionCode'] not in list(filt_instit):
@@ -427,7 +435,12 @@ del alloccs5
 # BASES
 sql_bases = """SELECT bases_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
-filt_bases = list(cursor2.execute(sql_bases).fetchone()[0].split(', '))
+filt_bases = cursor2.execute(sql_bases).fetchone()[0]
+if type(filt_bases) == str:
+    filt_bases = list(filt_bases.split(', '))
+else:
+    filt_bases = []
+
 alloccs7 = []
 for x in alloccs6:
      if x['basisOfRecord'] not in list(filt_bases):
@@ -441,7 +454,12 @@ del alloccs6
 # PROTOCOLS
 sql_protocols = """SELECT protocols_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
-filt_protocols = list(cursor2.execute(sql_protocols).fetchone()[0].split(', '))
+filt_protocols = cursor2.execute(sql_protocols).fetchone()[0]
+if type(filt_protocols) == str:
+    filt_protocols = list(filt_protocols).split(', ')
+else:
+    filt_protocols = []
+
 alloccs8 = []
 for x in alloccs7:
     if x['protocol'] not in list(filt_protocols):
@@ -455,7 +473,10 @@ del alloccs7
 # SAMPLING PROTOCOL
 sql_sampling = """SELECT sampling_protocols_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
-filt_sampling = list(cursor2.execute(sql_sampling).fetchone()[0].split(', '))
+filt_sampling = cursor2.execute(sql_sampling).fetchone()[0]
+if type(filt_sampling) == str:
+    filt_sampling = list(filt_sampling.split(', '))
+
 alloccsX = []
 for x in alloccs8:
     if 'samplingProtocol' in x.keys() and x['samplingProtocol'] not in list(filt_sampling):
