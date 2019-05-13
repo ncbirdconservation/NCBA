@@ -10,6 +10,6 @@ workDir = '/Users/nmtarr/Documents/RANGES/'
 codeDir = '/Users/nmtarr/Code/range_map_evaluation/'
 inDir = workDir + 'Inputs/'
 outDir = workDir + 'Outputs/'
-default_coordUncertainty = 1000
+default_coordUncertainty = 100
 SRID_dict = {'WGS84': 4326, 'AlbersNAD83': 102008} # Used in file names for output.
 spdb = outDir + sp_id + gbif_req_id + gbif_filter_id + '.sqlite'
