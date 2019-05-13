@@ -2,7 +2,7 @@
 sp_id = 'bybcux0'
 summary_name = 'cuckoo'
 gbif_req_id = 'GBIFr11'
-gbif_filter_id = 'GBIFf2'
+gbif_filter_id = 'GBIFf3'
 ebird_req_id = None
 ebird_filter_id = None
 evaluation = 'eval_gbif1'

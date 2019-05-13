@@ -314,10 +314,11 @@ for occdict in alloccs:
         co = 'UNKNOWN'
 
     summary['collections'] = summary['collections'] + [co]
+
     if co in value_summaries['collections'].keys():
-        value_summaries['collections'][who] += 1
+        value_summaries['collections'][co] += 1
     else:
-        value_summaries['collections'][who] = 1
+        value_summaries['collections'][co] = 1
 
     # establishment means
     try:
@@ -518,7 +519,7 @@ sql_protocols = """SELECT protocols_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_protocols = cursor2.execute(sql_protocols).fetchone()[0]
 if type(filt_protocols) == str:
-    filt_protocols = list(filt_protocols).split(', ')
+    filt_protocols = list(filt_protocols.split(', '))
 else:
     filt_protocols = []
 
