@@ -258,7 +258,8 @@ value_summaries = {'bases': {},
                   'issues': {},
                   'institutions': {},
                   'collections': {},
-                  'protocols': {}}
+                  'protocols': {},
+                  'samplingProtocols': {}}
 
 for occdict in alloccs:
     # datums
@@ -350,21 +351,28 @@ for occdict in alloccs:
         samproto = 'UKNOWN'
     summary['protocols'] = summary['protocols'] | set([samproto])
 
-    if samproto in value_summaries['protocols'].keys():
-        value_summaries['protocols'][samproto] += 1
+    if samproto in value_summaries['samplingProtocols'].keys():
+        value_summaries['samplingProtocols'][samproto] += 1
     else:
-        value_summaries['protocols'][samproto] = 1
+        value_summaries['samplingProtocols'][samproto] = 1
 
-print(value_summaries)
-
-
-
-# Remove duplicates, make strings for entry into table
+# Remove duplicates, make strings for entry into summary table of attributes
 cursor.executescript("""CREATE TABLE post_request_attributes (field TEXT, vals TEXT);""")
 for x in summary.keys():
-    stmt = """INSERT INTO post_request_attributes (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary[x]))).replace('"', ''))
+    vals = str(list(set(summary[x]))).replace('"', '')
+    stmt = """INSERT INTO post_request_attributes (field, vals) VALUES ("{0}", "{1}");""".format(x, vals)
     cursor.execute(stmt)
 
+# Store the value summary for the selected fields in a table.
+cursor.executescript("""CREATE TABLE post_request_value_counts
+                        (attribute TEXT, value TEXT, count INTEGER);""")
+for x in value_summaries.keys():
+    attribute = value_summaries[x]
+    for y in value_summaries[x].keys():
+        z = value_summaries[x][y]
+        frog = """INSERT INTO post_request_value_counts (attribute, value, count)
+                  VALUES ("{0}", "{1}", "{2}")""".format(x,y,z)
+        cursor.execute(frog)
 
 ##################################################  FILTER MORE
 ###############################################################
