@@ -254,7 +254,8 @@ summary = {'datums': ['WGS84'],
            'protocols': set([])}
 
 value_summaries = {'bases': {},
-                  'datums': {'WGS84': 0}}
+                  'datums': {'WGS84': 0},
+                  'issues': {}}
 
 for occdict in alloccs:
     # datums
@@ -266,16 +267,23 @@ for occdict in alloccs:
             value_summaries['datums'][occdict['geodeticDatum']] += 1
     if occdict['geodeticDatum'] == 'WGS84':
         value_summaries['datums']['WGS84'] += 1
-    print(value_summaries['datums'])
 
     # issues
     summary['issues'] = summary['issues'] | set(occdict['issues'])
+    for issue in occdict['issues']:
+        if issue not in value_summaries['issues'].keys():
+            value_summaries['issues'][issue] = 1
+        if issue in value_summaries['issues'].keys():
+            value_summaries['issues'][issue] += 1
+
     # basis or record
     BOR = occdict['basisOfRecord']
+    print(BOR)
     if BOR == "" or BOR == None:
         summary['bases'] = summary['bases'] + ["UNKNOWN"]
     else:
         summary['bases'] = summary['bases'] + [BOR]
+
     # institution
     try:
         try:
