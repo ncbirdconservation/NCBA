@@ -358,10 +358,11 @@ for occdict in alloccs:
         value_summaries['samplingProtocols'][samproto] = 1
 
 # Remove duplicates, make strings for entry into summary table of attributes
-cursor.executescript("""CREATE TABLE post_request_attributes (field TEXT, vals TEXT);""")
+cursor.executescript("""CREATE TABLE record_attributes (step TEXT, field TEXT, vals TEXT);""")
 for x in summary.keys():
     vals = str(list(set(summary[x]))).replace('"', '')
-    stmt = """INSERT INTO post_request_attributes (field, vals) VALUES ("{0}", "{1}");""".format(x, vals)
+    stmt = """INSERT INTO record_attributes (step, field, vals)
+              VALUES ("request", "{0}", "{1}");""".format(x, vals)
     cursor.execute(stmt)
 
 # Store the value summary for the selected fields in a table.
@@ -614,9 +615,9 @@ for occdict in alloccsX:
         pass
 
 # Remove duplicates, make strings for entry into table
-cursor.executescript("""CREATE TABLE post_filter_attributes (field TEXT, vals TEXT);""")
 for x in summary2.keys():
-    stmt = """INSERT INTO post_filter_attributes (field, vals) VALUES ("{0}", "{1}");""".format(x, str(list(set(summary2[x]))).replace('"', ''))
+    stmt = """INSERT INTO record_attributes (step, field, vals)
+              VALUES ("filter", "{0}", "{1}");""".format(x, str(list(set(summary2[x]))).replace('"', ''))
     cursor.execute(stmt)
 
 
