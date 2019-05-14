@@ -662,6 +662,7 @@ for e in alloccsX:
             WHERE occ_id = {1};""".format(e['individualCount'], e['gbifID'])
         cursor.execute(sql2)
 conn.commit()
+print("Records saved in {0}".format(config.spdb))
 
 ################################################  BUFFER POINTS
 ###############################################################
