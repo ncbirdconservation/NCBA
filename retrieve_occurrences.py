@@ -547,9 +547,9 @@ else:
 
 alloccs9 = []
 for x in alloccs8:
-    if x['protocol'] not in filt_protocols:
+    if x['issues'] not in filt_issues:
         alloccs9.append(x)
-    elif 'protocol' not in x.keys():
+    elif 'issues' not in x.keys():
         alloccs9.append(x)
     else:
         pass
