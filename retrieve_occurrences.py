@@ -469,12 +469,15 @@ else:
 
 alloccs5 = []
 for x in alloccs4:
-    if x['collectionCode'] not in list(filt_collection):
-        alloccs5.append(x)
-    elif 'collectionCode' not in x.keys():
-        alloccs5.append(x)
+    if 'collectionCode' in x.keys():
+        if x['collectionCode'] not in list(filt_collection):
+            alloccs5.append(x)
+        elif 'collectionCode' not in x.keys():
+            alloccs5.append(x)
+        else:
+            pass
     else:
-        pass
+        alloccs5.append(x)
 del alloccs4
 
 # INSTITUTIONS
@@ -488,12 +491,11 @@ else:
 
 alloccs6 = []
 for x in alloccs5:
-    if x['institutionCode'] not in list(filt_instit):
-        alloccs6.append(x)
-    elif 'institutionCode' not in x.keys():
-        alloccs6.append(x)
+    if 'institutionCode' in x.keys():
+        if x['institutionCode'] not in filt_instit:
+            alloccs6.append(x)
     else:
-        pass
+        alloccs6.append(x)
 del alloccs5
 
 # BASES
@@ -526,7 +528,7 @@ else:
 
 alloccs8 = []
 for x in alloccs7:
-    if x['protocol'] not in list(filt_protocols):
+    if x['protocol'] not in filt_protocols:
         alloccs8.append(x)
     elif 'protocol' not in x.keys():
         alloccs8.append(x)
@@ -534,21 +536,43 @@ for x in alloccs7:
         pass
 del alloccs7
 
+# ISSUES
+sql_issues = """SELECT issues_omit FROM gbif_filters
+               WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
+filt_issues = cursor2.execute(sql_issues).fetchone()[0]
+if type(filt_issues) == str:
+    filt_issues = list(filt_issues.split(', '))
+else:
+    filt_issues = []
+
+alloccs9 = []
+for x in alloccs8:
+    if x['protocol'] not in filt_protocols:
+        alloccs9.append(x)
+    elif 'protocol' not in x.keys():
+        alloccs9.append(x)
+    else:
+        pass
+del alloccs8
+
+
 # SAMPLING PROTOCOL
 sql_sampling = """SELECT sampling_protocols_omit FROM gbif_filters
                WHERE filter_id = '{0}';""".format(config.gbif_filter_id)
 filt_sampling = cursor2.execute(sql_sampling).fetchone()[0]
 if type(filt_sampling) == str:
     filt_sampling = list(filt_sampling.split(', '))
+else:
+    filt_sampling = []
 
 alloccsX = []
-for x in alloccs8:
-    if 'samplingProtocol' in x.keys() and x['samplingProtocol'] not in list(filt_sampling):
-        alloccsX.append(x)
-    elif 'samplingProtocol' not in x.keys():
-        alloccsX.append(x)
+for x in alloccs9:
+    if 'samplingProtocol' in x.keys():
+        if x['samplingProtocol'] not in filt_sampling:
+            alloccsX.append(x)
     else:
-        pass
+        alloccsX.append(x)
+del alloccs9
 
 ############################# SAVE SUMMARY OF VALUES KEPT (FILTER)
 summary2 = {'datums': ['WGS84'],
