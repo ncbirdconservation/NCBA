@@ -199,7 +199,7 @@ occ_search = occurrences.search(gbif_id,
                                 hasCoordinate=coordinate,
                                 continent=continent)
 occ_count=occ_search['count']
-print('{0} records exist with the request parameters'.format(occ_count))
+print('\n{0} records exist with the request parameters'.format(occ_count))
 
 # Get occurrences in batches, saving into master list
 alloccs = []
@@ -676,6 +676,7 @@ for x in alloccsX:
                     config.SRID_dict[x['geodeticDatum']])
         cursor.executescript(sql1)
     except Exception as e:
+        print("\nThere was a problem with the following record:")
         print(e)
         print(x)
 
@@ -687,7 +688,7 @@ for e in alloccsX:
             WHERE occ_id = {1};""".format(e['individualCount'], e['gbifID'])
         cursor.execute(sql2)
 conn.commit()
-print("Records saved in {0}".format(config.spdb))
+print("\nRecords saved in {0}".format(config.spdb))
 
 ################################################  BUFFER POINTS
 ###############################################################
