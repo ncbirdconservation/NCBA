@@ -21,6 +21,11 @@ ncebirdst <- NCBA %>%
   left_join(ebirdst, c("AOS59.Scientific.Name" = "scientific_name")) %>%
   mutate(ebirdst = case_when(is.na(run_name) == FALSE ~ 1)) %>%
   select(Common.Name, ebirdst)
-
-# Save results
 write.csv(ncebirdst, file='T:/NCBA/Species_List/ncba-ebirdsted.csv')
+
+# Which GAP species don't match the NCBA list?
+GAPnonBA <- gap %>% 
+  full_join(NCBA, c("GAP_common_name" = "Common.Name")) %>%
+  select("GAP_common_name", "GAP_scientific_name", 
+         "AOS59.Scientific.Name", "AOS57.Scientific.Name")
+View(GAPnonBA)
