@@ -6,16 +6,23 @@ boundaries from eBird status and trends.
 library(tidyverse)
 library(ebirdst)
 library(lubridate)
+library(stringr)
 
 # Set paths and variables
 projDir = 'T:/NCBA/Species_list/'
 
 # Read in species list of NCBA
 NCBA <- read.csv(paste(projDir,'NCBA_species.csv', sep=""))
-# Fix capitalization of common name (e.g., "-C" -> "-c")
+
+# Make lower case to avoid capitilization problems
+levels(NCBA$Common.Name) <- str_to_lower(levels(NCBA$Common.Name))
 
 # Read in season boundaries tables from eBird status and trends
 ebirdst <- ebirdst_runs
+
+# Make lower case to avoid capitilization problems
+#ebirdst$common_name <- str_to_lower(ebirdst$common_name)
+ebirdst <- mutate(ebirdst, common_name = str_to_lower(ebirdst$common_name))
 
 # Combine NCBA species dataframe with ebird runs
 seasons <- NCBA %>%
@@ -33,5 +40,6 @@ select("NCBA_common_name", "breeding_start_dt", "breeding_end_dt",
 arrange(NCBA_common_name)
 
 # Drop year from season date values
+seasons
 
 View(seasons)
