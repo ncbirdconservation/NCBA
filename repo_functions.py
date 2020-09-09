@@ -104,6 +104,110 @@ def MapShapefilePolygons(map_these, title):
     plt.title(title, fontsize=20, pad=-40, backgroundcolor='w')
     return
 
+def MapShapefilePolygons_NC(map_these, title):
+    """
+    Displays shapefiles on a simple CONUS basemap.  Maps are plotted in the order
+    provided so put the top map last in the listself.  You can specify a column
+    to map as well as custom colors for it.  This function may not be very robust
+    to other applications.
+
+    NOTE: The shapefiles have to be in WGS84 CRS.
+
+    (dict, str) -> displays maps, returns matplotlib.pyplot figure
+
+    Arguments:
+    map_these -- list of dictionaries for shapefiles you want to display in
+                CONUS. Each dictionary should have the following format, but
+                some are unneccesary if 'column' doesn't = 'None'.  The critical
+                ones are file, column, and drawbounds.  Column_colors is needed
+                if column isn't 'None'.  Others are needed if it is 'None'.
+                    {'file': '/path/to/your/shapfile',
+                     'alias': 'my layer'
+                     'column': None,
+                     'column_colors': {0: 'k', 1: 'r'}
+                    'linecolor': 'k',
+                    'fillcolor': 'k',
+                    'linewidth': 1,
+                    'drawbounds': True
+                    'marker': 's'}
+    title -- title for the map.
+    """
+    # Packages needed for plotting
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.basemap import Basemap
+    import numpy as np
+    from matplotlib.patches import Polygon
+    from matplotlib.collections import PatchCollection
+    from matplotlib.patches import PathPatch
+
+    # Basemap
+    fig = plt.figure(figsize=(15,12))
+    ax = plt.subplot(1,1,1)
+    map = Basemap(projection='aea', resolution='i', lon_0=-79.8, lat_0=35.5,
+                  height=410000, width=900000)
+    map.drawcoastlines(color='grey')
+    map.drawstates(color='grey')
+    map.drawcountries(color='grey')
+    map.fillcontinents(color='#a2d0a2',lake_color='#a9cfdc')
+    map.drawmapboundary(fill_color='#a9cfdc')
+
+    for mapfile in map_these:
+        if mapfile['column'] == None:
+            # Add shapefiles to the map
+            if mapfile['fillcolor'] == None:
+                map.readshapefile(mapfile['file'], 'mapfile',
+                                  drawbounds=mapfile['drawbounds'],
+                                  linewidth=mapfile['linewidth'],
+                                  color=mapfile['linecolor'])
+                # Empty scatter plot for the legend
+                plt.scatter([], [], c='', edgecolor=mapfile['linecolor'],
+                            alpha=1, label=mapfile['alias'], s=100,
+                            marker=mapfile['marker'])
+
+            else:
+                map.readshapefile(mapfile['file'], 'mapfile',
+                          drawbounds=mapfile['drawbounds'])
+                # Code for extra formatting -- filling in polygons setting border
+                # color
+                patches = []
+                for info, shape in zip(map.mapfile_info, map.mapfile):
+                    patches.append(Polygon(np.array(shape), True))
+                ax.add_collection(PatchCollection(patches,
+                                                  facecolor= mapfile['fillcolor'],
+                                                  edgecolor=mapfile['linecolor'],
+                                                  linewidths=mapfile['linewidth'],
+                                                  zorder=2))
+                # Empty scatter plot for the legend
+                plt.scatter([], [], c=mapfile['fillcolor'],
+                            edgecolors=mapfile['linecolor'],
+                            alpha=1, label=mapfile['alias'], s=100,
+                            marker=mapfile['marker'])
+
+        else:
+            map.readshapefile(mapfile['file'], 'mapfile', drawbounds=mapfile['drawbounds'])
+            for info, shape in zip(map.mapfile_info, map.mapfile):
+                for thang in mapfile['column_colors'].keys():
+                    if info[mapfile['column']] == thang:
+                        x, y = zip(*shape)
+                        map.plot(x, y, marker=None, color=mapfile['column_colors'][thang])
+
+            # Empty scatter plot for the legend
+            for seal in mapfile['column_colors'].keys():
+                plt.scatter([], [], c=mapfile['column_colors'][seal],
+                            edgecolors=mapfile['column_colors'][seal],
+                            alpha=1, label=mapfile['value_alias'][seal],
+                            s=100, marker=mapfile['marker'])
+
+    # Legend -- the method that works is ridiculous but necessary; you have
+    #           to add empty scatter plots with the symbology you want for
+    #           each shapefile legend entry and then call the legend.  See
+    #           plt.scatter(...) lines above.
+    plt.legend(scatterpoints=1, frameon=True, labelspacing=1, loc='lower left',
+               framealpha=1, fontsize='x-large')
+
+    # Title
+    plt.title(title, fontsize=20, pad=-40, backgroundcolor='w')
+    return
 
 def download_GAP_range_CONUS2001v1(gap_id, toDir):
     """
