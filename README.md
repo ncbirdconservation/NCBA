@@ -1,1 +1,5 @@
-A place holder repo for potential data summaries to inform a NC Bird Atlas.  Based on the GAP-range-evaluation repo.
+# North Carolin Bird Atlas I Analysis Repo
+
+Maintained by Nathan Tarr
+
+This repo houses code for the analysis of data to support the NC Bird Atlas.
