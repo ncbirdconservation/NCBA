@@ -10,7 +10,7 @@ library(stringr)
 
 
 # Set paths and variables
-projDir = 'T:/NCBA/Species_list/'
+projDir = '~/NCBA/Species_list/'
 
 # Read in species list of NCBA
 NCBA <- read.csv(paste(projDir,'NCBA_species.csv', sep=""))

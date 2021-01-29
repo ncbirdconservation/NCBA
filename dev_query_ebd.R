@@ -7,7 +7,7 @@ library(dplyr)
 input_file <- "/Volumes/eBird/ebd_US-NC_relOct-2020/ebd_US-NC_relOct-2020.txt"
 
 # parameters ------------------------------------------------------------
-output_file <- "/users/nmtarr/Documents/NCBA/Data/ebd_filtered.txt"
+output_file <- "~/NCBA/Data/ebd_filtered.txt"
 species <- c("Swainson's Warbler")
 #state <- "US-NC"
 country <- "US"
