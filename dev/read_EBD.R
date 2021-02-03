@@ -3,11 +3,11 @@ library(auk)
 library(dplyr)
 
 # path to the ebird data file -------------------------------------------
-#input_file <- system.file("extdata/ebd-sample.txt", package = "auk")
-input_file <- "/Volumes/eBird/ebd_US-NC_relOct-2020/ebd_US-NC_relOct-2020.txt"
+input_ebd <- auk_get_ebd_path()
+input_sampling <- "/Volumes/eBird/ebd_sampling_relDec-2020"
 
 # parameters ------------------------------------------------------------
-output_file <- "/users/nmtarr/Documents/NCBA/Data/ebd_filtered.txt"
+output_file <- "/users/nmtarr/Documents/NCBA/Data/swwa_filtered.txt"
 species <- c("Swainson's Warbler")
 #state <- "US-NC"
 country <- "US"
@@ -28,6 +28,7 @@ ebird_data <- input_file %>%
   auk_species(species=species) %>%
   auk_date(date=date) %>%
   auk_country(country=country) %>%
+  auk_complete() %<%
   # 3. run filtering
   auk_filter(file = output_file, overwrite = TRUE) %>%
   # 4. read text file into r data frame
