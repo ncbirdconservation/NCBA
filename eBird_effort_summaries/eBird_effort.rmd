@@ -1,0 +1,126 @@
+---
+title: "eBird effort by county"
+author: "N.M. Tarr"
+date: "2/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load packages
+```{r}
+library(auk)
+library(tidyverse)
+library(ggplot2)
+library(sf)
+```
+
+Set some paths
+```{r}
+# reference the filtered checklist output file
+filtered_checklists <- "/users/nmtarr/Documents/NCBA/Data/filtered_checklists.txt"
+```
+
+## Read in the effort data (filtered checklist table).
+```{r}
+checklists <- read_sampling(filtered_checklists)
+```
+
+### How many checklists?
+```{r}
+length(unique(checklists$checklist_id))
+```
+
+### Checklist locations
+A crude map of x,y locations for checklists shows broad coverage across the state.
+```{r}
+ggplot(data=checklists) +
+  geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
+             shape=3) + 
+  ggtitle("") +
+  ylab("") + 
+  xlab("")
+```
+
+### How many checklists per county?
+Note, the assignment of checklists to counties was performed by eBird and it is possible that errors exist due to traveling counts that cross county lines and errors in the recorded locations of checklists.
+```{r}
+by_county <- checklists %>%
+  group_by(county) %>%
+  summarize(
+    count = n(),
+  ) %>%
+  arrange(county) 
+print(by_county, n=100)
+```
+
+### Summary of number of checklists per county
+```{r}
+ggplot(data=by_county) +
+  geom_boxplot(mapping=aes(y=count, x=""), color="darkgreen", 
+               outlier.colour="red", show.legend=TRUE) + 
+  coord_flip() + 
+  ggtitle("The number of checklists in NC counties") +
+  ylab("Checklists (n)") + 
+  xlab("") +
+  scale_y_continuous(n.breaks=12)
+```
+
+Summary statistics for the numbers of checklists in counties
+```{r}
+summary(by_county)
+```
+
+```{r}
+# Create a spatial data frame from a county shapefile.
+counties.shapefile <- "~/Documents/NCBA/Data/NC_counties_shapefile/North_Carolina_State_and_County_Boundary_Polygons.shp"
+counties <- st_read(counties.shapefile) %>% arrange(County)
+
+# Join to get the checklist count
+# McDowell county is misspelled in the counties shapefile, it's easier to change a df than a sf.
+by_county[59, "county"] = "Mcdowell"
+counties.checklists <- counties %>%
+  left_join(by_county, by = c("County" = "county"))
+
+# Pull out just the column of interest here ("count") and plot it.
+county.count <- select(counties.checklists, count, geometry)
+plot(county.count, main="Number of Checklists Attributed to Counties by eBird")
+```
+
+### Top 10 counties in terms of checklist count.
+```{r}
+head(arrange(by_county, desc(count)), n=10)
+```
+
+```{r}
+# Add a column to record whether it's a "top" or "bottom" county as far as count goes.
+tops <- counties.checklists %>% arrange(desc(count)) %>% head(n=10)
+bottoms <- counties.checklists %>% arrange(count) %>% head(n=10)
+counties.checklists <- counties.checklists %>%
+  mutate(top10 = ifelse(count %in% tops$count, TRUE, FALSE)) %>%
+  mutate(bottom10 = ifelse(count %in% bottoms$count, TRUE, FALSE)) %>%
+  arrange(desc(count))
+```
+
+```{r}
+# Pull out just the column of interest here ("count") and plot it.
+tops2 <- counties.checklists %>%
+  select(top10, geometry)
+plot(tops2, main="Top 10 Counties for Number of eBird Checklists")
+```
+
+
+
+### Bottoms 10 counties in terms of checklist count.
+```{r}
+head(arrange(by_county, count), n=10)
+```
+
+```{r}
+# Pull out just the column of interest here ("count") and plot it.
+bottoms2 <- counties.checklists %>%
+  select(bottom10, geometry)
+plot(bottoms2, main="Bottom 10 Counties for Number of eBird Checklists")
+```

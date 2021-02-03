@@ -1,0 +1,28 @@
+---
+title: "Single Species Summary"
+author: "N.M. Tarr"
+date: "2/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load packages
+```{r}
+library(auk)
+```
+
+Paths
+```{r}
+ebd_file <- "/users/nmtarr/Documents/NCBA/Data/ebd_filtered.txt"
+df <- ebd_file %>% read_ebd()
+colnames(df)
+```
+
+
+```{r}
+print(unique(df["common_name"]))
+```
+
