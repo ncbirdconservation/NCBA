@@ -1,5 +1,5 @@
 ---
-title: "eBird effort by county"
+title: "eBird Effort by County"
 author: "N.M. Tarr"
 date: "2/1/2021"
 output: html_document
@@ -15,12 +15,13 @@ library(auk)
 library(tidyverse)
 library(ggplot2)
 library(sf)
+starttime <- Sys.time()
 ```
 
 Set some paths
 ```{r}
 # reference the filtered checklist output file
-filtered_checklists <- "/users/nmtarr/Documents/NCBA/Data/filtered_checklists.txt"
+filtered_checklists <- "~/Documents/NCBA/Data/filtered_checklists.txt"
 ```
 
 ## Read in the effort data (filtered checklist table).
@@ -111,8 +112,6 @@ tops2 <- counties.checklists %>%
 plot(tops2, main="Top 10 Counties for Number of eBird Checklists")
 ```
 
-
-
 ### Bottoms 10 counties in terms of checklist count.
 ```{r}
 head(arrange(by_county, count), n=10)
@@ -123,4 +122,10 @@ head(arrange(by_county, count), n=10)
 bottoms2 <- counties.checklists %>%
   select(bottom10, geometry)
 plot(bottoms2, main="Bottom 10 Counties for Number of eBird Checklists")
+```
+
+### Report runtime
+```{r}
+endtime <- Sys.time()
+print(endtime - starttime)
 ```
