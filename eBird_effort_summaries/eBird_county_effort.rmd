@@ -1,84 +1,111 @@
 ---
-title: "eBird Effort by County"
+title: "eBird Sampling Effort Summaries"
 author: "N.M. Tarr"
-date: "2/1/2021"
-output: html_document
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: 
+  rmdformats::downcute:
+  html_document:
+    df_print: paged
+    code_folding: hide
+
 ---
+# Purpose
+This notebook summarizes eBird sampling (effort) within North Carolina for the past 20 years.  Sampling data can be downloaded from the eBird website and queried with eBird's R package named "auk".  The script named "filter_eBird_sampling.R", which is saved in the NCBA github repo, performs the filtering that supports this notebook.  
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+The records available from the sampling data set are for individual, unique checklists and several attributes are included for each.  This notebook summarizes the available attribute values to learn as much as possible about the modern eBird effort to date within North Carolina.  The available checklist attributes are:
 
-Load packages
-```{r}
+* checklist_id            
+* last_edited_date        
+* county
+* county_code
+* iba_code                  
+* bcr_code                
+* usfws_code                
+* atlas_block              
+* locality                  
+* locality_id              
+* locality_type             
+* latitude                
+* longitude                 
+* observation_date 
+
+* time_observations_started 
+
+* observer_id              
+* sampling_event_identifier 
+
+* protocol_type            
+* protocol_code             
+* project_code            
+* duration_minutes          
+* effort_distance_km      
+* effort_area_ha            
+* number_observers        
+* all_species_reported      
+* group_identifier        
+* trip_comments   
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE)
+
 library(auk)
 library(tidyverse)
 library(ggplot2)
 library(sf)
 starttime <- Sys.time()
-```
 
-Set some paths
-```{r}
-# reference the filtered checklist output file
+# Reference the filtered checklist output file
 filtered_checklists <- "~/Documents/NCBA/Data/filtered_checklists.txt"
-```
 
-## Read in the effort data (filtered checklist table).
-```{r}
+# Read in the effort data (filtered checklist table).
 checklists <- read_sampling(filtered_checklists)
+
+# Read in a county shapefile in the correct projection.
+counties.shapefile <- "~/Documents/NCBA/Data/NC_counties_shapefile/North_Carolina_State_and_County_Boundary_Polygons.shp"
+# Create a spatial data frame from a county shapefile.
+counties <- st_read(counties.shapefile) %>% arrange(County)
+
+comma <- function(x) format(x, digits=2, big.mark=",")
 ```
 
-### How many checklists?
-```{r}
-length(unique(checklists$checklist_id))
-```
+# Checklist Count
+There are currently `r comma(length(unique(checklists$checklist_id)))` checklists from North Carolina in eBird.
 
-### Checklist locations
+# Checklist Locations
 A crude map of x,y locations for checklists shows broad coverage across the state.
-```{r}
+```{r xy_locations}
 ggplot(data=checklists) +
   geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
              shape=3) + 
-  ggtitle("") +
+  ggtitle("NC Checklist Coordinates for 2000-2020") +
   ylab("") + 
   xlab("")
 ```
 
-### How many checklists per county?
-Note, the assignment of checklists to counties was performed by eBird and it is possible that errors exist due to traveling counts that cross county lines and errors in the recorded locations of checklists.
-```{r}
+# Checklists per County
+```{r per_county_bwplot}
 by_county <- checklists %>%
   group_by(county) %>%
   summarize(
     count = n(),
   ) %>%
   arrange(county) 
-print(by_county, n=100)
-```
-
-### Summary of number of checklists per county
-```{r}
 ggplot(data=by_county) +
-  geom_boxplot(mapping=aes(y=count, x=""), color="darkgreen", 
+  geom_boxplot(mapping=aes(y=count, x=""), color="purple", 
                outlier.colour="red", show.legend=TRUE) + 
   coord_flip() + 
-  ggtitle("The number of checklists in NC counties") +
+  ggtitle("The Number of Checklists in NC Counties") +
   ylab("Checklists (n)") + 
   xlab("") +
   scale_y_continuous(n.breaks=12)
 ```
 
-Summary statistics for the numbers of checklists in counties
-```{r}
-summary(by_county)
-```
+Between `r comma(summary(by_county$count)[[1]])` and `r comma(summary(by_county$count)[[6]])` checklists are available for counties in North Carolina, and the median number of checklists is `r comma(summary(by_county$count)[[3]])`.
 
-```{r}
-# Create a spatial data frame from a county shapefile.
-counties.shapefile <- "~/Documents/NCBA/Data/NC_counties_shapefile/North_Carolina_State_and_County_Boundary_Polygons.shp"
-counties <- st_read(counties.shapefile) %>% arrange(County)
-
+```{r per_county_map}
 # Join to get the checklist count
 # McDowell county is misspelled in the counties shapefile, it's easier to change a df than a sf.
 by_county[59, "county"] = "Mcdowell"
@@ -90,12 +117,12 @@ county.count <- select(counties.checklists, count, geometry)
 plot(county.count, main="Number of Checklists Attributed to Counties by eBird")
 ```
 
-### Top 10 counties in terms of checklist count.
-```{r}
-head(arrange(by_county, desc(count)), n=10)
+## Top 10 Counties
+```{r top_county_table}
+knitr::kable(head(arrange(by_county, desc(count)), n=10), caption="Top 10 Counties")
 ```
 
-```{r}
+```{r top_county_map}
 # Add a column to record whether it's a "top" or "bottom" county as far as count goes.
 tops <- counties.checklists %>% arrange(desc(count)) %>% head(n=10)
 bottoms <- counties.checklists %>% arrange(count) %>% head(n=10)
@@ -103,29 +130,34 @@ counties.checklists <- counties.checklists %>%
   mutate(top10 = ifelse(count %in% tops$count, TRUE, FALSE)) %>%
   mutate(bottom10 = ifelse(count %in% bottoms$count, TRUE, FALSE)) %>%
   arrange(desc(count))
-```
 
-```{r}
 # Pull out just the column of interest here ("count") and plot it.
 tops2 <- counties.checklists %>%
   select(top10, geometry)
 plot(tops2, main="Top 10 Counties for Number of eBird Checklists")
 ```
 
-### Bottoms 10 counties in terms of checklist count.
-```{r}
-head(arrange(by_county, count), n=10)
+## Bottom 10 Counties
+```{r bottom_county_table}
+knitr::kable(head(arrange(by_county, count), n=10), caption="Bottom 10")
 ```
 
-```{r}
+```{r bottom_county_map}
 # Pull out just the column of interest here ("count") and plot it.
 bottoms2 <- counties.checklists %>%
   select(bottom10, geometry)
 plot(bottoms2, main="Bottom 10 Counties for Number of eBird Checklists")
 ```
 
-### Report runtime
-```{r}
-endtime <- Sys.time()
-print(endtime - starttime)
+## Checklists per County Table
+Note, the assignment of checklists to counties was performed by eBird and it is possible that errors exist due to traveling counts that cross county lines and errors in the recorded locations of checklists.
+```{r per_county_all}
+knitr::kable(by_county, caption="")
 ```
+
+# Runtime
+```{r runtime}
+endtime <- Sys.time()
+runtime <- endtime - starttime
+```
+`r format(runtime)`
