@@ -54,7 +54,10 @@ knitr::opts_chunk$set(
 library(auk)
 library(tidyverse)
 library(ggplot2)
+theme_set(theme_bw())
 library(sf)
+library(RColorBrewer)
+library(maps)
 starttime <- Sys.time()
 
 # Reference the filtered checklist output file
@@ -63,26 +66,30 @@ filtered_checklists <- "~/Documents/NCBA/Data/filtered_checklists.txt"
 # Read in the effort data (filtered checklist table).
 checklists <- read_sampling(filtered_checklists)
 
-# Read in a county shapefile in the correct projection.
-counties.shapefile <- "~/Documents/NCBA/Data/NC_counties_shapefile/North_Carolina_State_and_County_Boundary_Polygons.shp"
-# Create a spatial data frame from a county shapefile.
-counties <- st_read(counties.shapefile) %>% arrange(County)
-
 comma <- function(x) format(x, digits=2, big.mark=",")
+```
+
+Read in a county simple features collection
+```{r counties_data}
+counties <- st_as_sf(map("county", plot = FALSE, fill = TRUE)) %>%
+  subset(grepl("north carolina", ID)) %>%
+  mutate(county = str_to_title(str_replace(ID, "north carolina,", ""))) %>%
+  select(-c(ID))
+# Reproject?
 ```
 
 # Checklist Count
 There are currently `r comma(length(unique(checklists$checklist_id)))` checklists from North Carolina in eBird.
 
 # Checklist Locations
-A crude map of x,y locations for checklists shows broad coverage across the state.
 ```{r xy_locations}
 ggplot(data=checklists) +
   geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
              shape=3) + 
-  ggtitle("NC Checklist Coordinates for 2000-2020") +
-  ylab("") + 
-  xlab("")
+  labs(title="EBird checklist coordinates are widely distributed within NC",
+       caption="Checklists from before 2000 are not shown") +
+  ylab("latitude") + 
+  xlab("longitude")
 ```
 
 # Checklists per County
@@ -93,13 +100,18 @@ by_county <- checklists %>%
     count = n(),
   ) %>%
   arrange(county) 
+
+# We will need median # checklists for below
+median.checklists <- toString(comma(summary(by_county$count)[[3]]))
 ggplot(data=by_county) +
-  geom_boxplot(mapping=aes(y=count, x=""), color="purple", 
-               outlier.colour="red", show.legend=TRUE) + 
+  geom_boxplot(mapping=aes(y=count, x=""), color="orange", 
+               outlier.colour="darkred", show.legend=TRUE) + 
   coord_flip() + 
-  ggtitle("The Number of Checklists in NC Counties") +
+  labs(title="A handful of counties have many more checklists than others",
+       subtitle=str_c("The median number of checklists in a county was ",
+                      median.checklists),
+       caption="Checklists from before 2000 are not included") +
   ylab("Checklists (n)") + 
-  xlab("") +
   scale_y_continuous(n.breaks=12)
 ```
 
@@ -107,14 +119,16 @@ Between `r comma(summary(by_county$count)[[1]])` and `r comma(summary(by_county$
 
 ```{r per_county_map}
 # Join to get the checklist count
-# McDowell county is misspelled in the counties shapefile, it's easier to change a df than a sf.
-by_county[59, "county"] = "Mcdowell"
 counties.checklists <- counties %>%
-  left_join(by_county, by = c("County" = "county"))
+  left_join(by_county, by = "county")
 
 # Pull out just the column of interest here ("count") and plot it.
-county.count <- select(counties.checklists, count, geometry)
-plot(county.count, main="Number of Checklists Attributed to Counties by eBird")
+county.count <- select(counties.checklists, count, geom)
+# plot(county.count, main="Number of Checklists Attributed to Counties by eBird")
+ggplot(data=county.count) +
+  geom_sf(data=counties.checklists, aes(fill=count)) +
+  labs(title="Counties with large cities are heavily sampled",
+       caption="Checklists from before 2000 are not included")
 ```
 
 ## Top 10 Counties
