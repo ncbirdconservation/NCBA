@@ -10,7 +10,7 @@ output:
 
 ---
 # Purpose
-This notebook summarizes eBird sampling (effort) within North Carolina for the past 20 years.  Sampling data can be downloaded from the eBird website and queried with eBird's R package named "auk".  The script named "filter_eBird_sampling.R", which is saved in the NCBA github repo, performs the filtering that supports this notebook.  
+This notebook summarizes eBird sampling (effort) within North Carolina for the past 5 years.  Sampling data can be downloaded from the eBird website and queried with eBird's R package named "auk".  The script named "filter_eBird_sampling.R", which is saved in the NCBA github repo, performs the filtering that supports this notebook.  
 
 The records available from the sampling data set are for individual, unique checklists and several attributes are included for each.  This notebook summarizes the available attribute values to learn as much as possible about the modern eBird effort to date within North Carolina.  The available checklist attributes are:
 
@@ -71,6 +71,12 @@ checklists <- read_sampling(filtered_checklists)
 comma <- function(x) format(x, digits=2, big.mark=",")
 ```
 
+```{r filter}
+# Further filtering of the sampling data can occur here.  For example, we may
+# want to remove data from certain projects.
+```
+
+
 ```{r counties_data}
 # Read in county spatial data frame
 counties <- st_as_sf(map("county", plot = FALSE, fill = TRUE)) %>%
@@ -84,12 +90,29 @@ counties <- st_as_sf(map("county", plot = FALSE, fill = TRUE)) %>%
 
 * There are currently `r comma(length(unique(checklists$checklist_id)))` checklists from North Carolina in eBird.
 
+# Week
+```{r}
+by_week <- checklists %>%
+  mutate(week=week(date(observation_date))) %>%
+  group_by(week) %>%
+  summarize(count=n())
+
+ggplot(data=by_week) +
+  geom_line(mapping=aes(y=count, x=week), show.legend=TRUE, color="orange") + 
+  labs(title="EBirder activity varies greatly throughout the year",
+       caption="Checklists from before 2015 are not included") +
+  ylab("total number of checklists") +
+  scale_x_continuous(limits=c(0,52), breaks=seq(0,52,by=4)) +
+  scale_y_continuous(breaks=seq(0,30000,5000))
+
+```
+
+
 # Locality
 ```{r group_by_locality}
 by_locality <- checklists %>%
   group_by(locality, locality_id) %>%
-  summarize(
-    count = n())
+  summarize(count = n())
 ```
 
 * Many checklists are revisits to previously surveyed locations.  The ratio of locations that were visited once to the total number of checklists is `r round(nrow(filter(by_locality, count==1))  / length(unique(checklists$checklist_id)), digits=2)`.
@@ -102,7 +125,7 @@ ggplot(data=by_locality) +
                outlier.colour="orange", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="Some locations have been very heavily sampled",
-       caption="Checklists from before 2000 are not included") +
+       caption="Checklists from before 2015 are not included") +
   ylab("Checklists (n)") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -120,7 +143,7 @@ ggplot(data=locality_bins, aes(x="", y=value, fill=times_surveyed)) +
   scale_fill_viridis_d(alpha = 1, option="D") +
   theme_void() + 
   labs(title="Most locations have only been sampled once",
-       caption="Checklists from before 2000 are not represented")
+       caption="Checklists from before 2015 are not represented")
 ```
 
 ```{r locality_type_pie}
@@ -137,7 +160,7 @@ ggplot(data=by_locality_type, aes(x="", y=count, fill=locality_type)) +
   scale_fill_viridis_d(alpha = 1, option="D") +
   theme_void() + 
   labs(title="Many checklists are assigned to hotspots, but most are not",
-       caption="Checklists from before 2000 are not represented")
+       caption="Checklists from before 2015 are not represented")
 
 # Print table
 knitr::kable(by_locality_type, caption="Number of checklists per locality type")
@@ -159,7 +182,7 @@ ggplot(data=checklists) +
   geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
              shape=3) + 
   labs(title="Checklist locations are distributed throughout NC, but coverage is incomplete",
-       caption="Checklists from before 2000 were not included in this summary") +
+       caption="Checklists from before 2015 were not included in this summary") +
   ylab("latitude") + 
   xlab("longitude")
 ```
@@ -182,7 +205,7 @@ ggplot(data=by_county) +
   labs(title="A handful of counties have many more checklists than others",
        subtitle=str_c("The median number of checklists in a county was ",
                       median.checklists),
-       caption="Checklists from before 2000 are not included") +
+       caption="Checklists from before 2015 are not included") +
   ylab("Checklists (n)") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -200,7 +223,7 @@ ggplot(data=county.count) +
   geom_sf(data=counties.checklists, aes(fill=count)) +
   scale_fill_viridis_c(trans = "sqrt", alpha = 1, option="E") +
   labs(title="Large variation exists in the number of checklists among counties",
-       caption="Checklists from before 2000 are not included")
+       caption="Checklists from before 2015 are not included")
 ```
 
 ### Top 10 Counties
@@ -224,7 +247,7 @@ ggplot() +
   geom_sf(data=tops2, aes(fill=top10)) +
   scale_fill_viridis_d(alpha = 1, option="D") +
   labs(title="Counties with large cities are heavily sampled",
-       caption="Checklists from before 2000 are not included")
+       caption="Checklists from before 2015 are not included")
 ```
 
 ### Bottom 10 Counties
@@ -240,7 +263,7 @@ ggplot() +
   geom_sf(data=bottoms2, aes(fill=bottom10)) +
   scale_fill_viridis_d(alpha = 1, option="E") +
   labs(title="Counties with fewest checklists are in the Coastal Plains",
-       caption="Checklists from before 2000 are not included")
+       caption="Checklists from before 2015 are not included")
 ```
 
 ### Checklists per County Table
@@ -270,7 +293,7 @@ ggplot(data=by_observer) +
                outlier.colour="blue", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="Even moderately active eBirders are in the minority",
-       caption="Checklists from before 2000 are not included") +
+       caption="Checklists from before 2015 are not included") +
   ylab("Checklists (n)") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -290,7 +313,7 @@ ggplot(data=core_observers) +
                outlier.colour="darkred", show.legend=TRUE) + 
   coord_flip() + 
   labs(title='Most "core" eBirders have submitted < 100 checklists',
-       caption="Checklists from before 2000 were not included in this summary") +
+       caption="Checklists from before 2015 were not included in this summary") +
   ylab("Checklists (n)") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -332,7 +355,7 @@ ggplot(data=start_df) +
                outlier.colour="magenta", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="eBirders generally get out in the late morning",
-       caption="Checklists from before 2000 are not included") +
+       caption="Checklists from before 2015 are not included") +
   ylab("Start Hour") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -358,7 +381,7 @@ ggplot(data=duration_OK) +
                outlier.colour="red", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="Many checklists were over an hour long",
-       caption="Checklists from before 2000 are not included") +
+       caption="Checklists from before 2015 are not included") +
   ylab("Minutes") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -385,7 +408,7 @@ ggplot(data=distance_OK) +
                outlier.colour="blue", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="Checklists with distances < 1km are in the minority",
-       caption="Checklists from before 2000 are not included") +
+       caption="Checklists from before 2015 are not included") +
   ylab("Kilometers") + 
   scale_y_continuous(n.breaks=12)
 summary(distance_OK$effort_distance_km)
@@ -397,7 +420,7 @@ ggplot(data=too_far) +
                outlier.colour="gold", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="Most excessively long checklists are around 10km in length",
-       caption="Checklists from before 2000 are not included") +
+       caption="Checklists from before 2015 are not included") +
   ylab("Kilometers") + 
   scale_y_continuous(n.breaks=12)
 summary(too_far$effort_distance_km)
