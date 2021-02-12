@@ -1,5 +1,5 @@
 ---
-title: "eBird Sampling Effort Summaries"
+title: "eBird Sampling Effort Summaries ***** DRAFT *****"
 author: "N.M. Tarr"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output: 
@@ -58,6 +58,8 @@ theme_set(theme_bw())
 library(sf)
 library(RColorBrewer)
 library(maps)
+library(hms)
+library(lubridate)
 starttime <- Sys.time()
 
 # Reference the filtered checklist output file
@@ -69,8 +71,8 @@ checklists <- read_sampling(filtered_checklists)
 comma <- function(x) format(x, digits=2, big.mark=",")
 ```
 
-Read in a county simple features collection
 ```{r counties_data}
+# Read in county spatial data frame
 counties <- st_as_sf(map("county", plot = FALSE, fill = TRUE)) %>%
   subset(grepl("north carolina", ID)) %>%
   mutate(county = str_to_title(str_replace(ID, "north carolina,", ""))) %>%
@@ -78,21 +80,91 @@ counties <- st_as_sf(map("county", plot = FALSE, fill = TRUE)) %>%
 # Reproject?
 ```
 
-# Checklist Count
-There are currently `r comma(length(unique(checklists$checklist_id)))` checklists from North Carolina in eBird.
+# General
 
-# Checklist Locations
+* There are currently `r comma(length(unique(checklists$checklist_id)))` checklists from North Carolina in eBird.
+
+# Locality
+```{r group_by_locality}
+by_locality <- checklists %>%
+  group_by(locality, locality_id) %>%
+  summarize(
+    count = n())
+```
+
+* Many checklists are revisits to previously surveyed locations.  The ratio of locations that were visited once to the total number of checklists is `r round(nrow(filter(by_locality, count==1))  / length(unique(checklists$checklist_id)), digits=2)`.
+
+* Most locations have only been sampled once.  However, some locations have been visited an enormous number of times.
+
+```{r locality_boxplot}
+ggplot(data=by_locality) +
+  geom_boxplot(mapping=aes(y=count, x=""), color="blue", 
+               outlier.colour="orange", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="Some locations have been very heavily sampled",
+       caption="Checklists from before 2000 are not included") +
+  ylab("Checklists (n)") + 
+  scale_y_continuous(n.breaks=12)
+```
+
+```{r locality_pie}
+labels <- c("1", "2:10", "11:20", "21:5,000")
+locality_bins <- table(cut(by_locality$count, breaks=c(0,1,10,20,5000),
+                           labels=labels)) %>%
+                  data.frame()
+colnames(locality_bins) = c("times_surveyed", "value")
+
+ggplot(data=locality_bins, aes(x="", y=value, fill=times_surveyed)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0) +
+  scale_fill_viridis_d(alpha = 1, option="D") +
+  theme_void() + 
+  labs(title="Most locations have only been sampled once",
+       caption="Checklists from before 2000 are not represented")
+```
+
+```{r locality_type_pie}
+# Summarize whether checklists are for hotspots, personal locations, etc.
+by_locality_type <- checklists %>%
+  group_by(locality_type) %>%
+  summarize(
+    count = n())
+
+# Print pie chart
+ggplot(data=by_locality_type, aes(x="", y=count, fill=locality_type)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0) +
+  scale_fill_viridis_d(alpha = 1, option="D") +
+  theme_void() + 
+  labs(title="Many checklists are assigned to hotspots, but most are not",
+       caption="Checklists from before 2000 are not represented")
+
+# Print table
+knitr::kable(by_locality_type, caption="Number of checklists per locality type")
+```
+
+## Most Visited Locations Table
+```{r most_visited_locations}
+most_visited <- by_locality %>%
+  arrange(by=desc(count)) %>%
+  filter(count > 99)
+
+knitr::kable(most_visited, caption="Locations visited 100 or more times.")
+```
+
+
+# Spatial Distribution
 ```{r xy_locations}
 ggplot(data=checklists) +
   geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
              shape=3) + 
-  labs(title="EBird checklist coordinates are widely distributed within NC",
-       caption="Checklists from before 2000 are not shown") +
+  labs(title="Checklist locations are distributed throughout NC, but coverage is incomplete",
+       caption="Checklists from before 2000 were not included in this summary") +
   ylab("latitude") + 
   xlab("longitude")
 ```
 
-# Checklists per County
+## Checklists per County
 ```{r per_county_bwplot}
 by_county <- checklists %>%
   group_by(county) %>%
@@ -124,14 +196,14 @@ counties.checklists <- counties %>%
 
 # Pull out just the column of interest here ("count") and plot it.
 county.count <- select(counties.checklists, count, geom)
-# plot(county.count, main="Number of Checklists Attributed to Counties by eBird")
 ggplot(data=county.count) +
   geom_sf(data=counties.checklists, aes(fill=count)) +
-  labs(title="Counties with large cities are heavily sampled",
+  scale_fill_viridis_c(trans = "sqrt", alpha = 1, option="E") +
+  labs(title="Large variation exists in the number of checklists among counties",
        caption="Checklists from before 2000 are not included")
 ```
 
-## Top 10 Counties
+### Top 10 Counties
 ```{r top_county_table}
 knitr::kable(head(arrange(by_county, desc(count)), n=10), caption="Top 10 Counties")
 ```
@@ -147,11 +219,15 @@ counties.checklists <- counties.checklists %>%
 
 # Pull out just the column of interest here ("count") and plot it.
 tops2 <- counties.checklists %>%
-  select(top10, geometry)
-plot(tops2, main="Top 10 Counties for Number of eBird Checklists")
+  select(top10, geom)
+ggplot() +
+  geom_sf(data=tops2, aes(fill=top10)) +
+  scale_fill_viridis_d(alpha = 1, option="D") +
+  labs(title="Counties with large cities are heavily sampled",
+       caption="Checklists from before 2000 are not included")
 ```
 
-## Bottom 10 Counties
+### Bottom 10 Counties
 ```{r bottom_county_table}
 knitr::kable(head(arrange(by_county, count), n=10), caption="Bottom 10")
 ```
@@ -159,14 +235,172 @@ knitr::kable(head(arrange(by_county, count), n=10), caption="Bottom 10")
 ```{r bottom_county_map}
 # Pull out just the column of interest here ("count") and plot it.
 bottoms2 <- counties.checklists %>%
-  select(bottom10, geometry)
-plot(bottoms2, main="Bottom 10 Counties for Number of eBird Checklists")
+  select(bottom10, geom)
+ggplot() +
+  geom_sf(data=bottoms2, aes(fill=bottom10)) +
+  scale_fill_viridis_d(alpha = 1, option="E") +
+  labs(title="Counties with fewest checklists are in the Coastal Plains",
+       caption="Checklists from before 2000 are not included")
 ```
 
-## Checklists per County Table
+### Checklists per County Table
 Note, the assignment of checklists to counties was performed by eBird and it is possible that errors exist due to traveling counts that cross county lines and errors in the recorded locations of checklists.
 ```{r per_county_all}
 knitr::kable(by_county, caption="")
+```
+
+## Checklists per Atlas Block
+Forthcoming
+
+# Observers
+## All observers
+```{r observer_summary_stats}
+by_observer <- checklists %>%
+  group_by(observer_id) %>%
+  summarize(
+    count = n())
+obs_summary <- by_observer$count %>%
+  summary()
+```
+
+Most eBirders have only submitted a handful of checklists. The median number of checklists submitted is only `r obs_summary[[3]]`, and observers who have submitted more than `r obs_summary[[5]]` are in the top quartile for number of submissions.
+```{r observer_boxplot}
+ggplot(data=by_observer) +
+  geom_boxplot(mapping=aes(y=count, x=""), color="darkgreen", 
+               outlier.colour="blue", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="Even moderately active eBirders are in the minority",
+       caption="Checklists from before 2000 are not included") +
+  ylab("Checklists (n)") + 
+  scale_y_continuous(n.breaks=12)
+```
+
+## Core observers
+It is informative to look more closely at a subset of active observers in order to better characterize observers who may participate in the atlas.  Here, I exclude the extreme outliers and people with fewer than some arbitrarily "small" number of submissions (20). 
+```{r core_observer_stats}
+core_observers <- by_observer %>%
+  filter(count > 20 & count < 3000)
+topobs_summary <- core_observers$count %>%
+  summary()
+```
+
+```{r core_observer_boxplot}
+ggplot(data=core_observers) +
+  geom_boxplot(mapping=aes(y=count, x=""), color="darkgrey", 
+               outlier.colour="darkred", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title='Most "core" eBirders have submitted < 100 checklists',
+       caption="Checklists from before 2000 were not included in this summary") +
+  ylab("Checklists (n)") + 
+  scale_y_continuous(n.breaks=12)
+```
+
+# Protocol
+```{r protocol}
+# Summarize protocol
+by_protocol <- checklists %>%
+  group_by(protocol_type) %>%
+  summarize(
+    count = n())
+colnames(by_protocol) = c("Protocol Type", "Checklists (n)")
+
+# Print table
+knitr::kable(by_protocol)
+```
+
+# Project
+```{r project}
+# Summarize projects
+by_project <- checklists %>%
+  group_by(project_code) %>%
+  summarize(
+    count = n())
+colnames(by_project) = c("Project", "Checklists (n)")
+
+# Print table
+knitr::kable(by_project)
+```
+
+# Start Time
+```{r time}
+start_df <- checklists %>%
+  select(time_observations_started) %>%
+  mutate(time=hour(as_hms(time_observations_started)))
+
+ggplot(data=start_df) +
+  geom_boxplot(mapping=aes(y=time, x=""), color="darkblue", 
+               outlier.colour="magenta", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="eBirders generally get out in the late morning",
+       caption="Checklists from before 2000 are not included") +
+  ylab("Start Hour") + 
+  scale_y_continuous(n.breaks=12)
+```
+
+# Duration
+```{r duration_prep}
+# Prep a data frame of duration data
+duration_df <- checklists %>%
+  select(duration_minutes) %>% 
+  arrange(desc(duration_minutes))
+
+too_long <- subset(duration_df, duration_minutes > 1440)
+sorta_long <- subset(duration_df, duration_minutes <1441 & duration_minutes > 720)
+duration_OK <- subset(duration_df, duration_minutes < 721)
+```
+
+* The durations of most checklists are less than one day (1,440 minutes), but `r nrow(too_long)` checklists carried on longer than a day and `r nrow(sorta_long)` checklists lasted between 12 and 24 hours. 
+* I omitted checklists longer than 12 hours for the summaries in this section.
+
+```{r duration_boxplot}
+ggplot(data=duration_OK) +
+  geom_boxplot(mapping=aes(y=duration_minutes, x=""), color="purple", 
+               outlier.colour="red", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="Many checklists were over an hour long",
+       caption="Checklists from before 2000 are not included") +
+  ylab("Minutes") + 
+  scale_y_continuous(n.breaks=12)
+```
+
+```{r duration_table}
+print(summary(duration_OK$duration_minutes))
+```
+
+# Distance
+```{r distance_prep}
+# Prep a data frame of duration data
+distance_df <- checklists %>%
+  select(effort_distance_km) %>% 
+  arrange(desc(effort_distance_km))
+
+too_far <- subset(distance_df, effort_distance_km > 5)
+distance_OK <- subset(distance_df, effort_distance_km < 6)
+```
+
+
+```{r distance_boxplot}
+ggplot(data=distance_OK) +
+  geom_boxplot(mapping=aes(y=effort_distance_km, x=""), color="darkgreen", 
+               outlier.colour="blue", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="Checklists with distances < 1km are in the minority",
+       caption="Checklists from before 2000 are not included") +
+  ylab("Kilometers") + 
+  scale_y_continuous(n.breaks=12)
+summary(distance_OK$effort_distance_km)
+```
+
+```{r too_far_boxplot}
+ggplot(data=too_far) +
+  geom_boxplot(mapping=aes(y=effort_distance_km, x=""), color="darkred", 
+               outlier.colour="gold", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="Most excessively long checklists are around 10km in length",
+       caption="Checklists from before 2000 are not included") +
+  ylab("Kilometers") + 
+  scale_y_continuous(n.breaks=12)
+summary(too_far$effort_distance_km)
 ```
 
 # Runtime
