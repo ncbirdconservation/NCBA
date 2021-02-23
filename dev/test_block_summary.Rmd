@@ -1,0 +1,130 @@
+---
+title: "test_block_summary"
+author: "N.M. Tarr"
+date: "2/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r prep, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE)
+
+library(auk)
+library(tidyverse)
+library(ggplot2)
+theme_set(theme_bw())
+library(sf)
+library(RColorBrewer)
+library(hms)
+library(lubridate)
+library(tmap)
+starttime <- Sys.time()
+
+# Convenience function for commas in large numbers
+comma <- function(x) format(x, digits=2, big.mark=",")
+```
+
+```{r block_data}
+# Read in NCBA block spatial data frame
+blocks_path <- "~/Data/ncba_blocks.shp"
+blocks_sf <- st_read(blocks_path)
+
+# We need to assign the crs to the blocks since none is in metadata, I asked 
+# John Carpenter for which crs it is in.
+st_crs(blocks_sf) = 6542
+```
+
+```{r checklists}
+# Reference the filtered checklist output file
+filtered_checklists <- "~/Documents/NCBA/Data/filtered_checklists.txt"
+
+# Read in the effort data (filtered checklist table)
+checklists <- read_sampling(filtered_checklists)
+```
+
+### All above is in eBird_NC_effort.rmd
+```{r make_checklists_spatial}
+# Create spatial frame of checklists data frame
+checklists_sf <- checklists %>%
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
+  st_transform(6542)
+plot(select(checklists_sf, county), pch=3)
+```
+
+
+## Checklist coordinates per block 
+```{r lists_per_block-coordinates}
+# Add block info to checklists
+checklist_plus_block <- st_join(checklists_sf, blocks_sf, join = st_within, 
+                                left=TRUE) %>%
+  select(-c(NAME, STATUS, COUNTY, FORM_LINK))
+
+# Tally checklists per block
+by_block_coord <- checklist_plus_block %>%
+  group_by(BLOCK_NAME) %>%
+  summarize(count=n())
+
+# Boxplot
+ggplot(data=by_block_coord) +
+  geom_boxplot(mapping=aes(y=count, x=""), color="blue", 
+               outlier.colour="gold", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="Many blocks have no checklists, but others have thousands",
+       subtitle = "Many blocks contain no checklists",
+       caption="Checklists from before 2015 are not included") +
+  ylab("Checklists (n)") + 
+  scale_y_continuous(n.breaks=12)
+```
+
+```{r block-coordinate_tally_map}
+# Join the tally with the block spatial frame for map display
+by_block_coord_count <- by_block_coord %>%
+  select(BLOCK_NAME, count) %>%
+  data.frame() %>%
+  select(-c(geometry))
+
+by_block_sf <- left_join(blocks_sf, by_block_coord_count, by=("BLOCK_NAME" = "BLOCK_NAME")) %>%
+  select(BLOCK_NAME, count, geometry) %>%
+  replace_na(list(count=0))
+
+# Get priority block centroids for plotting
+priority_dots <- st_centroid(filter(blocks_sf, TYPE == "Priority")$geometry)
+
+# Plot the map
+tmap_mode("view")
+tm_shape(by_block_sf) +
+  tm_fill(
+    col = "count",
+    palette = "Blues",
+    style="fixed",
+    alpha = .6,
+    breaks = c(0, 1, 50, 100, 1000, 2000, 10000),
+    as.count = TRUE
+  ) +
+tm_shape(priority_dots) + 
+  tm_dots(col="purple", size=0.01)
+```
+
+```{r blocks_with_most_coordinates}
+# Sort blocks by number of checklist coordinates
+top_blocks <- by_block_coord_count %>%
+  arrange(desc(count)) %>%
+  head(n = 20)
+
+knitr::kable(top_blocks, caption="Blocks with checklist coordinate counts in the top 20")
+```
+
+
+## Proportion of checklists within priority blocks (bar)
+
+## Checklists per WRC region
+
+```{r}
+block_count <- count(as_tibble(checklist_plus_block), QUADID)
+```
