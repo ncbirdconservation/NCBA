@@ -90,6 +90,7 @@ ggplot(data=by_week) +
   ylab("total number of checklists") +
   scale_x_continuous(limits=c(0,52), breaks=seq(0,52,by=4)) +
   scale_y_continuous(breaks=seq(0,30000,5000))
+rm(by_week)
 ```
 
 
@@ -158,6 +159,7 @@ most_visited <- by_locality %>%
   filter(count > 99)
 
 knitr::kable(most_visited, caption="Locations visited 100 or more times.")
+rm(by_locality, by_locality_type)
 ```
 
 # Spatial Distribution
@@ -256,100 +258,198 @@ ggplot() +
 Note, the assignment of checklists to counties was performed by eBird and it is possible that errors exist due to traveling counts that cross county lines and errors in the recorded locations of checklists.
 ```{r per_county_all}
 knitr::kable(by_county, caption="")
+rm(by_county, tops, bottoms, tops2, bottoms2)
 ```
 
 ## Checklists per Atlas Block
 Although coordinates are provided by eBird for checklists, they do not provide precise locations of eBirder effort for two reasons.  First, there are limits to the spatial precision of the points due to gps precision and/or observers ability to identify exactly where they birded on a map or in the app.  Second, many birders travel while birding but their paths are not available, only the distances they traveled.
 
-Locational uncertainty is important because if it is large in relation to the level of analysis, it creates uncertainty about which spatial subregions, such as counties or atlas blocks, a checklist should be attributed to.  One approach is to assign each checklist to the subregion that the checklist coordinate is located within.  That approach could generate deceptive results if checklists represent birding effort from multiple blocks but are assigned to a single block or if the coordinate is located in a block adjacent to where the birding actually occurred. I present results from this approach below for reference and coarse data summary and refer to it as "coordinate count".
+Locational uncertainty is important and problematic because if it is large in relation to the level of analysis, it creates uncertainty about which spatial subregions, such as counties or atlas blocks, a checklist should be attributed to.  I explored two appraoches to handling locational uncertainty.
 
-Another approach is to use checklist polygons instead of the coordinates (points) in order to include the locational uncertainty in the summary.  Under this approach, coordinates are buffered with the distance traveled by the observer during the checklist period.  Each checklist is then assigned to all of the blocks that the polygon intersects in order to acknowledge that the checklist could represent effort from multiple blocks. Results from this approach can logically be expected to exaggerate the true footprint of birding effort and suggest blocks were sampled that actually were not.  The results are forthcoming.
-```{r make_checklists_spatial}
-# Create spatial frame of checklists data frame
-checklists_sf <- checklists %>%
+Method A -- Assign each checklist to the subregion that the checklist coordinate is located within.  This approach could generate deceptive results if checklists represent birding effort from multiple blocks but are assigned to a single block or if the coordinate is located in a block adjacent to where the birding actually occurred.  This approach should generally be expected to underestimate how many checklists covered some portion of a given block.
+
+Method B -- Use polygons instead of the coordinates (points, Method A) in order to include the locational uncertainty.  Under this approach, coordinates are buffered with the distance traveled by the observer during the checklist period, plus 100 m to account for the fact that observers may have recorded birds at a distance from where they were located.  Each checklist is then assigned to all of the blocks that the polygon intersects in order to acknowledge that the checklist could represent effort from multiple blocks. Results from this approach can logically be expected to exaggerate the true footprint of birding effort and suggest blocks were sampled that actually were not, thus overestimating how many checklists covered some portion of a given block.  Furthermore, checklists with large effort distances produce enormous footprints than make results unhelpful.  Thus, I excluded checklists with effort distances greater than 5 km for this method.
+```{r method_A}
+timer <- Sys.time()
+method_A <- checklists %>%
+  # Make checklists data frame spatial with right projection
   st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
-  st_transform(6542)
-```
-
-```{r lists_per_block_coordinate}
-# Add block info to checklists
-checklist_plus_block <- st_join(checklists_sf, blocks_sf, join = st_within, 
-                                left=TRUE) %>%
-  select(-c(NAME, STATUS, COUNTY, FORM_LINK))
-
-# Tally checklists per block
-by_block_coord <- checklist_plus_block %>%
+  st_transform(6542) %>%
+  # Find which blocks each coordinate is within
+  st_join(blocks_sf, join = st_within, left=TRUE) %>%
+  select(-c(NAME, STATUS, COUNTY, FORM_LINK)) %>%
+  # Summarize by number checklists within each block
   group_by(BLOCK_NAME) %>%
-  summarize(count=n())
-
-# Join the tally with the block spatial frame to get zero blocks and support map
-by_block_coord_count <- by_block_coord %>%
-  select(BLOCK_NAME, count) %>%
+  summarize(checklists=n()) %>%
+  select(BLOCK_NAME, checklists) %>%
+  # Join back with blocks spatial frame to fill in zeros (as a data frame)
   data.frame() %>%
-  select(-c(geometry))
-
-by_block_sf <- left_join(blocks_sf, by_block_coord_count, by=("BLOCK_NAME" = "BLOCK_NAME")) %>%
-  select(BLOCK_NAME, count, geometry) %>%
-  replace_na(list(count=0))
+  select(-c(geometry)) %>%
+  right_join(blocks_sf, by=("BLOCK_NAME" = "BLOCK_NAME")) %>%
+  select(BLOCK_NAME, checklists, geometry) %>%
+  replace_na(list(checklists=0)) %>%
+  # Make spatial again
+  st_as_sf()
+print(Sys.time() - timer)
 ```
 
-```{r lists_per_block_boxplot}
-# Boxplot
-ggplot(data=by_block_sf) +
-  geom_boxplot(mapping=aes(y=count, x=""), color="blue", 
-               outlier.colour="gold", show.legend=TRUE) + 
-  coord_flip() + 
-  labs(title="Many blocks have no checklists, but others have thousands",
-       caption="Checklists from before 2015 are not included") +
-  ylab("Checklists (n)") + 
-  scale_y_continuous(n.breaks=12)
-summary(by_block_sf$count)
+```{r buffered_coordinates}
+# Create new sf of buffered checklist coordinates.  Some lists have no distance
+#   so replace those with 0.  Stationary or short lists should be buffered 100
+#   m to account for area surveyed.  This is imperfect, but more defensible than
+#   nothing. Lists traveling > 5 km are just problematic and not informative so 
+#   removed here.
+timer <- Sys.time()
+buffered_coordinates <- checklists %>%
+  # Make spatial frame
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
+  st_transform(6542) %>%
+  select(checklist_id, atlas_block, protocol_type, effort_distance_km,
+         geometry) %>%
+  # Buffer coordinates
+  replace_na(list(effort_distance_km=0)) %>%
+  filter(effort_distance_km <= 5) %>%
+  mutate(buffer_length = (effort_distance_km + 0.1)*1000) %>%
+  mutate(footprint = st_buffer(geometry, buffer_length)) %>%
+  st_set_geometry("footprint") %>%
+  select(-c(geometry)) 
+print(Sys.time() - timer)
 ```
 
-```{r block-coordinate_tally_map}
+```{r sample_buffered_coordinates}
+# Create a list of blocks to sample from
+sample_from <- c("SOUTHPORT", "FUNSTON", "WINNABOW", "LELAND", "CURRIE",
+                 "SILK HOPE", "BYNUM", "WHITE CROSS", "EFLAND", "CEDAR GROVE",
+                 "FRANKLIN", "ALARKA", "CLINGMANS DOME", "MT LECONTE", 
+                 "BRYSON CITY")
+
+sample_footprints <- checklists %>%
+  # Make spatial frame
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
+  st_transform(6542) %>%
+  # Find which block each coordinate is within
+  st_join(blocks_sf, join = st_within, left=TRUE) %>%
+  # Use block name to pull out checklists assigned to blocks of interest
+  filter(NAME %in% sample_from) %>%
+  select(checklist_id, effort_distance_km, geometry) %>%
+  # Buffer coordinates for footprints
+  replace_na(list(effort_distance_km=0)) %>%
+  filter(effort_distance_km <= 5) %>%
+  mutate(buffer_length = (effort_distance_km + 0.1)*1000) %>%
+  mutate(footprint = st_buffer(geometry, buffer_length)) %>%
+  st_set_geometry("footprint") %>%
+  select(-c(geometry)) 
+```
+
+```{r method_B}
+timer <- Sys.time()
+# Intersect lists with blocks, tally checklists per block, drop footprint,
+#   join with blocks sf to get block geometry
+method_B <- buffered_coordinates %>%
+  # Intersect footprints with blocks, NOTE this keeps "withins" and fragments
+  st_intersection(blocks_sf) %>%
+  # Find count by block
+  group_by(BLOCK_NAME) %>%
+  summarise(checklists = n()) %>%
+  st_drop_geometry() %>%
+  # Add zero blocks via a join
+  right_join(blocks_sf, by="BLOCK_NAME") %>%
+  select(BLOCK_NAME, checklists, geometry) %>%
+  replace_na(list(checklists=0)) %>%
+  st_as_sf()  
+print(Sys.time() - timer)
+rm(buffered_coordinates)
+```
+
+```{r checklist_by_block_map}
 # Get priority block centroids for plotting
-priority_dots <- st_centroid(filter(blocks_sf, TYPE == "Priority")$geometry)
+priority_centroids <- st_centroid(filter(blocks_sf, TYPE == "Priority")$geometry)
 
 # Plot the map
 tmap_mode("view")
-tm_shape(by_block_sf) +
-  tm_fill(
-    col = "count",
-    palette = "Blues",
-    style="fixed",
-    alpha = .6,
-    breaks = c(0, 1, 50, 100, 1000, 2000, 10000),
-    as.count = TRUE
-  ) +
-tm_shape(priority_dots) + 
-  tm_dots(col="purple", size=0.01)
+tm_shape(method_A) +
+  tm_fill(col = "checklists", palette = "Blues", style="fixed", alpha = .6,
+          breaks = c(0, 1, 50, 100, 1000, 2000, 10000), as.count = TRUE) +
+tm_shape(method_B) +
+  tm_fill(col = "checklists", palette = "Reds", style="fixed", alpha = .6,
+          breaks = c(0, 1, 50, 100, 1000, 2000, 10000), as.count = TRUE) +
+tm_shape(priority_centroids) + tm_symbols(col="purple", size=0.01, shape=5) +
+tm_shape(sample_footprints) + tm_borders()
 ```
 
-```{r blocks_with_most_coordinates}
-# Sort blocks by number of checklist coordinates
-top_blocks <- by_block_coord_count %>%
-  arrange(desc(count)) %>%
-  head(n = 20)
+Note: checklist footprints with center coordinates within select blocks are included in the map in order to display a sample of theunderlying data for method B.  Priority centroids identify priority atlas blocks.
 
-knitr::kable(top_blocks, caption="Blocks with checklist coordinate counts in the top 20")
+```{r checklist_by_block_cleanup}
+rm(sample_footprints)
 ```
 
-```{r coordinate-block_count_bar}
-by_block_sf$ysn_checklists <- ifelse(by_block_sf$count > 0, "Checklists",
-                                     "No Checklists")
+```{r checklists_per_block_boxplot}
+# Join methods A and B results to facilitate plotting with facets
+count_A <- method_A %>%
+  st_drop_geometry() %>%
+  mutate(method = "A")
+count_B <- method_B %>%
+  st_drop_geometry() %>%
+  mutate(method = "B")
+count_AB <- rbind(count_A, count_B)
+
+# Boxplot
+ggplot(data=count_AB) +
+  geom_boxplot(mapping=aes(y=checklists, x=""), color="black", 
+               outlier.colour="orange", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="Many blocks have no checklists, but others have thousands",
+       subtitle="Method B tallies more checklists per block than method A",
+       caption="Checklists from before 2015 are not included") +
+  ylab("Checklists (n)") + 
+  scale_y_continuous(n.breaks=12) +
+  facet_wrap(~ method, nrow=2)
+
+print("method A")
+summary(count_AB$method_A)
+print("method B")
+summary(count_AB$method_B)
+```
+
+
+```{r blocks_with_most_checklists}
+top_blocks_A <- count_A %>%
+  arrange(desc(checklists)) %>%
+  head(n = 20) %>%
+  select(-c(method)) %>%
+  rename(atlas_block=BLOCK_NAME)
+knitr::kable(top_blocks_A, caption="Method A top 20 blocks")
+
+top_blocks_B <- count_B %>%
+  arrange(desc(checklists)) %>%
+  head(n = 20) %>%
+  select(-c(method)) %>%
+  rename(atlas_block=BLOCK_NAME)
+knitr::kable(top_blocks_B, caption="Method B top 20 blocks")
+```
+
+```{r checklists_priority_vs_no_chart}
+count_AB$ysn_checklists <- ifelse(count_AB$checklists > 0, 
+                                  "Checklists","No Checklists")
 
 priority_blocks <- blocks_sf %>%
   data.frame() %>%
   filter(TYPE=="Priority") %>%
   select(BLOCK_NAME, TYPE) %>%
-  left_join(data.frame(by_block_sf), by=("BLOCK_NAME" = "BLOCK_NAME"))
+  left_join(data.frame(count_AB), by=("BLOCK_NAME" = "BLOCK_NAME"))
   
 ggplot(data=priority_blocks, aes(ysn_checklists)) +
   geom_bar() +
   ylab("Priority Blocks") +
   xlab("") + 
-  labs(title="A small proportion, but considerable number, of priority blocks remain unsampled",
-       caption="Checklists from before 2015 are not included")
+  labs(title="Many priority blocks remain unsampled",
+       subtitle = "Method A suggests a higher number of unsampled priority blocks than method B",
+       caption="Checklists from before 2015 are not included") +
+  facet_wrap(~ method, ncol=2)
+```
+
+```{r checklist_block_count_cleanup}
+rm(method_A, method_B, count_AB, count_A, count_B)
 ```
 
 
@@ -476,7 +576,7 @@ distance_df <- checklists %>%
   arrange(desc(effort_distance_km))
 
 too_far <- subset(distance_df, effort_distance_km > 5)
-distance_OK <- subset(distance_df, effort_distance_km < 6)
+distance_OK <- subset(distance_df, effort_distance_km <= 5)
 ```
 
 
