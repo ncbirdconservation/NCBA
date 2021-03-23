@@ -45,11 +45,8 @@ comma <- function(x) format(x, digits=2, big.mark=",")
 ```{r block_data}
 # Read in NCBA block spatial data frame
 blocks_path <- "~/Data/ncba_blocks.shp"
-blocks_sf <- st_read(blocks_path)
-
-# We need to assign the crs to the blocks since none is in metadata, I asked 
-# John Carpenter for which crs it is in.
-st_crs(blocks_sf) = 6542
+blocks_sf <- st_read(blocks_path) %>% st_transform(6542)
+st_crs(blocks_sf)
 ```
 
 ```{r checklists}
@@ -86,7 +83,7 @@ by_week <- checklists %>%
 ggplot(data=by_week) +
   geom_line(mapping=aes(y=count, x=week), show.legend=TRUE, color="orange") + 
   labs(title="EBirder activity varies greatly throughout the year",
-       caption="Checklists from before 2015 are not included") +
+       caption="Checklists from before 2016 are not included") +
   ylab("total number of checklists") +
   scale_x_continuous(limits=c(0,52), breaks=seq(0,52,by=4)) +
   scale_y_continuous(breaks=seq(0,30000,5000))
@@ -108,10 +105,10 @@ by_locality <- checklists %>%
 ```{r locality_boxplot}
 ggplot(data=by_locality) +
   geom_boxplot(mapping=aes(y=count, x=""), color="darkblue", 
-               outlier.colour="green", show.legend=TRUE) + 
+               outlier.colour="orange", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="Some locations have been very heavily sampled",
-       caption="Checklists from before 2015 are not included") +
+       caption="Checklists from before 2016 are not included") +
   ylab("Checklists (n)") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -129,7 +126,7 @@ ggplot(data=locality_bins, aes(x="", y=value, fill=times_surveyed)) +
   scale_fill_viridis_d(alpha = 1, option="D") +
   theme_void() + 
   labs(title="Most locations have only been sampled once",
-       caption="Checklists from before 2015 are not represented")
+       caption="Checklists from before 2016 are not represented")
 ```
 
 ```{r locality_type_pie}
@@ -146,7 +143,7 @@ ggplot(data=by_locality_type, aes(x="", y=count, fill=locality_type)) +
   scale_fill_viridis_d(alpha = 1, option="D") +
   theme_void() + 
   labs(title="Many checklists are assigned to hotspots, but most are not",
-       caption="Checklists from before 2015 are not represented")
+       caption="Checklists from before 2016 are not represented")
 
 # Print table
 knitr::kable(by_locality_type, caption="Number of checklists per locality type")
@@ -193,7 +190,7 @@ ggplot(data=by_county) +
   labs(title="A handful of counties have many more checklists than others",
        subtitle=str_c("The median number of checklists in a county was ",
                       median.checklists),
-       caption="Checklists from before 2015 are not included") +
+       caption="Checklists from before 2016 are not included") +
   ylab("Checklists (n)") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -211,7 +208,7 @@ ggplot(data=county.count) +
   geom_sf(data=counties.checklists, aes(fill=count)) +
   scale_fill_viridis_c(trans = "sqrt", alpha = 1, option="E") +
   labs(title="Large variation exists in the number of checklists among counties",
-       caption="Checklists from before 2015 are not included")
+       caption="Checklists from before 2016 are not included")
 ```
 
 ### Top 10 Counties
@@ -235,7 +232,7 @@ ggplot() +
   geom_sf(data=tops2, aes(fill=top10)) +
   scale_fill_viridis_d(alpha = 1, option="D") +
   labs(title="Counties with large cities are heavily sampled",
-       caption="Checklists from before 2015 are not included")
+       caption="Checklists from before 2016 are not included")
 ```
 
 ### Bottom 10 Counties
@@ -251,7 +248,7 @@ ggplot() +
   geom_sf(data=bottoms2, aes(fill=bottom10)) +
   scale_fill_viridis_d(alpha = 1, option="E") +
   labs(title="Counties with fewest checklists are in the Coastal Plains",
-       caption="Checklists from before 2015 are not included")
+       caption="Checklists from before 2016 are not included")
 ```
 
 ### Checklists per County Table
@@ -276,16 +273,16 @@ method_A <- checklists %>%
   st_transform(6542) %>%
   # Find which blocks each coordinate is within
   st_join(blocks_sf, join = st_within, left=TRUE) %>%
-  select(-c(NAME, STATUS, COUNTY, FORM_LINK)) %>%
+  #################################select(-c(NAME, STATUS, COUNTY, FORM_LINK)) %>%
   # Summarize by number checklists within each block
-  group_by(BLOCK_NAME) %>%
+  group_by(name) %>%
   summarize(checklists=n()) %>%
-  select(BLOCK_NAME, checklists) %>%
+  select(name, checklists) %>%
   # Join back with blocks spatial frame to fill in zeros (as a data frame)
   data.frame() %>%
   select(-c(geometry)) %>%
-  right_join(blocks_sf, by=("BLOCK_NAME" = "BLOCK_NAME")) %>%
-  select(BLOCK_NAME, checklists, geometry) %>%
+  right_join(blocks_sf, by=("name" = "name")) %>%
+  ##########################################select(name, checklists, geometry) %>%
   replace_na(list(checklists=0)) %>%
   # Make spatial again
   st_as_sf()
@@ -314,10 +311,13 @@ buffered_coordinates <- checklists %>%
 
 ```{r sample_buffered_coordinates}
 # Create a list of blocks to sample from
-sample_from <- c("SOUTHPORT", "FUNSTON", "WINNABOW", "LELAND", "CURRIE",
-                 "SILK HOPE", "BYNUM", "WHITE CROSS", "EFLAND", "CEDAR GROVE",
-                 "FRANKLIN", "ALARKA", "CLINGMANS DOME", "MT LECONTE", 
-                 "BRYSON CITY")
+sample_from <- c("Southport CE", "Southport CW", "Southport NE", "Southport NW",
+                 "Southport SE", "Southport SW") 
+                 
+# quads <- c("SOUTHPORT", "FUNSTON", "WINNABOW", "LELAND", "CURRIE",
+#            "SILK HOPE", "BYNUM", "WHITE CROSS", "EFLAND", "CEDAR GROVE",
+#            "FRANKLIN", "ALARKA", "CLINGMANS DOME", "MT LECONTE", 
+#            "BRYSON CITY")
 
 sample_footprints <- checklists %>%
   # Make spatial frame
@@ -326,7 +326,7 @@ sample_footprints <- checklists %>%
   # Find which block each coordinate is within
   st_join(blocks_sf, join = st_within, left=TRUE) %>%
   # Use block name to pull out checklists assigned to blocks of interest
-  filter(NAME %in% sample_from) %>%
+  filter(name %in% sample_from) %>%
   select(checklist_id, effort_distance_km, geometry) %>%
   # Buffer coordinates for footprints
   replace_na(list(effort_distance_km=0)) %>%
@@ -344,12 +344,12 @@ method_B <- buffered_coordinates %>%
   # Intersect footprints with blocks, NOTE this keeps "withins" and fragments
   st_intersection(blocks_sf) %>%
   # Find count by block
-  group_by(BLOCK_NAME) %>%
+  group_by(name) %>%
   summarise(checklists = n()) %>%
   st_drop_geometry() %>%
   # Add zero blocks via a join
-  right_join(blocks_sf, by="BLOCK_NAME") %>%
-  select(BLOCK_NAME, checklists, geometry) %>%
+  right_join(blocks_sf, by="name") %>%
+  select(name, checklists, geometry) %>%
   replace_na(list(checklists=0)) %>%
   st_as_sf()  
 rm(buffered_coordinates)
@@ -357,7 +357,7 @@ rm(buffered_coordinates)
 
 ```{r checklist_by_block_map}
 # Get priority block centroids for plotting
-priority_centroids <- st_centroid(filter(blocks_sf, TYPE == "Priority")$geometry)
+priority_centroids <- st_centroid(filter(blocks_sf, priority==1)$geometry)
 
 # Plot the map
 tmap_mode("view")
@@ -371,7 +371,7 @@ tm_shape(priority_centroids) + tm_symbols(col="purple", size=0.01, shape=5) +
 tm_shape(sample_footprints) + tm_borders()
 ```
 
-Note: checklist footprints with center coordinates within select blocks are included in the map in order to display a sample of theunderlying data for method B.  Priority centroids identify priority atlas blocks.
+Note: checklist footprints with center coordinates within select blocks are included in the map in order to display a sample of the underlying data for method B.  Priority centroids identify priority atlas blocks.
 
 ```{r checklist_by_block_cleanup}
 rm(sample_footprints)
@@ -381,9 +381,11 @@ rm(sample_footprints)
 # Join methods A and B results to facilitate plotting with facets
 count_A <- method_A %>%
   st_drop_geometry() %>%
+  select(name, checklists) %>%
   mutate(method = "A")
 count_B <- method_B %>%
   st_drop_geometry() %>%
+  select(name, checklists) %>%
   mutate(method = "B")
 count_AB <- rbind(count_A, count_B)
 
@@ -394,15 +396,15 @@ ggplot(data=count_AB) +
   coord_flip() + 
   labs(title="Many blocks have no checklists, but others have thousands",
        subtitle="Method B tallies more checklists per block than method A",
-       caption="Checklists from before 2015 are not included") +
+       caption="Checklists from before 2016 are not included") +
   ylab("Checklists (n)") + 
   scale_y_continuous(n.breaks=12) +
   facet_wrap(~ method, nrow=2)
 
 print("method A")
-summary(count_AB$method_A)
+summary(count_A$checklists)
 print("method B")
-summary(count_AB$method_B)
+summary(count_B$checklists)
 ```
 
 
@@ -411,14 +413,14 @@ top_blocks_A <- count_A %>%
   arrange(desc(checklists)) %>%
   head(n = 20) %>%
   select(-c(method)) %>%
-  rename(atlas_block=BLOCK_NAME)
+  rename(atlas_block=name)
 knitr::kable(top_blocks_A, caption="Method A top 20 blocks")
 
 top_blocks_B <- count_B %>%
   arrange(desc(checklists)) %>%
   head(n = 20) %>%
   select(-c(method)) %>%
-  rename(atlas_block=BLOCK_NAME)
+  rename(atlas_block=name)
 knitr::kable(top_blocks_B, caption="Method B top 20 blocks")
 ```
 
@@ -428,9 +430,9 @@ count_AB$ysn_checklists <- ifelse(count_AB$checklists > 0,
 
 priority_blocks <- blocks_sf %>%
   data.frame() %>%
-  filter(TYPE=="Priority") %>%
-  select(BLOCK_NAME, TYPE) %>%
-  left_join(data.frame(count_AB), by=("BLOCK_NAME" = "BLOCK_NAME"))
+  filter(priority==1) %>%
+  select(name, priority) %>%
+  left_join(data.frame(count_AB), by=("name" = "name"))
   
 ggplot(data=priority_blocks, aes(ysn_checklists)) +
   geom_bar() +
@@ -438,7 +440,7 @@ ggplot(data=priority_blocks, aes(ysn_checklists)) +
   xlab("") + 
   labs(title="Many priority blocks remain unsampled",
        subtitle = "Method A suggests a higher number of unsampled priority blocks than method B",
-       caption="Checklists from before 2015 are not included") +
+       caption="Checklists from before 2016 are not included") +
   facet_wrap(~ method, ncol=2)
 ```
 
@@ -465,7 +467,7 @@ ggplot(data=by_observer) +
                outlier.colour="blue", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="Even moderately active eBirders are in the minority",
-       caption="Checklists from before 2015 are not included") +
+       caption="Checklists from before 2016 are not included") +
   ylab("Checklists (n)") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -481,8 +483,8 @@ topobs_summary <- core_observers$count %>%
 
 ```{r core_observer_boxplot}
 ggplot(data=core_observers) +
-  geom_boxplot(mapping=aes(y=count, x=""), color="darkgrey", 
-               outlier.colour="darkred", show.legend=TRUE) + 
+  geom_boxplot(mapping=aes(y=count, x=""), color="darkblue", 
+               outlier.colour="orange", show.legend=TRUE) + 
   coord_flip() + 
   labs(title='Most "core" eBirders have submitted < 100 checklists',
        caption="Checklists from before 2015 were not included in this summary") +
@@ -527,7 +529,7 @@ ggplot(data=start_df) +
                outlier.colour="magenta", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="eBirders generally get out in the late morning",
-       caption="Checklists from before 2015 are not included") +
+       caption="Checklists from before 2016 are not included") +
   ylab("Start Hour") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -549,11 +551,11 @@ duration_OK <- subset(duration_df, duration_minutes < 721)
 
 ```{r duration_boxplot}
 ggplot(data=duration_OK) +
-  geom_boxplot(mapping=aes(y=duration_minutes, x=""), color="purple", 
-               outlier.colour="red", show.legend=TRUE) + 
+  geom_boxplot(mapping=aes(y=duration_minutes, x=""), color="darkblue", 
+               outlier.colour="orange", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="Many checklists were over an hour long",
-       caption="Checklists from before 2015 are not included") +
+       caption="Checklists from before 2016 are not included") +
   ylab("Minutes") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -573,14 +575,13 @@ too_far <- subset(distance_df, effort_distance_km > 5)
 distance_OK <- subset(distance_df, effort_distance_km <= 5)
 ```
 
-
 ```{r distance_boxplot}
 ggplot(data=distance_OK) +
   geom_boxplot(mapping=aes(y=effort_distance_km, x=""), color="darkgreen", 
                outlier.colour="blue", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="Checklists with distances < 1km are in the minority",
-       caption="Checklists from before 2015 are not included") +
+       caption="Checklists from before 2016 are not included") +
   ylab("Kilometers") + 
   scale_y_continuous(n.breaks=12)
 summary(distance_OK$effort_distance_km)
@@ -588,11 +589,11 @@ summary(distance_OK$effort_distance_km)
 
 ```{r too_far_boxplot}
 ggplot(data=too_far) +
-  geom_boxplot(mapping=aes(y=effort_distance_km, x=""), color="darkred", 
-               outlier.colour="gold", show.legend=TRUE) + 
+  geom_boxplot(mapping=aes(y=effort_distance_km, x=""), color="darkblue", 
+               outlier.colour="orange", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="Most excessively long checklists are around 10km in length",
-       caption="Checklists from before 2015 are not included") +
+       caption="Checklists from before 2016 are not included") +
   ylab("Kilometers") + 
   scale_y_continuous(n.breaks=12)
 summary(too_far$effort_distance_km)

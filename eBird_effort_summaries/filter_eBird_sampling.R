@@ -1,5 +1,5 @@
 # author: "N.M. Tarr"
-# date: "2/3/2021"
+# date: "3/22/2021"
 # description:
 # The eBird sampling dataset can be downloaded from eBird, but includes many 
 # records that are not relevant for the NCBA.  Therefore, checklist records of 
@@ -15,13 +15,13 @@ library(tidyverse)
 output_file <- "~/Documents/NCBA/Data/filtered_checklists.txt"
 
 # Print path to sampling data set
-sampling_file <- "/Volumes/eBird/ebd_sampling_relDec-2020/ebd_sampling_relDec-2020.txt"
+sampling_file <- "/Volumes/eBird/ebd_sampling_relFeb-2021/ebd_sampling_relFeb-2021.txt"
 print(sampling_file)
 
 # Filtering criteria
 state <- "US-NC"
 country <- "US"
-date <- c("2015-01-01", "2021-12-31")
+date <- c("2016-01-01", "2021-12-31")
 
 # Filter the sampling data and save results to the output file. Note that only 
 # complete checklists are returned.
