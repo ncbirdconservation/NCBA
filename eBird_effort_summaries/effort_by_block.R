@@ -62,7 +62,7 @@ results_path <- "~/Documents/NCBA/effort_by_block.csv"
 # are negative because checklists with really large distances traveled were removed
 # for method B.
 
-# Checklists per block  --------------------------------------------------------
+# Method a  --------------------------------------------------------------------
 count_A <- checklists %>%
   # Make checklists data frame spatial with right projection
   st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
@@ -79,6 +79,7 @@ count_A <- checklists %>%
   right_join(blocks_sf, by=("name" = "name")) %>%
   replace_na(list(checklists=0, minutes=0))
 
+# Method B ---------------------------------------------------------------------
 # Create new sf of buffered checklist coordinates.  Some lists have no distance
 #   so replace those with 0.  Stationary or short lists should be buffered 100
 #   m to account for area surveyed.  This is imperfect, but more defensible than
@@ -112,6 +113,7 @@ count_B <- buffered_coordinates %>%
   select(name, checklists, minutes, geometry) %>%
   replace_na(list(checklists=0, minutes=0))
 
+# Synthesis --------------------------------------------------------------------
 # Join methods A and B results
 count_A2 <- count_A %>%
   select(name, checklists, minutes) %>%
