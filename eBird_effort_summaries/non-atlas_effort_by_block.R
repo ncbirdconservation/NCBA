@@ -14,10 +14,11 @@ starttime <- Sys.time()
 blocks_path <- "~/Data/ncba_blocks.shp"
 blocks_sf <- st_read(blocks_path) %>% st_transform(6542)
 filtered_checklists <- "~/Documents/NCBA/Data/filtered_checklists.txt"
-checklists <- read_sampling(filtered_checklists) %>% filter(project_code != "EBIRD_ATL_NC")
+checklists <- read_sampling(filtered_checklists)
 results_path <- "~/Documents/NCBA/non-atlas_effort_by_block.csv"
 
 # Further filtering of sampling data could go here -----------------------------
+checklists <- filter(checklists, project_code != "EBIRD_ATL_NC")
 
 ## Notes on methods ------------------------------------------------------------
 # Although coordinates are provided by eBird for checklists, they do not provide 
