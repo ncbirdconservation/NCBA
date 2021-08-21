@@ -1,8 +1,8 @@
-# title: "Effort by atlas block"
+# title: "Non-atlas effort by atlas block (Non-atlas)"
 # author: "N.M. Tarr"
-# date: March 22 2021
-# description: Summarizes eBird effort by block.  Input is the output from 
-#   a run of "filter_eBird_sampling.R".
+# date: August 20 2021
+# description: Summarizes eBird effort by block, but excludes NCBA-associated 
+# data.  Input is the output from a run of "filter_eBird_sampling.R".
 
 library(auk)
 library(tidyverse)
@@ -14,8 +14,8 @@ starttime <- Sys.time()
 blocks_path <- "~/Data/ncba_blocks.shp"
 blocks_sf <- st_read(blocks_path) %>% st_transform(6542)
 filtered_checklists <- "~/Documents/NCBA/Data/filtered_checklists.txt"
-checklists <- read_sampling(filtered_checklists)
-results_path <- "~/Documents/NCBA/effort_by_block.csv"
+checklists <- read_sampling(filtered_checklists) %>% filter(project_code != "EBIRD_ATL_NC")
+results_path <- "~/Documents/NCBA/non-atlas_effort_by_block.csv"
 
 # Further filtering of sampling data could go here -----------------------------
 

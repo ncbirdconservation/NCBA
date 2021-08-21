@@ -1,5 +1,5 @@
 ---
-title: "eBird Effort in North Carolina"
+title: "Non-atlas eBird Effort in North Carolina"
 author: "N.M. Tarr"
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output: 
@@ -7,6 +7,7 @@ output:
   html_document:
     df_print: paged
     code_folding: hide
+
 ---
 # Purpose
 This notebook summarizes eBird sampling (effort) within North Carolina for the past 5 years.  Sampling data can be downloaded from the eBird website and queried with eBird's R package named "auk".  The script named "filter_eBird_sampling.R", which is saved in the NCBA github repo, performs the filtering that supports this notebook.  The notebook can be updated and revised periodically.
@@ -53,10 +54,10 @@ st_crs(blocks_sf)
 filtered_checklists <- "~/Documents/NCBA/Data/filtered_checklists.txt"
 
 # Read in the effort data (filtered checklist table)
-checklists <- read_sampling(filtered_checklists)
+checklists <- read_sampling(filtered_checklists) 
 
-# Further filtering of the sampling data can occur here.  For example, we may
-# want to remove data from certain projects.
+# Remove NCBA data
+checklists <- filter(checklists, project_code != "EBIRD_ATL_NC")
 ```
 
 ```{r counties_data}
@@ -70,7 +71,7 @@ counties <- st_as_sf(map("county", plot = FALSE, fill = TRUE)) %>%
 
 # General
 
-* There are currently `r comma(length(unique(checklists$checklist_id)))` checklists from North Carolina in eBird.
+* There are currently `r comma(length(unique(checklists$checklist_id)))` atlas checklists from North Carolina in eBird.
 
 # Week
 ```{r}
@@ -81,7 +82,7 @@ by_week <- checklists %>%
 
 ggplot(data=by_week) +
   geom_line(mapping=aes(y=count, x=week), show.legend=TRUE, color="orange") + 
-  labs(title="EBirder activity varies greatly throughout the year",
+  labs(title="Non-atlaser activity varies greatly throughout the year",
        caption="Checklists from before 2021 are not included") +
   ylab("total number of checklists") +
   scale_x_continuous(limits=c(0,52), breaks=seq(0,52,by=4)) +
@@ -99,14 +100,14 @@ by_locality <- checklists %>%
 
 * Many checklists are revisits to previously surveyed locations.  The ratio of locations that were visited once to the total number of checklists is `r round(nrow(filter(by_locality, count==1))  / length(unique(checklists$checklist_id)), digits=2)`.
 
-* Most locations have only been sampled once.  However, some locations have been visited a large number of times.
+* Most locations have only been sampled once.  However, some locations have been visited an enormous number of times.
 
 ```{r locality_boxplot}
 ggplot(data=by_locality) +
   geom_boxplot(mapping=aes(y=count, x=""), color="darkblue", 
                outlier.colour="orange", show.legend=TRUE) + 
   coord_flip() + 
-  labs(title="Some locations have been very heavily sampled",
+  labs(title="Non-atlasers heavily sampled some locations",
        caption="Checklists from before 2021 are not included") +
   ylab("Checklists (n)") + 
   scale_y_continuous(n.breaks=12)
@@ -124,7 +125,7 @@ ggplot(data=locality_bins, aes(x="", y=value, fill=times_surveyed)) +
   coord_polar("y", start=0) +
   scale_fill_viridis_d(alpha = 1, option="D") +
   theme_void() + 
-  labs(title="Most locations have only been sampled once",
+  labs(title="Most locations sampled by non-atlasers have only been sampled once",
        caption="Checklists from before 2021 are not represented")
 ```
 
@@ -141,7 +142,7 @@ ggplot(data=by_locality_type, aes(x="", y=count, fill=locality_type)) +
   coord_polar("y", start=0) +
   scale_fill_viridis_d(alpha = 1, option="D") +
   theme_void() + 
-  labs(title="Many checklists are assigned to hotspots, but the majority are not",
+  labs(title="Non-atlasers assigned many checklists to hotspots, but most are not",
        caption="Checklists from before 2021 are not represented")
 
 # Print table
@@ -154,7 +155,7 @@ most_visited <- by_locality %>%
   arrange(by=desc(count)) %>%
   filter(count > 99)
 
-knitr::kable(most_visited, caption="Locations visited 100 or more times.")
+knitr::kable(most_visited, caption="Locations visited 100 or more times by non-atlasers.")
 rm(by_locality, by_locality_type)
 ```
 
@@ -164,7 +165,7 @@ ggplot(data=checklists) +
   geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
              shape=3) + 
   labs(title="Checklist locations are distributed throughout NC, but coverage is incomplete",
-       caption="Checklists from before 2021 were not included in this summary") +
+       caption="Checklists from before 2015 were not included in this summary") +
   ylab("latitude") + 
   xlab("longitude")
 ```
@@ -186,7 +187,7 @@ ggplot(data=by_county) +
   geom_boxplot(mapping=aes(y=count, x=""), color="darkred", 
                outlier.colour="orange", show.legend=TRUE) + 
   coord_flip() + 
-  labs(title="A handful of counties have many more checklists than others",
+  labs(title="A handful of counties have many more non-atlas checklists than others",
        subtitle=str_c("The median number of checklists in a county was ",
                       median.checklists),
        caption="Checklists from before 2021 are not included") +
@@ -246,7 +247,7 @@ bottoms2 <- counties.checklists %>%
 ggplot() +
   geom_sf(data=bottoms2, aes(fill=bottom10)) +
   scale_fill_viridis_d(alpha = 1, option="E") +
-  labs(title="Counties with fewest checklists are in the NE Coastal Plains and piedmont",
+  labs(title="Counties with fewest checklists are in the Coastal Plains",
        caption="Checklists from before 2021 are not included")
 ```
 
@@ -393,7 +394,7 @@ ggplot(data=count_AB) +
   geom_boxplot(mapping=aes(y=checklists, x=""), color="black", 
                outlier.colour="orange", show.legend=TRUE) + 
   coord_flip() + 
-  labs(title="Many blocks have no checklists, but others have hundreds",
+  labs(title="Many blocks have no checklists, but others have thousands",
        subtitle="Method B tallies more checklists per block than method A",
        caption="Checklists from before 2021 are not included") +
   ylab("Checklists (n)") + 
@@ -437,7 +438,7 @@ ggplot(data=priority_blocks, aes(ysn_checklists)) +
   geom_bar() +
   ylab("Priority Blocks") +
   xlab("") + 
-  labs(title="Several priority blocks remain unsampled",
+  labs(title="Many priority blocks were unsampled by non-atlasers",
        subtitle = "Method A suggests a higher number of unsampled priority blocks than method B",
        caption="Checklists from before 2021 are not included") +
   facet_wrap(~ method, ncol=2)
@@ -485,8 +486,8 @@ ggplot(data=core_observers) +
   geom_boxplot(mapping=aes(y=count, x=""), color="darkblue", 
                outlier.colour="orange", show.legend=TRUE) + 
   coord_flip() + 
-  labs(title='Most "core" eBirders have submitted < 100 checklists',
-       caption="Checklists from before 2021 were not included in this summary") +
+  labs(title='Active, non-atlasing eBirders have generally submitted < 100 checklists',
+       caption="Checklists from before 2015 were not included in this summary") +
   ylab("Checklists (n)") + 
   scale_y_continuous(n.breaks=12)
 ```
@@ -554,7 +555,7 @@ ggplot(data=duration_OK) +
                outlier.colour="orange", show.legend=TRUE) + 
   coord_flip() + 
   labs(title="Many checklists were over an hour long",
-       caption="Checklists from before 2016 are not included") +
+       caption="Checklists from before 2021 are not included") +
   ylab("Minutes") + 
   scale_y_continuous(n.breaks=12)
 ```
