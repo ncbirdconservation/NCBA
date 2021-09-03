@@ -1,0 +1,501 @@
+---
+title: "NCBA Staff eBird Effort"
+author: "N.M. Tarr"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: 
+  rmdformats::downcute:
+  html_document:
+    df_print: paged
+    code_folding: hide
+
+---
+# Purpose
+This notebook summarizes an observer's sampling (effort) within North Carolina. Sampling data can be downloaded from the eBird website and queried with eBird's R package named "auk".  The script named "filter_eBird_sampling.R", which is saved in the NCBA github repo, performs the filtering that supports this notebook.  The notebook can be updated and revised periodically.
+
+The records available from the sampling data set are for individual, unique checklists and several attributes are included for each.  This notebook summarizes the available attribute values to learn as much as possible about an observer's effort within North Carolina.  The available checklist attributes are:
+
+checklist_id, last_edited_date, county, county_code, iba_code, bcr_code, 
+usfws_code, atlas_block, locality, locality_id, locality_type, latitude,
+longitude, observation_date, time_observations_started, observer_id, 
+sampling_event_identifier, protocol_type, protocol_code, project_code, 
+duration_minutes, effort_distance_km, effort_area_ha, number_observers,
+all_species_reported, group_identifier, trip_comments   
+
+```{r set_variables}
+# Path to NCBA blocks shapefile
+blocks_path <- "~/ENTERPATH/ncba_blocks.shp"
+
+# Path to filter_eBird_sampling.R output (text file)
+filtered_checklists <- "~/ENTERPATH/filtered_checklists.txt"
+
+# Observe ID codes
+observer_ids <- c("obs228000", "obs1621424", "obs2180466", "obs208474", 
+                  "obs207928", "obs1814750", "obs1739101", "obs353514",
+                  "obs730153")
+```
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE)
+
+library(auk)
+library(tidyverse)
+library(ggplot2)
+theme_set(theme_bw())
+library(sf)
+library(RColorBrewer)
+library(maps)
+library(hms)
+library(lubridate)
+library(tmap)
+starttime <- Sys.time()
+
+comma <- function(x) format(x, digits=2, big.mark=",")
+```
+
+```{r block_data}
+# Read in NCBA block spatial data frame
+blocks_sf <- st_read(blocks_path) %>% st_transform(6542)
+st_crs(blocks_sf)
+```
+
+```{r checklists}
+# Read in the effort data (filtered checklist table)
+checklists <- read_sampling(filtered_checklists) 
+
+# Isolate observer's checklists
+checklists <- filter(checklists, (observer_id %in% observer_ids & project_code == "EBIRD_ATL_NC"))
+```
+
+```{r counties_data}
+# Read in county spatial data frame
+counties <- st_as_sf(map("county", plot = FALSE, fill = TRUE)) %>%
+  subset(grepl("north carolina", ID)) %>%
+  mutate(county = str_to_title(str_replace(ID, "north carolina,", ""))) %>%
+  select(-c(ID))
+# Reproject?
+```
+
+# General
+
+* The observer has `r comma(length(unique(checklists$checklist_id)))` atlas checklists from North Carolina in eBird.
+
+# Week
+```{r}
+by_week <- checklists %>%
+  mutate(week=week(date(observation_date))) %>%
+  group_by(week) %>%
+  summarize(count=n())
+
+ggplot(data=by_week) +
+  geom_line(mapping=aes(y=count, x=week), show.legend=TRUE, color="orange") + 
+  labs(title="",
+       caption="Checklists from before 2021 are not included") +
+  ylab("total number of checklists") +
+  scale_x_continuous(limits=c(0,52), breaks=seq(0,52,by=4)) +
+  scale_y_continuous(breaks=seq(0,30000,5000))
+rm(by_week)
+```
+
+
+# Locality
+```{r group_by_locality}
+by_locality <- checklists %>%
+  group_by(locality, locality_id) %>%
+  summarize(count = n())
+```
+
+* The ratio of locations that were visited once to the total number of checklists is `r round(nrow(filter(by_locality, count==1))  / length(unique(checklists$checklist_id)), digits=2)`.
+
+```{r locality_boxplot}
+ggplot(data=by_locality) +
+  geom_boxplot(mapping=aes(y=count, x=""), color="darkblue", 
+               outlier.colour="orange", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="",
+       caption="Checklists from before 2021 are not included") +
+  ylab("Checklists (n)") + 
+  scale_y_continuous(n.breaks=12)
+```
+
+```{r locality_pie}
+labels <- c("1", "2:10", "11:20", "21:5,000")
+locality_bins <- table(cut(by_locality$count, breaks=c(0,1,10,20,5000),
+                           labels=labels)) %>%
+                  data.frame()
+colnames(locality_bins) = c("times_surveyed", "value")
+
+ggplot(data=locality_bins, aes(x="", y=value, fill=times_surveyed)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0) +
+  scale_fill_viridis_d(alpha = 1, option="D") +
+  theme_void() + 
+  labs(title="",
+       caption="Checklists from before 2021 are not represented")
+```
+
+```{r locality_type_pie}
+# Summarize whether checklists are for hotspots, personal locations, etc.
+by_locality_type <- checklists %>%
+  group_by(locality_type) %>%
+  summarize(
+    count = n())
+
+# Print pie chart
+ggplot(data=by_locality_type, aes(x="", y=count, fill=locality_type)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0) +
+  scale_fill_viridis_d(alpha = 1, option="D") +
+  theme_void() + 
+  labs(title="",
+       caption="Checklists from before 2021 are not represented")
+
+# Print table
+knitr::kable(by_locality_type, caption="Number of checklists per locality type")
+```
+
+## Visited Locations Table
+```{r most_visited_locations}
+most_visited <- by_locality %>%
+  arrange(by=desc(count))
+
+knitr::kable(most_visited, caption="Locations visited by staff.")
+rm(by_locality, by_locality_type)
+```
+
+# Spatial Distribution
+```{r xy_locations}
+ggplot(data=checklists) +
+  geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
+             shape=3) + 
+  labs(title="",
+       caption="Checklists from before 2021 were not included in this summary") +
+  ylab("latitude") + 
+  xlab("longitude")
+```
+
+## Checklists per County
+```{r per_county_bwplot}
+by_county <- checklists %>%
+  group_by(county) %>%
+  summarize(
+    count = n(),
+  ) %>%
+  arrange(county) 
+```
+
+Between `r comma(summary(by_county$count)[[1]])` and `r comma(summary(by_county$count)[[6]])` checklists are available for counties in North Carolina, and the median number of checklists is `r comma(summary(by_county$count)[[3]])`.
+
+```{r per_county_map}
+# Join to get the checklist count
+counties.checklists <- counties %>%
+  left_join(by_county, by = "county")
+
+# Pull out just the column of interest here ("count") and plot it.
+county.count <- select(counties.checklists, count, geom)
+ggplot(data=county.count) +
+  geom_sf(data=counties.checklists, aes(fill=count)) +
+  scale_fill_viridis_c(trans = "sqrt", alpha = 1, option="E") +
+  labs(title="",
+       caption="Checklists from before 2021 are not included")
+```
+
+
+### Checklists per County Sampled
+Note, the assignment of checklists to counties was performed by eBird and it is possible that errors exist due to traveling counts that cross county lines and errors in the recorded locations of checklists.
+```{r per_county_all}
+knitr::kable(by_county, caption="")
+rm(by_county, tops, bottoms, tops2, bottoms2)
+```
+
+## Checklists per Atlas Block
+Although coordinates are provided by eBird for checklists, they do not provide precise locations of eBirder effort for two reasons.  First, there are limits to the spatial precision of the points due to gps precision and/or observers ability to identify exactly where they birded on a map or in the app.  Second, many birders travel while birding but their paths are not available, only the distances they traveled.
+
+Locational uncertainty is important and problematic because if it is large in relation to the level of analysis, it creates uncertainty about which spatial subregions, such as counties or atlas blocks, a checklist should be attributed to.  I explored two appraoches to handling locational uncertainty.
+
+Method A -- Assign each checklist to the subregion that the checklist coordinate is located within.  This approach could generate deceptive results if checklists represent birding effort from multiple blocks but are assigned to a single block or if the coordinate is located in a block adjacent to where the birding actually occurred.  This approach should generally be expected to underestimate how many checklists covered some portion of a given block.
+
+Method B -- Use polygons instead of the coordinates (points, Method A) in order to include the locational uncertainty.  Under this approach, coordinates are buffered with the distance traveled by the observer during the checklist period, plus 100 m to account for the fact that observers may have recorded birds at a distance from where they were located.  Each checklist is then assigned to all of the blocks that the polygon intersects in order to acknowledge that the checklist could represent effort from multiple blocks. Results from this approach can logically be expected to exaggerate the true footprint of birding effort and suggest blocks were sampled that actually were not, thus overestimating how many checklists covered some portion of a given block.  Furthermore, checklists with large effort distances produce enormous footprints than make results unhelpful.  Thus, I excluded checklists with effort distances greater than 5 km for this method.
+```{r method_A}
+method_A <- checklists %>%
+  # Make checklists data frame spatial with right projection
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
+  st_transform(6542) %>%
+  # Find which blocks each coordinate is within
+  st_join(blocks_sf, join = st_within, left=TRUE) %>%
+  #################################select(-c(NAME, STATUS, COUNTY, FORM_LINK)) %>%
+  # Summarize by number checklists within each block
+  group_by(name) %>%
+  summarize(checklists=n()) %>%
+  select(name, checklists) %>%
+  # Join back with blocks spatial frame to fill in zeros (as a data frame)
+  data.frame() %>%
+  select(-c(geometry)) %>%
+  right_join(blocks_sf, by=("name" = "name")) %>%
+  ##########################################select(name, checklists, geometry) %>%
+  replace_na(list(checklists=0)) %>%
+  # Make spatial again
+  st_as_sf()
+```
+
+```{r buffered_coordinates}
+# Create new sf of buffered checklist coordinates.  Some lists have no distance
+#   so replace those with 0.  Stationary or short lists should be buffered 100
+#   m to account for area surveyed.  This is imperfect, but more defensible than
+#   nothing. Lists traveling > 5 km are just problematic and not informative so 
+#   removed here.
+buffered_coordinates <- checklists %>%
+  # Make spatial frame
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
+  st_transform(6542) %>%
+  select(checklist_id, atlas_block, protocol_type, effort_distance_km,
+         geometry) %>%
+  # Buffer coordinates
+  replace_na(list(effort_distance_km=0)) %>%
+  filter(effort_distance_km <= 5) %>%
+  mutate(buffer_length = (effort_distance_km + 0.1)*1000) %>%
+  mutate(footprint = st_buffer(geometry, buffer_length)) %>%
+  st_set_geometry("footprint") %>%
+  select(-c(geometry)) 
+```
+
+```{r sample_buffered_coordinates}
+checklist_footprints <- checklists %>%
+  # Make spatial frame
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
+  st_transform(6542) %>%
+  # Find which block each coordinate is within
+  st_join(blocks_sf, join = st_within, left=TRUE) %>%
+  # Use block name to pull out checklists assigned to blocks of interest
+  #filter(name %in% sample_from) %>%  ############### CAN REMOVE THIS>???
+  select(checklist_id, effort_distance_km, geometry) %>%
+  # Buffer coordinates for footprints
+  replace_na(list(effort_distance_km=0)) %>%
+  filter(effort_distance_km <= 5) %>%
+  mutate(buffer_length = (effort_distance_km + 0.1)*1000) %>%
+  mutate(footprint = st_buffer(geometry, buffer_length)) %>%
+  st_set_geometry("footprint") %>%
+  select(-c(geometry)) 
+```
+
+```{r method_B}
+# Intersect lists with blocks, tally checklists per block, drop footprint,
+#   join with blocks sf to get block geometry
+method_B <- buffered_coordinates %>%
+  # Intersect footprints with blocks, NOTE this keeps "withins" and fragments
+  st_intersection(blocks_sf) %>%
+  # Find count by block
+  group_by(name) %>%
+  summarise(checklists = n()) %>%
+  st_drop_geometry() %>%
+  # Add zero blocks via a join
+  right_join(blocks_sf, by="name") %>%
+  select(name, checklists, geometry) %>%
+  replace_na(list(checklists=0)) %>%
+  st_as_sf()  
+rm(buffered_coordinates)
+```
+
+```{r checklist_by_block_map}
+# Get priority block centroids for plotting
+priority_centroids <- st_centroid(filter(blocks_sf, priority==1)$geometry)
+
+# Plot the map
+tmap_mode("view")
+tm_shape(method_A) +
+  tm_fill(col = "checklists", palette = "Blues", style="fixed", alpha = .6,
+          breaks = c(0, 1, 50, 100, 1000, 2000, 10000), as.count = TRUE) +
+tm_shape(method_B) +
+  tm_fill(col = "checklists", palette = "Reds", style="fixed", alpha = .6,
+          breaks = c(0, 1, 50, 100, 1000, 2000, 10000), as.count = TRUE) +
+tm_shape(priority_centroids) + tm_symbols(col="purple", size=0.01, shape=5) +
+tm_shape(checklist_footprints) + tm_borders()
+```
+
+Note: checklist footprints with center coordinates within select blocks are included in the map in order to display a sample of the underlying data for method B.  Priority centroids identify priority atlas blocks.
+
+```{r checklist_by_block_cleanup}
+rm(checklist_footprints)
+```
+
+```{r checklists_per_block_boxplot}
+# Join methods A and B results to facilitate plotting with facets
+count_A <- method_A %>%
+  st_drop_geometry() %>%
+  select(name, checklists) %>%
+  mutate(method = "A")
+count_B <- method_B %>%
+  st_drop_geometry() %>%
+  select(name, checklists) %>%
+  mutate(method = "B")
+count_AB <- rbind(count_A, count_B)
+
+# Boxplot
+ggplot(data=count_AB) +
+  geom_boxplot(mapping=aes(y=checklists, x=""), color="black", 
+               outlier.colour="orange", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="",
+       subtitle="",
+       caption="Checklists from before 2021 are not included") +
+  ylab("Checklists (n)") + 
+  scale_y_continuous(n.breaks=12) +
+  facet_wrap(~ method, nrow=2)
+
+#print("method A")
+#summary(count_A$checklists)
+#print("method B")
+#summary(count_B$checklists)
+```
+
+
+```{r blocks_with_checklists}
+top_blocks_A <- count_A %>%
+  arrange(desc(checklists)) %>%
+  select(-c(method)) %>%
+  filter(checklists > 0) %>%
+  rename(atlas_block=name) %>%
+  rename(method_A=checklists)
+
+top_blocks_B <- count_B %>%
+  arrange(desc(checklists)) %>%
+  select(-c(method)) %>%
+  filter(checklists > 0) %>%
+  rename(atlas_block=name) %>%
+  rename(method_B=checklists)
+
+tops_ <- inner_join(top_blocks_A, top_blocks_B, by=("atlas_block" = "atlas_block"))
+knitr::kable(tops_, caption="Checklists attributed to blocks")
+```
+
+```{r checklists_priority_vs_no_chart}
+count_AB$ysn_checklists <- ifelse(count_AB$checklists > 0, 
+                                  "Checklists","No Checklists")
+
+surveyed_blocks <- blocks_sf %>%
+  data.frame() %>%
+  select(name, priority) %>%
+  left_join(data.frame(count_AB), by=("name" = "name")) %>%
+  filter((name %in% top_blocks_A$atlas_block) | (name %in% top_blocks_B$atlas_block))
+
+surveyed_blocks$priority <- ifelse(surveyed_blocks$priority == 1, "Priority", "Not Priority")
+
+ggplot(data=surveyed_blocks, aes(priority)) +
+  geom_bar() +
+  ylab("Surveyed Blocks") +
+  xlab("") + 
+  labs(title="",
+       subtitle = "",
+       caption="Checklists from before 2021 are not included") +
+  facet_wrap(~ method, ncol=2)
+```
+
+```{r checklist_block_count_cleanup}
+rm(method_A, method_B, count_AB, count_A, count_B)
+```
+
+# Protocol
+```{r protocol}
+# Summarize protocol
+by_protocol <- checklists %>%
+  group_by(protocol_type) %>%
+  summarize(
+    count = n())
+colnames(by_protocol) = c("Protocol Type", "Checklists (n)")
+
+# Print table
+knitr::kable(by_protocol)
+```
+
+# Project
+```{r project}
+# Summarize projects
+by_project <- checklists %>%
+  group_by(project_code) %>%
+  summarize(
+    count = n())
+colnames(by_project) = c("Project", "Checklists (n)")
+
+# Print table
+knitr::kable(by_project)
+```
+
+# Start Time
+```{r time}
+start_df <- checklists %>%
+  select(time_observations_started) %>%
+  mutate(time=hour(as_hms(time_observations_started)))
+
+ggplot(data=start_df) +
+  geom_boxplot(mapping=aes(y=time, x=""), color="darkblue", 
+               outlier.colour="magenta", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="",
+       caption="Checklists from before 2021 are not included") +
+  ylab("Start Hour") + 
+  scale_y_continuous(n.breaks=12)
+```
+
+# Duration
+```{r duration_prep}
+# Prep a data frame of duration data
+duration_df <- checklists %>%
+  select(duration_minutes) %>% 
+  arrange(desc(duration_minutes))
+
+too_long <- subset(duration_df, duration_minutes > 1440)
+sorta_long <- subset(duration_df, duration_minutes <1441 & duration_minutes > 720)
+duration_OK <- subset(duration_df, duration_minutes < 721)
+```
+
+* `r nrow(too_long)` checklists carried on longer than a day 
+* `r nrow(sorta_long)` checklists lasted between 12 and 24 hours. 
+* Checklists longer than 12 hours were omitted for the summaries in this section.
+
+```{r duration_boxplot}
+ggplot(data=duration_OK) +
+  geom_boxplot(mapping=aes(y=duration_minutes, x=""), color="darkblue", 
+               outlier.colour="orange", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="",
+       caption="Checklists from before 2021 are not included") +
+  ylab("Minutes") + 
+  scale_y_continuous(n.breaks=12)
+```
+
+```{r duration_table}
+print(summary(duration_OK$duration_minutes))
+```
+
+# Distance
+```{r distance_prep}
+# Prep a data frame of duration data
+distance_df <- checklists %>%
+  select(effort_distance_km) %>% 
+  arrange(desc(effort_distance_km))
+
+too_far <- subset(distance_df, effort_distance_km > 5)
+distance_OK <- subset(distance_df, effort_distance_km <= 5)
+```
+
+```{r distance_boxplot}
+ggplot(data=distance_OK) +
+  geom_boxplot(mapping=aes(y=effort_distance_km, x=""), color="darkgreen", 
+               outlier.colour="blue", show.legend=TRUE) + 
+  coord_flip() + 
+  labs(title="",
+       caption="Checklists from before 2021 are not included") +
+  ylab("Kilometers") + 
+  scale_y_continuous(n.breaks=12)
+summary(distance_OK$effort_distance_km)
+```
+
+
+# Runtime
+```{r runtime}
+endtime <- Sys.time()
+runtime <- endtime - starttime
+```
+`r format(runtime)`
