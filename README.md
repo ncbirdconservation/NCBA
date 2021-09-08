@@ -1,4 +1,4 @@
-# North Carolin Bird Atlas I Code Repo
+# NC Bird Atlas I
 
 Maintained by Nathan Tarr
 
