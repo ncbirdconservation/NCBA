@@ -21,7 +21,7 @@ __develop__ -- holds scripts used for testing and developing code.
 
 __effort_summaries__ -- summaries of eBird sampling data (eBird checklists) and NCBA data at the survey level.
 
-__one-time_scripts__ -- scripts that complete one-time tasks, such as downloading or processing something.
+__single-use_scripts__ -- scripts that complete one-time tasks, such as downloading or processing something.
 
 __species_summaries__ -- summaries of species data; individual species or species groups.
 
