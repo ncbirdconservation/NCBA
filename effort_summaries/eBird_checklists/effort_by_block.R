@@ -4,6 +4,12 @@
 # description: Summarizes eBird effort by block.  Input is the output from 
 #   a run of "filter_eBird_sampling.R".
 
+# CUSTOMIZE -- set paths to your files -----------------------------------------
+blocks_path <- "~/ENTERYOURPATH/ncba_blocks.shp"
+filtered_checklists <- "~/ENTERYOURPATH/filtered_checklists.txt"
+results_path <- "~/ENTERYOURPATH/effort_by_block.csv"
+# ------------------------------------------------------------------------------
+
 library(auk)
 library(tidyverse)
 library(sf)
@@ -11,11 +17,8 @@ library(lubridate)
 starttime <- Sys.time()
 
 # Read in data and prep
-blocks_path <- "~/Data/ncba_blocks.shp"
 blocks_sf <- st_read(blocks_path) %>% st_transform(6542)
-filtered_checklists <- "~/Documents/NCBA/Data/filtered_checklists.txt"
 checklists <- read_sampling(filtered_checklists)
-results_path <- "~/Documents/NCBA/effort_by_block.csv"
 
 # Further filtering of sampling data could go here -----------------------------
 

@@ -18,7 +18,13 @@ usfws_code, atlas_block, locality, locality_id, locality_type, latitude,
 longitude, observation_date, time_observations_started, observer_id, 
 sampling_event_identifier, protocol_type, protocol_code, project_code, 
 duration_minutes, effort_distance_km, effort_area_ha, number_observers,
-all_species_reported, group_identifier, trip_comments   
+all_species_reported, group_identifier, trip_comments 
+
+```{r set_paths}
+blocks_path <- "~/ENTER/YOUR/PATH/ncba_blocks.shp"
+# Reference the filtered checklist output file
+filtered_checklists <- "~/ENTER/YOUR/PATH/filtered_checklists.txt"
+```
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(
@@ -43,15 +49,11 @@ comma <- function(x) format(x, digits=2, big.mark=",")
 
 ```{r block_data}
 # Read in NCBA block spatial data frame
-blocks_path <- "~/Data/ncba_blocks.shp"
 blocks_sf <- st_read(blocks_path) %>% st_transform(6542)
 st_crs(blocks_sf)
 ```
 
 ```{r checklists}
-# Reference the filtered checklist output file
-filtered_checklists <- "~/Documents/NCBA/Data/filtered_checklists.txt"
-
 # Read in the effort data (filtered checklist table)
 checklists <- read_sampling(filtered_checklists)
 

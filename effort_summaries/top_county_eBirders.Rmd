@@ -12,6 +12,11 @@ output:
 # Purpose
 Find the top eBirder in each county of North Carolina.
 
+```{r}
+# Reference the filtered checklist output file
+filtered_checklists <- "~/ENTER/YOUR/PATH/filtered_checklists.txt"
+```
+
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(
@@ -21,9 +26,6 @@ knitr::opts_chunk$set(
 
 library(dplyr)
 library(auk)
-
-# Reference the filtered checklist output file
-filtered_checklists <- "~/Documents/NCBA/Data/filtered_checklists.txt"
 
 # Read in the effort data (filtered checklist table).
 checklists <- read_sampling(filtered_checklists)

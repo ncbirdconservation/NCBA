@@ -21,3 +21,6 @@ effort_summaries -- summaries of eBird sampling data (eBird checklists) and NCBA
 one-time_scripts -- scripts that complete one-time tasks, such as downloading or processing something.
 
 species_summaries -- summaries of species data; individual species or species groups.
+
+## Using
+Copy a script to you local machine, edit paths and variables where necessary to reflect your computing environment, and run in RStudio.

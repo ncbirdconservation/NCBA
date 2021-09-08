@@ -1,5 +1,5 @@
 # author: "N.M. Tarr"
-# date: "3/22/2021"
+# date: "8/22/2021"
 # description:
 # The eBird sampling dataset can be downloaded from eBird, but includes many 
 # records that are not relevant for the NCBA.  Therefore, checklist records of 
@@ -11,11 +11,12 @@
 library(auk)
 library(tidyverse)
 
-# Set a path for an output file
-output_file <- "~/Documents/NCBA/Data/filtered_checklists.txt"
+# Set a path for output filea
+output_file <- "~/ENTER/YOURPATH/filtered_checklists.txt"
+output_csv <- "~/ENTER/YOURPATH/filtered_checklists.csv"
 
 # Print path to sampling data set
-sampling_file <- "/Volumes/eBird/ebd_sampling_relJul-2021/ebd_sampling_relJul-2021.txt"
+sampling_file <- "/ENTERYOUR/PATH/ebd_sampling_relJul-2021/ebd_sampling_relJul-2021.txt"
 print(sampling_file)
 
 # Filtering criteria
@@ -42,6 +43,6 @@ endtime <- Sys.time()
 print(endtime - starttime)
 
 # Write to a csv file as well.
-write_csv(effort_data, "~/Documents/NCBA/Data/filtered_checklists.csv")
+write_csv(effort_data, output_csv)
 
 # Now explore the filtered checklist records in another script (.R or .rmd file).
