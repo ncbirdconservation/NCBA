@@ -1,4 +1,4 @@
-# NC Bird Atlas I
+# NC Bird Atlas
 
 Maintained by Nathan Tarr
 
