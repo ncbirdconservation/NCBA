@@ -1,5 +1,5 @@
 ---
-title: "Single Species Summary Example - just a starting point."
+title: "Single Species Summary Development"
 author: "N.M. Tarr"
 date: "9/8/2021"
 output: html_document
@@ -9,69 +9,92 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Paths
-```{r}
+Set your paths and credentials here
+```{r variables}
 sp <- "American Goldfinch"
-ebd_file <- "~/YOURPATH/ebd_US-NC_202103_202109_relJul-2021.txt"
-EBD_output <- "~/YOURPATH/NCBA/Species/testSP.txt"
+ebd_file <- ""
+EBD_output <- ""
+
+USER = ""
+PASS = ""
 ```
 
-Load packages
-```{r}
+```{r packages}
+# Load packages
 library(auk)
 library(dplyr)
 library(mongolite)
+library(tidyr)
+library(stringr)
 ```
 
-# MONGO DB
-```{r}
-USER = ""
-PASS = ""
-#> this is a read only account
+# MongoDB
+Read from the EBD collection
+```{r read_mongo}
+time1 <- proc.time()
+# this is a read only account
 HOST = "cluster0-shard-00-00.rzpx8.mongodb.net:27017"
 DB = "ebd_mgmt"
 COLLECTION = "ebd"
-#> other relevant collections include: blocks and ebd_taxonomy
+# other relevant collections include: blocks and ebd_taxonomy
 
 URI = sprintf("mongodb://%s:%s@%s/%s?authSource=admin&replicaSet=atlas-3olgg1-shard-0&readPreference=primary&ssl=true",USER, PASS, HOST, DB)
 
-#> connect to a specific collection (table)
+# connect to a specific collection (table)
 m <- mongo(COLLECTION, url = URI)
-print (m)
 
-#> return record with the following SAMPLING_EVENT_IDENTIFIER
-#> this query follows JSON based query syntax (see here for the basics: https://jeroen.github.io/mongolite/query-data.html#query-syntax)
-#testdata <- m$find('{"SAMPLING_EVENT_IDENTIFIER":"S79697260"}')
-testdata <- m$find('{}', limit = 10)
-#> looks like it dumps it right into a dataframe? will have to work through how to get observations (sub-documents)
-print(testdata)
-print(testdata$OBSERVATIONS[[1]])
+# return records for the species
+# this query follows JSON based query syntax (see here for the basics: https://jeroen.github.io/mongolite/query-data.html#query-syntax)
+query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${sp}"}')
+query <- '{"OBSERVATIONS.COMMON_NAME":"American Goldfinch"}'
+mongodata <- m$find(query) %>%
+             unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
+             filter(COMMON_NAME == sp)
+              
+# Calculate processing time
+mongotime <- proc.time() - time1
+
+# Print number of records returned
+print(paste("Records returned:", nrow(mongodata)))
+print(paste("Runtime: ", mongotime[["elapsed"]]))
 ```
 
-```{r}
-testdata2 <- unnest(testdata, cols = (c(OBSERVATIONS)))
-```
-
-
-# EBD
-Read the EBD database
-```{r}
-df1 <- ebd_file %>% 
-       # 1. reference file
-       auk_ebd() %>% 
-       # 2. define filters
-       auk_species(species = sp) %>% 
-       # 3. run filtering
-       auk_filter(file = EBD_output, overwrite = TRUE) %>% 
-       # 4. read text file into r data frame
-       read_ebd()
-```
-
-# Data Summaries
 Summarize by breeding codes
-```{r}
-df2 <- df1 %>%
-       # Summarize by number checklists within each block
-       group_by(breeding_code) %>%
-       summarize(reports=n())
+```{r mongo_breeding}
+mongodata2 <- mongodata %>%
+              # Summarize by number checklists within each block
+              group_by(BREEDING_CODE) %>%
+              summarize(reports=n())
+print(mongodata2)
+```
+
+# EBD/AUK
+Read from an EBD file
+```{r read_auk}
+time1 <- proc.time()
+aukdata <- ebd_file %>% 
+           # 1. reference file
+           auk_ebd() %>% 
+           # 2. define filters
+           auk_species(species = sp) %>% 
+           # 3. run filtering
+           auk_filter(file = EBD_output, overwrite = TRUE) %>% 
+           # 4. read text file into r data frame
+           read_ebd()
+
+# Calculate processing time
+auktime <- proc.time() - time1
+
+# Print number of records returned
+print(paste("Records returned:", nrow(aukdata)))
+print(paste("Runtime: ", auktime[["elapsed"]]))
+```
+
+Summarize by breeding codes
+```{r auk_breeding}
+aukdata2 <- aukdata %>%
+            # Summarize by number checklists within each block
+            group_by(breeding_code) %>%
+            summarize(reports=n())
+print(aukdata2)
 ```
