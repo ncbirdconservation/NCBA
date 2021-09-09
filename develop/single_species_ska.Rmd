@@ -26,15 +26,14 @@ library(mongolite)
 
 # MONGO DB
 ```{r}
-USER = "ncba_ruser"
-PASS = "Ammospizacaudacuta"
+source("mongo_credentials.r")
 #> this is a read only account
 HOST = "cluster0-shard-00-00.rzpx8.mongodb.net:27017"
 DB = "ebd_mgmt"
 COLLECTION = "ebd"
 #> other relevant collections include: blocks and ebd_taxonomy
 
-URI = sprintf("mongodb://%s:%s@%s/%s?authSource=admin&replicaSet=atlas-3olgg1-shard-0&readPreference=primary&ssl=true",USER, PASS, HOST, DB)
+URI = sprintf("mongodb://%s:%s@%s/%s?authSource=admin&replicaSet=atlas-3olgg1-shard-0&readPreference=primary&ssl=true",MUSER(), MPASS(), HOST, DB)
 
 #> connect to a specific collection (table)
 m <- mongo(COLLECTION, url = URI)
