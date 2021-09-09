@@ -26,8 +26,8 @@ library(mongolite)
 
 # MONGO DB
 ```{r}
-USER = ""
-PASS = ""
+USER = "ncba_ruser"
+PASS = "Ammospizacaudacuta"
 #> this is a read only account
 HOST = "cluster0-shard-00-00.rzpx8.mongodb.net:27017"
 DB = "ebd_mgmt"
@@ -43,10 +43,10 @@ print (m)
 #> return record with the following SAMPLING_EVENT_IDENTIFIER
 #> this query follows JSON based query syntax (see here for the basics: https://jeroen.github.io/mongolite/query-data.html#query-syntax)
 #testdata <- m$find('{"SAMPLING_EVENT_IDENTIFIER":"S79697260"}')
-Q = '{"OBSERVATIONS.COMMON_NAME":"Brown Creeper"}}'
+Q = '{"OBSERVATIONS.COMMON_NAME":"Brown Creeper"}'
 F = '{"SAMPLING_EVENT_IDENTIFIER":1, "OBSERVATION_DATE": 1, "NCBA_BLOCK":1, "DURATION_MINUTES": 1, "PROJECT_CODE":1, "LATITUDE":1, "LONGITUDE":1, "OBSERVATIONS.&":1}'
 
-testdata <- m$find(query = Q, filter = F)
+testdata <- m$find(query = Q, fields = F)
 #> looks like it dumps it right into a dataframe? will have to work through how to get observations (sub-documents)
 print(testdata)
 print(testdata$OBSERVATIONS[[1]])
