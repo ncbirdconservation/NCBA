@@ -1,0 +1,8 @@
+Example Queries
+
+
+
+Below are some example queries for MongoDB
+
+Get all Brown Creeper Records
+{"OBSERVATIONS":{"COMMON_NAME":"Brown Creeper"}}
