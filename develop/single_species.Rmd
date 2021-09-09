@@ -1,5 +1,5 @@
 ---
-title: "Single Species Summary"
+title: "Single Species Summary Example - just a starting point."
 author: "N.M. Tarr"
 date: "9/8/2021"
 output: html_document
@@ -12,8 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 Paths
 ```{r}
 sp <- "American Goldfinch"
-ebd_file <- "~/Datasets/ebd_US-NC_202103_202109_relJul-2021.txt"
-EBD_output <- "~/Documents/NCBA/Species/testSP.txt"
+ebd_file <- "~/YOURPATH/ebd_US-NC_202103_202109_relJul-2021.txt"
+EBD_output <- "~/YOURPATH/NCBA/Species/testSP.txt"
 ```
 
 Load packages
@@ -25,8 +25,8 @@ library(mongolite)
 
 # MONGO DB
 ```{r}
-USER = "ncba_ruser"
-PASS = "Ammospizacaudacuta"
+USER = ""
+PASS = ""
 #> this is a read only account
 HOST = "cluster0-shard-00-00.rzpx8.mongodb.net:27017"
 DB = "ebd_mgmt"
