@@ -46,7 +46,6 @@ m <- mongo(COLLECTION, url = URI)
 # return records for the species
 # this query follows JSON based query syntax (see here for the basics: https://jeroen.github.io/mongolite/query-data.html#query-syntax)
 query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${sp}"}')
-query <- '{"OBSERVATIONS.COMMON_NAME":"American Goldfinch"}'
 mongodata <- m$find(query) %>%
              unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
              filter(COMMON_NAME == sp)
