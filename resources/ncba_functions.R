@@ -26,7 +26,7 @@ connect_ncba_db <- function(ncba_config="ncba_config.R", database, collection){
   #                       database = "ebd_mgmt",
   #                       collection = "ebd")
   # mongodata <- conn$find({})
-  
+  library(mongolite)
   # Retrieve credentials
   source(ncba_config)
   
@@ -100,6 +100,10 @@ breeding_boxplot <- function(species, ebird, pallet, out_pdf, no_plot_codes,
   #   variable "codelevels" in function "chronplot" (below) will need to be added
   #   there.
   # drop -- TRUE or FALSE whether to include unreported codes in the plot
+  library(lubridate)
+  library(grid)
+  library(gridBase)
+  library(RColorBrewer)
   
   # Data prep
   # put all dates within the same year -- ignores leap year
