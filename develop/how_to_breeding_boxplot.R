@@ -14,7 +14,7 @@ config <- "~/Documents/NCBA/Scripts/ncba_config.R"
 setwd("~/Documents/NCBA/species/")
 
 # WHAT SPECIES? ----------------------------------------------------------------
-species <- "Clapper Rail"
+species <- "Loggerhead Shrike"
 
 # GET NCBA DATA ----------------------------------------------------------------
 # connect to a specific collection (table)
@@ -28,7 +28,7 @@ nc_data <- connection$find(query) %>%
   unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
   filter(COMMON_NAME == species)
 
-# Format columns
+# format columns
 ebird <- to_ebd_format(nc_data, drop=FALSE)
 
 # PLOT BREEDING CODES ----------------------------------------------------------
