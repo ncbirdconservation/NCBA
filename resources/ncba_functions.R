@@ -1,6 +1,6 @@
 # Functions for often-repeated actions associated with NCBA data management and 
 # analysis
-#
+#          
 # To access these functions, run 'source("ncba_functions.R")' in your R console,
 # script, or R markdown document.  If your working directory is not where 
 # this file is stored, then replace "ncba_functions.R" with the path to the file
