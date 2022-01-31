@@ -15,3 +15,11 @@ give feedback to the maintainer.
 
 
 [1]: https://https://github.com/nmtarr/NCBA/issues
+
+
+Task Management
+==================
+
+Individual tasks should be identified and described as individual issues so that they can be monitored and organized easily via github projects.  Avoid grouping multiple tasks into a single issue unless they are closely related.  Detailed elaboration and discussion of issues is encouraged.  
+
+Once created, tasks (issues) can be labeled as "wish", "to do", "in progress", or "done" in the NCBA Code Development project or another project.  Tasks should also be either claimed or assigned to an individual once they reach the "to do" phase.
