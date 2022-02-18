@@ -225,3 +225,27 @@ breeding_boxplot <- function(species, ebird, pallet, out_pdf, no_plot_codes,
   boxplot(obsdate ~ code, horizontal = TRUE,  col = "#F5F5F500", yaxt = "n", 
           xaxt = "n", data = ebird, add = TRUE)
 }
+
+
+# ------------------------------------------------------------------------------
+get_all_checklists <- function(ncba_config){
+  # Get a data frame of checklists from the NCBAdb.
+  # 
+  # Parameters:
+  # ncba_config -- Config file with NCBA MongoDB username and password
+  #
+  # Example:
+  # lists <- get_all_checklists("~/Documents/NCBA/Scripts/ncba_config.R")
+  
+  # Connect to the NCBA database
+  connection <- connect_ncba_db(ncba_config, "ebd_mgmt", "ebd")
+  
+  # Define a query
+  query <- '{}'
+  
+  # Define a filter that excludes the observation column
+  filter <- '{"OBSERVATIONS":0}'
+  
+  # Retrieve the checklists
+  checklists <- connection$find(query = query, fields = filter)
+}
