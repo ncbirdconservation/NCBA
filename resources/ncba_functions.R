@@ -228,15 +228,18 @@ breeding_boxplot <- function(species, ebird, pallet, out_pdf, no_plot_codes,
 
 
 # ------------------------------------------------------------------------------
-get_all_checklists <- function(ncba_config){
+get_all_checklists <- function(ncba_config, drop_ncba_col=TRUE){
   # Get a data frame of checklists from the NCBAdb.
   # 
   # Parameters:
   # ncba_config -- Config file with NCBA MongoDB username and password
+  # drop_ncba_col -- Setting to TRUE will drop columns from the NCBA database
+  #   that are not provided by eBird. List of columns found in eBird Sampling 
+  #   Dataset on 2/18/2022. 
   #
   # Example:
-  # lists <- get_all_checklists("~/Documents/NCBA/Scripts/ncba_config.R")
-  
+  # lists <- get_all_checklists("~/Documents/NCBA/Scripts/ncba_config.R",
+  #                             drop_ncba_col=FALSE)
   # Connect to the NCBA database
   connection <- connect_ncba_db(ncba_config, "ebd_mgmt", "ebd")
   
@@ -248,4 +251,21 @@ get_all_checklists <- function(ncba_config){
   
   # Retrieve the checklists
   checklists <- connection$find(query = query, fields = filter)
+  
+  # Make column names lower case to match eBird data download format
+  colnames(checklists) <- tolower(colnames(checklists))
+  
+  # Drop columns not in eBird sampling database.
+  colnames(checklists)[1] <- c("checklist_id")
+  
+  if (drop_ncba_col == TRUE) {checklists %>% select(
+    c(checklist_id, last_edited_date, county, county_code,
+      iba_code, bcr_code, usfws_code, atlas_block,
+      locality, locality_id, locality_type, latitude,
+      longitude, observation_date, time_observations_started,
+      observer_id, sampling_event_identifier, protocol_type,
+      protocol_code, project_code, duration_minutes, 
+      effort_distance_km, effort_area_ha, number_observers,
+      all_species_reported, group_identifier, trip_comments))}
+  else {checklists <- checklists}
 }
