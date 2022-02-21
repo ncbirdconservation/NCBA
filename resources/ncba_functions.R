@@ -240,6 +240,8 @@ get_all_checklists <- function(ncba_config, drop_ncba_col=TRUE){
   # Example:
   # lists <- get_all_checklists("~/Documents/NCBA/Scripts/ncba_config.R",
   #                             drop_ncba_col=FALSE)
+  library(tidyverse)
+  
   # Connect to the NCBA database
   connection <- connect_ncba_db(ncba_config, "ebd_mgmt", "ebd")
   

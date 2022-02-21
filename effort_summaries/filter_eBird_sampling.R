@@ -1,6 +1,7 @@
 # author: "N.M. Tarr"
 # date: "8/22/2021"
 # description:
+# NOTE: THIS SCRIPT CAN BE BYPASSED by using the function get_all_checklists().
 # The eBird sampling dataset can be downloaded from eBird, but includes many 
 # records that are not relevant for the NCBA.  Therefore, checklist records of 
 # interest must be extracted.  The auk package provides a way to do this and 
