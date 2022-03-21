@@ -270,4 +270,45 @@ get_all_checklists <- function(ncba_config, drop_ncba_col=TRUE){
       effort_distance_km, effort_area_ha, number_observers,
       all_species_reported, group_identifier, trip_comments))}
   else {checklists <- checklists}
+  
+  # Coerce data types of some columns to match eBird database format
+  checklists <- transform(checklists, bcr_code = as.integer(bcr_code),
+                          duration_minutes = as.integer(duration_minutes),
+                          all_species_reported = as.logical(all_species_reported),
+                          observation_date = as.Date(observation_date))
+}
+
+# ------------------------------------------------------------------------------
+lists_by_week <- function(checklists){
+  # Return a figure of checklists per week
+  # 
+  # Parameters:
+  # checklists -- data frame of checklists w/ observation_date field
+  #
+  # Example:
+  # week.figure <- lists_by_week(get_all_checklists(config, drop_ncba_col=TRUE))
+  # plot(week.figure)
+  
+  by_week <- checklists %>%
+    mutate(week=week(date(observation_date))) %>%
+    group_by(week) %>%
+    summarize(count=n())
+  
+  ggplot(data=by_week) +
+    geom_line(mapping=aes(y=count, x=week), show.legend=TRUE, color="orange") + 
+    labs(title="",
+         caption="Checklists from before 2021 are not included") +
+    ylab("total number of checklists") +
+    scale_x_continuous(limits=c(0,52), breaks=seq(0,52,by=4)) +
+    scale_y_continuous(breaks=seq(0,30000,5000))
+}
+
+# ------------------------------------------------------------------------------
+counties <- function(){
+  # Read in a county spatial data frame in EPSG 6542
+  st_as_sf(map("county", plot = FALSE, fill = TRUE)) %>%
+  subset(grepl("north carolina", ID)) %>%
+  mutate(county = str_to_title(str_replace(ID, "north carolina,", ""))) %>%
+  st_transform(6542) %>%
+  select(-c(ID))
 }

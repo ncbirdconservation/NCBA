@@ -14,7 +14,7 @@ config <- "~/Documents/NCBA/Scripts/ncba_config.R"
 setwd("~/Documents/NCBA/species/")
 
 # WHAT SPECIES? ----------------------------------------------------------------
-species <- "Loggerhead Shrike"
+species <- "Kentucky Warbler"
 
 # GET NCBA DATA ----------------------------------------------------------------
 # connect to a specific collection (table)
