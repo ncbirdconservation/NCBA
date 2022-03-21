@@ -362,7 +362,7 @@ effort_distance_boxplot <- function(checklists){
 }
 
 # ------------------------------------------------------------------------------
-effort_minutes_boxplot <- function(checklists){
+duration_minutes_boxplot <- function(checklists){
   # Describe the distribution of effort_minutes values as a box plot.
   # 
   # Parameters:
@@ -406,4 +406,29 @@ start_time_boxplot <- function(checklists){
          caption="Checklists from before 2021 are not included") +
     ylab("Start Hour") + 
     scale_y_continuous(n.breaks=12)
+}
+
+# ------------------------------------------------------------------------------
+locality_type_pie <- function(checklists){
+  # Describe the locality types present as a pie chart: whether checklists are 
+  #   for hotspots, personal locations, etc.
+  # 
+  # Parameters:
+  # checklists -- data frame of checklists w/ locality_type.
+  #
+  # Example:
+  # locality.pie <- locality_type_pie(get_all_checklists(config, 
+  #                                                        drop_ncba_col=TRUE))
+  # plot(locality.pie)
+  by_locality_type <- checklists %>%
+    group_by(locality_type) %>%
+    summarize(count = n())
+  
+  # Pie chart
+  pie <- ggplot(data=by_locality_type, aes(x="", y=count, fill=locality_type)) +
+    geom_bar(stat="identity", width=1) +
+    coord_polar("y", start=0) +
+    scale_fill_viridis_d(alpha = 1, option="D") +
+    theme_void() + 
+    labs(title="", caption="")
 }

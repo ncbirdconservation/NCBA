@@ -46,3 +46,15 @@ breeding_boxplot(species, ebird, pallet="Paired", out_pdf=NULL,
 # PLOT COORDINATES OF RECORDS --------------------------------------------------
 coords.plot <- plot_checklists_coords(ebird)
 plot(coords.plot)
+
+# SUMMARIZE START TIMES --------------------------------------------------------
+plot(start_time_boxplot(ebird))
+
+# SUMMARIZE TRAVEL DISTANCE ----------------------------------------------------
+plot(effort_distance_boxplot(ebird))
+
+# SUMMARIZE MINUTES EFFORT --------------------------------------------------------
+plot(duration_minutes_boxplot(ebird))
+
+# LOCALITY TYPE BREAKDOWN ------------------------------------------------------
+plot(locality_type_pie(ebird))
