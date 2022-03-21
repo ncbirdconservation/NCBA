@@ -13,8 +13,10 @@ source("ncba_functions.R")
 config <- "~/Documents/NCBA/Scripts/ncba_config.R"
 setwd("~/Documents/NCBA/species/")
 
+
 # WHAT SPECIES? ----------------------------------------------------------------
 species <- "Kentucky Warbler"
+
 
 # GET NCBA DATA ----------------------------------------------------------------
 # connect to a specific collection (table)
@@ -31,6 +33,7 @@ nc_data <- connection$find(query) %>%
 # format columns
 ebird <- to_ebd_format(nc_data, drop=FALSE)
 
+
 # PLOT BREEDING CODES ----------------------------------------------------------
 lump <- list(S = c("S", "S7", "M"), O = c("", "F", "O", "NC"))
 no_plot_codes <- NULL
@@ -38,6 +41,7 @@ out_pdf <- "~/Documents/NCBA/test.pdf"
 
 breeding_boxplot(species, ebird, pallet="Paired", out_pdf=NULL, 
                  no_plot_codes=no_plot_codes, lump=lump, drop=TRUE)
+
 
 # PLOT COORDINATES OF RECORDS --------------------------------------------------
 coords.plot <- plot_checklists_coords(ebird)

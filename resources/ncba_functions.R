@@ -326,9 +326,9 @@ plot_checklists_coords <- function(checklists){
   #   "longitude".
   #
   # Example:
-  # cords.map <- plot_checklists_coords(get_all_checklists(config, 
+  # coords.map <- plot_checklists_coords(get_all_checklists(config, 
   #                                                        drop_ncba_col=TRUE))
-  # plot(cords.map)
+  # plot(coords.map)
   
   ggplot(data=checklists) +
     geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
@@ -337,4 +337,26 @@ plot_checklists_coords <- function(checklists){
          caption="Checklists from before 2021 were not included in this summary") +
     ylab("latitude") + 
     xlab("longitude")
+}
+
+# ------------------------------------------------------------------------------
+effort_distance_boxplot <- function(checklists){
+  # Describe the distribution of effort_distance_km values as a boxplot
+  # 
+  # Parameters:
+  # checklists -- data frame of checklists w/ effort_distance_km.
+  #
+  # Example:
+  # coord.plot <- plot_checklists_coords(get_all_checklists(config, 
+  #                                                        drop_ncba_col=TRUE))
+  # plot(coord.plot)
+  boxplot <- ggplot(data=checklists) +
+    geom_boxplot(mapping=aes(y=effort_distance_km, x=""), 
+                 color="darkgreen", 
+                 outlier.colour="blue", show.legend=TRUE) + 
+    coord_flip() + 
+    labs(title="",
+         caption="Checklists from before 2021 are not included") +
+    ylab("Kilometers") + 
+    scale_y_continuous(n.breaks=12)
 }
