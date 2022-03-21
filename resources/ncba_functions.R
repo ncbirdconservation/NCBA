@@ -360,3 +360,50 @@ effort_distance_boxplot <- function(checklists){
     ylab("Kilometers") + 
     scale_y_continuous(n.breaks=12)
 }
+
+# ------------------------------------------------------------------------------
+effort_minutes_boxplot <- function(checklists){
+  # Describe the distribution of effort_minutes values as a box plot.
+  # 
+  # Parameters:
+  # checklists -- data frame of checklists w/ effort_minutes.
+  #
+  # Example:
+  # effort_distance_boxplot <- plot_checklists_coords(get_all_checklists(config, 
+  #                                                        drop_ncba_col=TRUE))
+  # plot(cords.map)
+  boxplot <- ggplot(data=checklists) +
+    geom_boxplot(mapping=aes(y=duration_minutes, x=""), 
+                 color="darkblue", 
+                 outlier.colour="orange", show.legend=TRUE) + 
+    coord_flip() + 
+    labs(title="", caption="") +
+    ylab("Minutes") + 
+    xlab("") +
+    scale_y_continuous(n.breaks=12)
+}
+
+# ------------------------------------------------------------------------------
+start_time_boxplot <- function(checklists){
+  # Describe the distribution of checklist start times as a box plot.
+  # 
+  # Parameters:
+  # checklists -- data frame of checklists w/ start time_observations_started.
+  #
+  # Example:
+  # start.box <- start_time_boxplot(get_all_checklists(config, 
+  #                                                        drop_ncba_col=TRUE))
+  # plot(start.box)
+  start_df <- checklists %>%
+    select(time_observations_started) %>%
+    mutate(time=hour(as_hms(time_observations_started)))
+  
+  boxplot <- ggplot(data=start_df) +
+    geom_boxplot(mapping=aes(y=time, x=""), color="darkblue", 
+                 outlier.colour="magenta", show.legend=TRUE) + 
+    coord_flip() + 
+    labs(title="",
+         caption="Checklists from before 2021 are not included") +
+    ylab("Start Hour") + 
+    scale_y_continuous(n.breaks=12)
+}
