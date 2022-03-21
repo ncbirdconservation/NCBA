@@ -38,3 +38,7 @@ out_pdf <- "~/Documents/NCBA/test.pdf"
 
 breeding_boxplot(species, ebird, pallet="Paired", out_pdf=NULL, 
                  no_plot_codes=no_plot_codes, lump=lump, drop=TRUE)
+
+# PLOT COORDINATES OF RECORDS --------------------------------------------------
+coords.plot <- plot_checklists_coords(ebird)
+plot(coords.plot)

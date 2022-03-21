@@ -312,3 +312,29 @@ counties <- function(){
   st_transform(6542) %>%
   select(-c(ID))
 }
+
+
+# ------------------------------------------------------------------------------
+plot_checklists_coords <- function(checklists){
+  # Return a map of checklist locations, based on their reported coordinates
+  #   
+  # Note: points will be mapped in the CRS of the checklists data frame,
+  #   which is likely EPSG:4326.
+  # 
+  # Parameters:
+  # checklists -- data frame of checklists, with columns named "latitude" and 
+  #   "longitude".
+  #
+  # Example:
+  # cords.map <- plot_checklists_coords(get_all_checklists(config, 
+  #                                                        drop_ncba_col=TRUE))
+  # plot(cords.map)
+  
+  ggplot(data=checklists) +
+    geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
+               shape=3) + 
+    labs(title="",
+         caption="Checklists from before 2021 were not included in this summary") +
+    ylab("latitude") + 
+    xlab("longitude")
+}
