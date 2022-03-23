@@ -31,7 +31,7 @@ nc_data <- connection$find(query) %>%
   filter(COMMON_NAME == species)
 
 # format columns
-ebird <- to_ebd_format(nc_data, drop=FALSE)
+sp_df <- to_ebd_format(nc_data, drop=FALSE)
 
 
 # PLOT BREEDING CODES ----------------------------------------------------------
@@ -39,22 +39,25 @@ lump <- list(S = c("S", "S7", "M"), O = c("", "F", "O", "NC"))
 no_plot_codes <- NULL
 out_pdf <- "~/Documents/NCBA/test.pdf"
 
-breeding_boxplot(species, ebird, pallet="Paired", out_pdf=NULL, 
+breeding_boxplot(species, sp_df, pallet="Paired", out_pdf=NULL, 
                  no_plot_codes=no_plot_codes, lump=lump, drop=TRUE)
 
 
 # PLOT COORDINATES OF RECORDS --------------------------------------------------
-coords.plot <- plot_checklists_coords(ebird)
+coords.plot <- plot_checklists_coords(sp_df)
 plot(coords.plot)
 
 # SUMMARIZE START TIMES --------------------------------------------------------
-plot(start_time_boxplot(ebird))
+plot(start_time_boxplot(sp_df))
 
 # SUMMARIZE TRAVEL DISTANCE ----------------------------------------------------
-plot(effort_distance_boxplot(ebird))
+plot(effort_distance_boxplot(sp_df))
 
 # SUMMARIZE MINUTES EFFORT --------------------------------------------------------
-plot(duration_minutes_boxplot(ebird))
+plot(duration_minutes_boxplot(sp_df))
 
 # LOCALITY TYPE BREAKDOWN ------------------------------------------------------
-plot(locality_type_pie(ebird))
+plot(locality_type_pie(sp_df))
+
+# PLOT SIMPLE FEATURES ---------------------------------------------------------
+map_checklists(checklists_df=sp_df, method="points")

@@ -420,6 +420,10 @@ locality_type_pie <- function(checklists){
   # locality.pie <- locality_type_pie(get_all_checklists(config, 
   #                                                        drop_ncba_col=TRUE))
   # plot(locality.pie)
+  
+  # Print table
+  knitr::kable(by_locality_type, caption="Count of checklists per locality type")
+
   by_locality_type <- checklists %>%
     group_by(locality_type) %>%
     summarize(count = n())
