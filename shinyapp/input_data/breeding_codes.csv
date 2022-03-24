@@ -1,4 +1,4 @@
-"BREEDING_CATEGORY""",BREEDING_CODE,NAME,DESCRIPTION
+BREEDING_CATEGORY,BREEDING_CODE,NAME,DESCRIPTION
 Confirmed,NY,Nest with Young,Nest with young seen or heard.
 Confirmed,NE,Nest with Eggs,Nest with eggs.
 Confirmed,FS,Carrying Fecal Sac,Adult carrying fecal sac.
@@ -20,5 +20,5 @@ Probable,P,Pair in Suitable Habitat,"Pair observed in suitable breeding habitat,
 Probable,M,Multiple (7+) Singing Birds,"At least 7 singing birds present in suitable nesting habitat, for some projects only during breeding season)."
 Probable,S7,Singing Bird Present 7+ Days,"Use only if you have observed a singing bird at the same spot, not elsewhere) one week or more earlier in the season. "
 Possible,S,Singing Bird,"Singing bird present in suitable nesting habitat, for some projects only during  breeding season)."
-Possible,H,In Appropriate Habitat,Adult in suitable nesting habitat during its breeding season. 
+Possible,H,In Appropriate Habitat,Adult in suitable nesting habitat during its breeding season.
 Observed,F,Flyover,"Flying over only -- Use it only when all individuals are seen as flyovers; do not use it if just one bird stops or is located feeding on the ground or in vegetation. Raptors, swallows, and swifts that are flying overhead and not obvious migrants are not flyovers, since these birds are often using the habitat in ways not obvious to observers on the ground. This restriction depends upon the judgment of the observer, so when in doubt, do not use this code."

@@ -1,8 +1,8 @@
 #species functions
 
-
+# table of breeding codes - used to display on Species page
 breeding_codes_key <- read.csv("input_data/breeding_codes.csv")
-print(head(breeding_codes_key))
+
 # ------------------------------------------------------------------------------
 # FROM - ADD CREDIT HERE!
 breeding_boxplot <- function(species, ebird, pallet, out_pdf, no_plot_codes,
