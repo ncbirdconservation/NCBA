@@ -17,18 +17,32 @@ body, label, input, button, select {
   font-family: 'Helvetica Neue', Helvetica;
   font-weight: 200;
 }
-h1, h2, h3, h4 { font-weight: 400; }
+h1, h2, h3, h4 { font-weight: 400; color:#2a3b4d;}
+.sidebar{
+  /* height:65%; */
+  background-color: rgba(42, 59, 77, 0.2);
+  padding: 0 10px 10px 10px;
+  transition: opacity 500ms 1s;
+}
+.panel {
+  boder-color: #2a3b4d;
 
+}
+.tab-control-title {
+  margin-top: 10px !important;
+  padding-top: 0px !important;
+}
+.tab-control-group {
+  padding-top: 20px;
+}
 .ol-nodots{
   list-style:none;
 }
 
 #controls {
   /* Appearance */
-  background-color: white;
-  padding: 0 10px 10px 10px;
-  cursor: move;
   /* Fade out while not hovering */
+  cursor: move;
   opacity: 0.75;
   zoom: 0.9;
   transition: opacity 500ms 1s;

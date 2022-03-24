@@ -6,6 +6,7 @@
 
 
 if(!require(shiny)) install.packages("shiny", repos = "http://cran.us.r-project.org")
+if(!require(shinyWidgets)) install.packages("shinyWidgets", repos = "http://cran.us.r-project.org")
 if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
 if(!require(mongolite)) install.packages("mongolite", repos = "http://cran.us.r-project.org")
 if(!require(dplyr)) install.packages("dplyr", repos = "http://cran.us.r-project.org")
@@ -27,9 +28,9 @@ source("spp.r") #species function file
 # MAP CONSTANTS
 nc_center_lat = 35.5
 nc_center_lng = -79.2
-nc_center_zoom = 6
+nc_center_zoom = 7
 nc_block_zoom = 13
-
+ncba_blue = "#2a3b4d"
 
 # SETUP FILES
 # basemap = leaflet(ebd_data) %>% setView(lng = -78.6778808, lat = 35.7667941, zoom = 12) %>% addTiles() %>% addProviderTiles(providers$CartoDB.Positron) %>% addCircles()
@@ -41,33 +42,53 @@ current_block = ""
 ui <- bootstrapPage(
   # titlePanel("NC Bird Atlas Explorer"),
   navbarPage(
-    theme = shinytheme("cosmo"), collapsible=TRUE,
+    theme = shinytheme("flatly"), collapsible=TRUE,
+    # theme = shinytheme("cosmo"), collapsible=TRUE,
     HTML('<a style="text-decoration:none;cursor:default;color:#FFFFFF;" class="active" href="#">NC Bird Atlas Data Explorer</a>'), id="nav",
     windowTitle = "NCBA Explorer",
+    tags$head(includeCSS("styles.css")),
     tabPanel("Blocks",
-      div(class="outer",
-          tags$head(includeCSS("styles.css")),
-          leafletOutput("mymap", width="100%", height="100%"),
+      div(class="col-md-2 panel sidebar", id = "block_controls",
 
-          absolutePanel(id = "controls", class = "panel panel-default",
-                        top = 60, left = 55, width = 350, fixed=TRUE,
-                        draggable = TRUE, height = "auto",
-
-                        # span(tags$i(h6("Checklists submitted to the NC Bird Atlas.")), style="color:#045a8d"),
-                        h3("Map Controls"),
-                        h3("Checklists"),
-                        tags$ol(class="ol-nodots",
-                          checkboxInput("show_checklists","Display Checklists", FALSE ),
-                          checkboxInput("portal_records","Portal Records Only", FALSE )
-                        ),
-                        h3("Priority Block"),
-                        # selectInput("block_select", h3("Priority Blocks"),
-                        #   choices = priority_block_list, selected=" "),
-                        htmlOutput("selected_block", inline=FALSE),
-                        plotOutput("blockhours"),
-                        verbatimTextOutput("testingoutput")
-          )
+          # span(tags$i(h6("Checklists submitted to the NC Bird Atlas.")), style="color:#045a8d"),
+          # h4("Map Controls"),
+          h3("Block Exporer", class="tab-control-title"),
+          tags$p("Summary statistics page for block-level data."),
+          div(class="tab-control-group",
+            h4("Checklists"),
+            # checkboxInput("show_checklists","Display Checklists", FALSE ),
+            prettySwitch("show_checklists","Display Checklists", value=TRUE ),
+            prettySwitch("portal_records","Portal Records Only", FALSE )
+          ),
+          div(class="tab-control-group",
+            h4("Priority Block"),
+            htmlOutput("selected_block", inline=FALSE)
+          ),
+          # div(class="tab-control-group",
+          #   h4("Date Range"),
+          #   dateRangeInput("date_range", ""),
+          #   sliderInput("month_range", "", min=1, max=12, value= c(1,12))
+          #   # htmlOutput("selected_block", inline=FALSE)
+          # )
+        ),
+        div(class="col-md-10",
+          leafletOutput("mymap")
+        ),
+        div(class="col-md-3 panel",
+          h4("Block Stats (placeholder)"),
+          h5("Total Hours"),
+          htmlOutput("65"),
+          h5("Portal Hours"),
+          htmlOutput("32")
+        ),
+        div(class="col-md-3 panel",
+          h4("Block Hours"),
+          plotOutput("blockhours")
+        ),
+        div(class="col-md-3 panel",
+          h4("Species Accumulation")
         )
+
     ),
     tabPanel("Species",
       div(class="container-fluid", tags$head(includeCSS("styles.css")),
@@ -147,7 +168,7 @@ server <- function(input, output, session) {
     # ggplot(get_block_hours(current_block_r()), aes(YEAR_MONTH, Value, color="#2a3b4d"))
     # ggplot(data=get_block_hours("RALEIGH_EAST-SE")) + geom_bar(mapping = aes(YEAR_MONTH, Value, color="#2a3b4d"))
     req(current_block_r())
-    ggplot(data=get_block_hours(current_block_r()),aes(YEAR_MONTH, Value)) + geom_col(fill="#2a3b4d")+ guides(x = guide_axis(angle = 90)) + ylab("Hours") + xlab("Year-Month")
+    ggplot(data=get_block_hours(current_block_r()),aes(YEAR_MONTH, Value)) + geom_col(fill=ncba_blue)+ guides(x = guide_axis(angle = 90)) + ylab("Hours") + xlab("Year-Month")
   })
 
   ########################################################################################
@@ -158,14 +179,14 @@ server <- function(input, output, session) {
       setView(lng = nc_center_lng, lat = nc_center_lat, zoom = nc_center_zoom) %>%
       # addTiles() %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
-      addGeoJSON(priority_block_geojson, weight= 3, color="#2a3a4d", fill = TRUE)
+      addGeoJSON(priority_block_geojson, weight= 3, color=ncba_blue, fill = FALSE)
   })
 
   observeEvent(current_block_r(), {
       req(current_block_r())
       block_info <- filter(block_data, ID_NCBA_BLOCK==current_block_r())
-      block_lat <- block_info$NW_Y
-      block_lng <- block_info$NW_X
+      block_lat <- block_info$SE_Y + ((block_info$NW_Y - block_info$SE_Y)/2)
+      block_lng <- block_info$SE_X - ((block_info$SE_X - block_info$NW_X)/2)
 
       leafletProxy("mymap", session) %>%
         setView(lat = block_lat, lng = block_lng , zoom = nc_block_zoom)
@@ -182,7 +203,7 @@ server <- function(input, output, session) {
         leafletProxy("mymap") %>%
           clearMarkers() %>%
           clearShapes() %>%
-          addCircles(data=checklists)
+          addCircles(data=checklists, color=ncba_blue)
       }
     } else {
 
