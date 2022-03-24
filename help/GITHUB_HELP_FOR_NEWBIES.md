@@ -5,6 +5,10 @@ git remote add upstream https://github.com/nmtarr/NCBA
 
 ## get changes from remote upstream
 git fetch upstream
+git pull upstream master
+
+## Update upstream project
+git push upstream
 
 ## Update forked project from local
 git push
