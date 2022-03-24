@@ -6,6 +6,7 @@
 library(stringr)
 library(tidyr)
 library(dplyr)
+library(lubridate)
 
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
@@ -60,4 +61,7 @@ plot(duration_minutes_boxplot(sp_df))
 plot(locality_type_pie(sp_df))
 
 # PLOT SIMPLE FEATURES ---------------------------------------------------------
-map_checklists(checklists_df=sp_df, method="points")
+map1 <- map_checklists(checklists_df=sp_df, kind="observations",
+                       method="point-radius")
+plot(select(map1, c(sampling_event_identifier, geometry)))
+

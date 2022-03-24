@@ -76,7 +76,7 @@ to_ebd_format <- function(dataframe, drop){
 }
 
 # ------------------------------------------------------------------------------
-breeding_boxplot <- function(species, ebird, pallet, out_pdf, no_plot_codes,
+breeding_boxplot <- function(species, data, pallet, out_pdf, no_plot_codes,
                              lump, drop, cex.x.axis = 0.9, cex.y.axis = 0.8) {
   # Produces a boxplot of breeding codes over calendar day.
   #
@@ -106,6 +106,7 @@ breeding_boxplot <- function(species, ebird, pallet, out_pdf, no_plot_codes,
   library(RColorBrewer)
   
   # Data prep
+  ebird <- data # THis should eventually be removed and ebird renamed.
   # put all dates within the same year -- ignores leap year
   ebird$observation_date <- sub("^20\\d\\d", "2016", ebird$observation_date)
   
@@ -394,6 +395,7 @@ start_time_boxplot <- function(checklists){
   # start.box <- start_time_boxplot(get_all_checklists(config, 
   #                                                        drop_ncba_col=TRUE))
   # plot(start.box)
+  library(hms)
   start_df <- checklists %>%
     select(time_observations_started) %>%
     mutate(time=hour(as_hms(time_observations_started)))
@@ -421,12 +423,13 @@ locality_type_pie <- function(checklists){
   #                                                        drop_ncba_col=TRUE))
   # plot(locality.pie)
   
-  # Print table
-  knitr::kable(by_locality_type, caption="Count of checklists per locality type")
-
   by_locality_type <- checklists %>%
     group_by(locality_type) %>%
     summarize(count = n())
+  
+  ## Print table
+  #knitr::kable(by_locality_type,
+  #             caption="Count of checklists per locality type")
   
   # Pie chart
   pie <- ggplot(data=by_locality_type, aes(x="", y=count, fill=locality_type)) +
@@ -435,4 +438,68 @@ locality_type_pie <- function(checklists){
     scale_fill_viridis_d(alpha = 1, option="D") +
     theme_void() + 
     labs(title="", caption="")
+}
+
+# ------------------------------------------------------------------------------
+map_checklists <- function(checklists_df, kind, method){# DRAFT DRAFT DRAFT
+  # Create new simple features (spatial data frame) of checklists.  
+  # 
+  #   Description: 
+  #   Checklist records often need to be assigned geometries for visualization
+  #   and spatial analyses, and different methods could be used.  Checklists
+  #   can be represented as points or polygons and polygons could be drawn as 
+  #   buffers around the checklist coordinates (circles) or buffers drawn around
+  #   checklist tracks.  Buffer length is meant to represent locational
+  #   uncertainty and can be approximated in different ways that are currently
+  #   supported.  Stationary or short lists should likely be buffered 100 m or
+  #   more to account for area surveyed.  Lists traveling > 5 km are just
+  #   problematic and not informative so removed here.  Null effort_distance_km
+  #   values are filled with zero, which assumes those records are stationary
+  #   counts.
+  #
+  #   Parameters:
+  #   checklists_df -- data frame of checklists with latitude, longitude, 
+  #     checklists_id or sampling_event_identifier, atlas_block, protocol_type,
+  #     and effort_distance_km columns.
+  #   kind -- "checklists" or "observations" to identify what type of records are
+  #     in the data frame.
+  #   method -- how to represent each record spatially.  Options are "points",
+  #     "point-radius", and "buffered_path".
+  library(sf)
+  
+  if (kind == "checklists"){
+    checklists_df <- checklists_df %>%
+      select(checklist_id, atlas_block, protocol_type, effort_distance_km,
+             latitude, longitude)
+  } else {
+    checklists_df <- checklists_df %>%
+      select(sampling_event_identifier, atlas_block, protocol_type, 
+             effort_distance_km, latitude, longitude)
+  }
+  
+  # Make spatial frame
+  checklists_sf <- checklists_df %>%
+    st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
+    st_transform(6542)
+  
+  # Apply method
+  if (method == "points") {
+    checklists_sf <- checklists_sf
+  }
+  if (method == "point-radius") {
+    checklists_sf <- checklists_sf %>%
+      # Buffer coordinates
+      replace_na(list(effort_distance_km=0)) %>%
+      filter(effort_distance_km <= 5) %>%
+      mutate(buffer_length = (effort_distance_km + 0.1)*1000) %>%
+      mutate(footprint = st_buffer(geometry, buffer_length)) %>%
+      select(-c(geometry)) %>%
+      mutate(geometry = footprint) %>%
+      st_set_geometry("geometry")
+  }
+  if (method == "buffer-tracks") {
+    print("This method is currently unavailable until we get checklist tracks.")
+  }
+  
+  return(checklists_sf)
 }
