@@ -1,6 +1,6 @@
 # NC Bird Atlas
 
-Maintained by Nathan Tarr, Scott Anderson, and John Carpenter
+Maintained by Nathan Tarr, Scott Anderson, Scott Pearson, and John Carpenter
 
 ## Purpose
 This repo houses code to support the NC Bird Atlas.
