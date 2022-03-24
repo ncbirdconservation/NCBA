@@ -441,7 +441,7 @@ locality_type_pie <- function(checklists){
 }
 
 # ------------------------------------------------------------------------------
-map_checklists <- function(checklists_df, kind, method){# DRAFT DRAFT DRAFT
+map_records <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
   # Create new simple features (spatial data frame) of checklists.  
   # 
   #   Description: 
@@ -458,7 +458,7 @@ map_checklists <- function(checklists_df, kind, method){# DRAFT DRAFT DRAFT
   #   counts.
   #
   #   Parameters:
-  #   checklists_df -- data frame of checklists with latitude, longitude, 
+  #   records_df -- data frame of checklists with latitude, longitude, 
   #     checklists_id or sampling_event_identifier, atlas_block, protocol_type,
   #     and effort_distance_km columns.
   #   kind -- "checklists" or "observations" to identify what type of records are
@@ -468,17 +468,17 @@ map_checklists <- function(checklists_df, kind, method){# DRAFT DRAFT DRAFT
   library(sf)
   
   if (kind == "checklists"){
-    checklists_df <- checklists_df %>%
+    records_df <- records_df %>%
       select(checklist_id, atlas_block, protocol_type, effort_distance_km,
              latitude, longitude)
   } else {
-    checklists_df <- checklists_df %>%
+    records_df <- records_df %>%
       select(sampling_event_identifier, atlas_block, protocol_type, 
              effort_distance_km, latitude, longitude)
   }
   
   # Make spatial frame
-  checklists_sf <- checklists_df %>%
+  checklists_sf <- records_df %>%
     st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
     st_transform(6542)
   
