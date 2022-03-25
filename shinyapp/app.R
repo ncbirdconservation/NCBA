@@ -76,9 +76,10 @@ ui <- bootstrapPage(
         ),
         div(class="col-md-3 panel",
           h4("Block Stats (placeholder)"),
-          h5("Total Hours"),
+          h5("Breeding"),
           htmlOutput("65"),
-          h5("Portal Hours"),
+          #should include all the requirements for completing - color coded if hit metric or not - also build/require block_status table in AtlasCache
+          h5("Non-Breeding"),
           htmlOutput("32")
         ),
         div(class="col-md-3 panel",
@@ -179,8 +180,14 @@ server <- function(input, output, session) {
 
   output$spp_accumulation <- renderPlot({
     req(current_block_r())
+    cblock <- current_block_r()
+    # make sure to get onlyl species (no spp, or slash)
+    tquery <- str_interp('{"ID_NCBA_BLOCK":"${cblock}", "OBSERVATIONS.CATEGORY":"species"}')
+    tfilter <- '{"SAMPLING_EVENT_IDENTIFIER":1, "OBSERVATION_DATE":1, "DURATION_MINUTES":1, "OBSERVATIONS.BREEDING_CODE":1, "OBSERVATIONS.BREEDING_CATEGORY":1, "OBSERVATIONS.COMMON_NAME":1}'
 
-    plot_spp_accumulation(current_block_r())
+
+    block_recs <- get_ebd_data(tquery, tfilter)
+    plot_spp_accumulation(block_recs)
 
     #figure out how to get other data from this summary/analysis!
     # spp_acc_info <- plot_spp_accumulation(current_block_r())
