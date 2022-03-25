@@ -52,7 +52,7 @@ ui <- bootstrapPage(
 
           # span(tags$i(h6("Checklists submitted to the NC Bird Atlas.")), style="color:#045a8d"),
           # h4("Map Controls"),
-          h3("Block Exporer", class="tab-control-title"),
+          h3("Block Explorer", class="tab-control-title"),
           tags$p("Summary statistics page for block-level data."),
           div(class="tab-control-group",
             h4("Checklists"),
@@ -86,7 +86,8 @@ ui <- bootstrapPage(
           plotOutput("blockhours")
         ),
         div(class="col-md-3 panel",
-          h4("Species Accumulation")
+          h4("Species Accumulation"),
+          plotOutput("spp_accumulation")
         )
 
     ),
@@ -169,6 +170,16 @@ server <- function(input, output, session) {
     # ggplot(data=get_block_hours("RALEIGH_EAST-SE")) + geom_bar(mapping = aes(YEAR_MONTH, Value, color="#2a3b4d"))
     req(current_block_r())
     ggplot(data=get_block_hours(current_block_r()),aes(YEAR_MONTH, Value)) + geom_col(fill=ncba_blue)+ guides(x = guide_axis(angle = 90)) + ylab("Hours") + xlab("Year-Month")
+  })
+
+  output$spp_accumulation <- renderPlot({
+    req(current_block_r())
+
+    plot_spp_accumulation(current_block_r())
+
+    #figure out how to get other data from this summary/analysis!
+    # spp_acc_info <- plot_spp_accumulation(current_block_r())
+    # spp_acc_info[1]
   })
 
   ########################################################################################

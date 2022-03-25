@@ -110,4 +110,4 @@ venv.bak/
 .mypy_cache/
 
 #shiny app deployment info
-/rsconnect
+rsconnect
