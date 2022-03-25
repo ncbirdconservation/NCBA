@@ -55,14 +55,14 @@ ui <- bootstrapPage(
           h3("Block Explorer", class="tab-control-title"),
           tags$p("Summary statistics page for block-level data."),
           div(class="tab-control-group",
-            h4("Checklists"),
-            # checkboxInput("show_checklists","Display Checklists", FALSE ),
-            prettySwitch("show_checklists","Display Checklists", value=TRUE ),
-            prettySwitch("portal_records","Portal Records Only", FALSE )
-          ),
-          div(class="tab-control-group",
             h4("Priority Block"),
             htmlOutput("selected_block", inline=FALSE)
+          ),
+          div(class="tab-control-group",
+            h4("Checklists"),
+            # checkboxInput("show_checklists","Display Checklists", FALSE ),
+            # prettySwitch("show_checklists","Display Checklists", value=TRUE ),
+            prettySwitch("portal_records","Portal Records Only", FALSE )
           ),
           # div(class="tab-control-group",
           #   h4("Date Range"),
@@ -77,10 +77,10 @@ ui <- bootstrapPage(
         div(class="col-md-3 panel",
           h4("Block Stats (placeholder)"),
           h5("Breeding"),
-          htmlOutput("65"),
+          htmlOutput("block_breeding_stats"),
           #should include all the requirements for completing - color coded if hit metric or not - also build/require block_status table in AtlasCache
           h5("Non-Breeding"),
-          htmlOutput("32")
+          htmlOutput("block_nonbreeding_stats")
         ),
         div(class="col-md-3 panel",
           h4("Block Hours"),
@@ -89,6 +89,10 @@ ui <- bootstrapPage(
         div(class="col-md-3 panel",
           h4("Species Accumulation"),
           plotOutput("spp_accumulation")
+        ),
+        div(class="col-md-12 panel",
+          h4("Test Panel"),
+          div(tableOutput("testing_output"), style="font-size:60%")
         )
 
     ),
@@ -112,7 +116,7 @@ ui <- bootstrapPage(
     tabPanel("About",
       tags$div(
         tags$h4("NC Bird Atlas Data Explorer"),
-        p("This site is a work in progress, designed to provide access to data collected through the North Carolina Bird Atlas. Data submitted to eBird is updated on a monthly basis."),
+        tags$p("This site is a work in progress, designed to provide access to data collected through the North Carolina Bird Atlas. Data submitted to eBird is updated on a monthly basis."),
         tags$br(),
         tags$img(src = "ncba_logo_blue_halo_final.png", width = "150px", height = "75px")
 
@@ -142,8 +146,14 @@ server <- function(input, output, session) {
   #   paste(input$portal_records)
   # })
 
+  #reactive function that listens for all sidget changes
   checklist_events <- reactive({
-    list(input$show_checklists, input$portal_records, current_block_r())
+    # list(input$show_checklists, input$portal_records, current_block_r())
+    list(input$portal_records, current_block_r())
+  })
+
+  criteria_changes <- reactive({
+    list(input$portal_records)
   })
 
   ########################################################################################
@@ -158,18 +168,70 @@ server <- function(input, output, session) {
   })
 
   # retrieves current block records when current_block_r() changes
-  current_block_data <- reactive({
+  current_block_ebd <- reactive({
     req(current_block_r())
+    print("retrieving current block data")
+    #build query string from parameters
+    #philosophy:
+    #   - if block changes, rerun query to retrieve from AtlasCache (this function)
+    #     - this returns a flattened dataset, with one row per checklist-species combination
+    #   - if other parameters change, filter existing data with "current_block_ebd_filtered"
+    #     - current_block_ebd_checklistsonly_filtered returns checklist level data
+
+    cblock <- current_block_r()
+    q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}"}')
+    get_ebd_data(q, "{}") #get all fields
 
   })
 
-  #label for current selected block
+  # FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES
+  current_block_ebd_filtered <- reactive({
+    req(current_block_ebd())
+
+    current_block_ebd() %>%
+      filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
+      # ADD ADDITIONAL FILTERS HERE AS NEEDED
+
+  })
+  # FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES - RETURNS CHECKLIST LEVEL DATA
+  current_block_ebd_checklistsonly_filtered <- reactive({
+    req(current_block_ebd_filtered())
+
+    current_block_ebd_filtered() %>%
+      filter(CATEGORY == "species") %>% # make sure only species counted
+      group_by(SAMPLING_EVENT_IDENTIFIER) %>%
+      mutate(SPP_COUNT = unique(GLOBAL_UNIQUE_IDENTIFIER)) %>%
+      select(ALL_SPECIES_REPORTED,ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NCBA_BLOCK,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR, SPP_COUNT)
+      # summarise(spp_count = unique(GLOBAL_UNIQUE_IDENTIFIER), .groups = 'drop')
+      # filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
+      # ADD ADDITIONAL FILTERS HERE AS NEEDED
+
+  })
+  # POPULATE LABEL FOR CURRENT BLOCK
   output$selected_block <-renderText({
     req(current_block_r())
-    paste(current_block_r())
+    blockname <- current_block_r()
+
+    strHTML <- str_interp('<strong>${blockname}</strong>')
+    HTML(strHTML)
+
+    # paste(current_block_r())
   })
 
-  #block hours summary plot
+  # output$block_breeding_stats <- reactive({
+  #   renderText('<span>Testing</span>')
+  # })
+
+  ## TESTING - table output
+  output$testing_output <- renderTable(
+    select(current_block_ebd_checklistsonly_filtered()),
+    striped = TRUE,
+    spacing = "xs"
+  )
+
+
+
+  # DISPLAY BLOCK HOURS SUMMARY PLOT
   output$blockhours <- renderPlot({
     # ggplot2(get_block_hours(current_block_r())$Value)
     # ggplot(get_block_hours(current_block_r()), aes(YEAR_MONTH, Value, color="#2a3b4d"))
@@ -178,25 +240,20 @@ server <- function(input, output, session) {
     ggplot(data=get_block_hours(current_block_r()),aes(YEAR_MONTH, Value)) + geom_col(fill=ncba_blue)+ guides(x = guide_axis(angle = 90)) + ylab("Hours") + xlab("Year-Month")
   })
 
+  # DISPLAY SPECIES ACCUMULATION PLOT
   output$spp_accumulation <- renderPlot({
-    req(current_block_r())
-    cblock <- current_block_r()
-    # make sure to get onlyl species (no spp, or slash)
-    tquery <- str_interp('{"ID_NCBA_BLOCK":"${cblock}", "OBSERVATIONS.CATEGORY":"species"}')
-    tfilter <- '{"SAMPLING_EVENT_IDENTIFIER":1, "OBSERVATION_DATE":1, "DURATION_MINUTES":1, "OBSERVATIONS.BREEDING_CODE":1, "OBSERVATIONS.BREEDING_CATEGORY":1, "OBSERVATIONS.COMMON_NAME":1}'
 
+    req(current_block_ebd_filtered())
+    # pass only those columns needed
+    sa <- current_block_ebd_filtered()[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES", "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME")]
 
-    block_recs <- get_ebd_data(tquery, tfilter)
-    plot_spp_accumulation(block_recs)
+    plot_spp_accumulation(sa)
 
-    #figure out how to get other data from this summary/analysis!
-    # spp_acc_info <- plot_spp_accumulation(current_block_r())
-    # spp_acc_info[1]
   })
 
   ########################################################################################
   # MAP
-  # renders basemap on leaflet
+  # SETUP LEAFLET MAP, RENDER BASEMAP
   output$mymap <- renderLeaflet({
     leaflet() %>%
       setView(lng = nc_center_lng, lat = nc_center_lat, zoom = nc_center_zoom) %>%
@@ -205,6 +262,7 @@ server <- function(input, output, session) {
       addGeoJSON(priority_block_geojson, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE)
   })
 
+  # ZOOM MAP TO SELECTED BLOCK
   observeEvent(current_block_r(), {
       req(current_block_r())
       block_info <- filter(block_data, ID_NCBA_BLOCK==current_block_r())
@@ -215,37 +273,23 @@ server <- function(input, output, session) {
 
       leafletProxy("mymap", session) %>%
         setView(lat = block_center_lat, lng = block_center_lng , zoom = nc_block_zoom)
-
   })
 
-  # show checklists on the map
-  observeEvent(checklist_events(), {
-    req(current_block_r())
-    if (input$show_checklists){
-      # check to make sure records returned!
-      checklists <- get_block_checklists(current_block_r(),input$portal_records)
-      if (length(checklists) > 0){
-        leafletProxy("mymap") %>%
-          clearMarkers() %>%
-          clearShapes() %>%
-          addCircles(data=checklists, color=ncba_blue)
-      }
-    } else {
-
+  # DISPLAY CHECKLISTS ON THE MAP
+  observeEvent(current_block_ebd_filtered(), {
+    # req(current_block_r())
+    req(current_block_ebd_filtered())
+    # check to make sure records returned!
+    # checklists <- get_block_checklists(current_block_r(),input$portal_records)
+    checklists <- current_block_ebd_filtered()[c("LATITUDE","LONGITUDE", "SAMPLING_EVENT_IDENTIFIER", "LOCALITY_ID", "LOCALITY", "OBSERVATION_DATE")]
+    if (length(checklists) > 0){
       leafletProxy("mymap") %>%
         clearMarkers() %>%
-        clearShapes()
-
+        clearShapes() %>%
+        addCircles(data=checklists, color=ncba_blue)
     }
+
   })
-  # plots checklists on map
-  # observeEvent(input$portal_records,{
-  #   leafletProxy("mymap") %>%
-  #     clearMarkers() %>%
-  #     clearShapes() %>%
-  #     addCircles(data=reactive_portal())
-  #
-  # })
 
   ########################################################################################
   ########################################################################################
