@@ -33,7 +33,6 @@ plot_spp_accumulation <- function(block) {
 
       # were any new spp found in this checklist? if so, add to df
       if (spp_check_unique > 0 ){
-        print("new spp_acc row")
         spp_acc[nrow(spp_acc) + 1,] <- c(obs_min, length(spp_unique))
       }
       #reset checklist unique spp count
@@ -47,7 +46,6 @@ plot_spp_accumulation <- function(block) {
 
       spp_unique <- c(spp_unique, block_recs$COMMON_NAME[i])
       spp_check_unique <- spp_check_unique + 1
-      print(spp_check_unique)
     }
 
   }

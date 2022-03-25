@@ -190,17 +190,19 @@ server <- function(input, output, session) {
       setView(lng = nc_center_lng, lat = nc_center_lat, zoom = nc_center_zoom) %>%
       # addTiles() %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
-      addGeoJSON(priority_block_geojson, weight= 3, color=ncba_blue, fill = FALSE)
+      addGeoJSON(priority_block_geojson, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE)
   })
 
   observeEvent(current_block_r(), {
       req(current_block_r())
       block_info <- filter(block_data, ID_NCBA_BLOCK==current_block_r())
-      block_lat <- block_info$SE_Y + ((block_info$NW_Y - block_info$SE_Y)/2)
-      block_lng <- block_info$SE_X - ((block_info$SE_X - block_info$NW_X)/2)
+
+      #calculate the center of the block
+      block_center_lat <- block_info$SE_Y + ((block_info$NW_Y - block_info$SE_Y)/2)
+      block_center_lng <- block_info$SE_X - ((block_info$SE_X - block_info$NW_X)/2)
 
       leafletProxy("mymap", session) %>%
-        setView(lat = block_lat, lng = block_lng , zoom = nc_block_zoom)
+        setView(lat = block_center_lat, lng = block_center_lng , zoom = nc_block_zoom)
 
   })
 
