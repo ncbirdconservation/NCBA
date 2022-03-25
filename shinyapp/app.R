@@ -22,6 +22,7 @@ if(!require(RColorBrewer)) install.packages("RColorBrewer", repos = "http://cran
 
 #get functions from other files
 source("blocks.r")
+source("~Code/NCBA/resources/ncba_function.r") # NCBA functions
 source("utils.r") #utilities file
 source("spp.r") #species function file
 
