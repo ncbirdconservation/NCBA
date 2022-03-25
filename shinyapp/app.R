@@ -149,11 +149,16 @@ server <- function(input, output, session) {
   # BLOCKS
   # reactive listener for block select
   #
+  # current block changes when map is clicked
   current_block_r <- reactive({
-    # get(input$block_select)
-
     geojson_info <- input$mymap_geojson_click
     paste(geojson_info$properties$ID_NCBA_BLOCK)
+
+  })
+
+  # retrieves current block records when current_block_r() changes
+  current_block_data <- reactive({
+    req(current_block_r())
 
   })
 
