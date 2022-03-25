@@ -16,7 +16,7 @@ setwd("~/Documents/NCBA/species/")
 
 
 # WHAT SPECIES? ----------------------------------------------------------------
-species <- "Kentucky Warbler"
+species <- "Little Blue Heron"
 
 
 # GET NCBA DATA ----------------------------------------------------------------
@@ -45,8 +45,7 @@ breeding_boxplot(species, sp_df, pallet="Paired", out_pdf=NULL,
 
 
 # PLOT COORDINATES OF RECORDS --------------------------------------------------
-coords.plot <- plot_checklists_coords(sp_df)
-plot(coords.plot)
+plot(plot_checklists_coords(sp_df))
 
 # SUMMARIZE START TIMES --------------------------------------------------------
 plot(start_time_boxplot(sp_df))
@@ -61,7 +60,8 @@ plot(duration_minutes_boxplot(sp_df))
 plot(locality_type_pie(sp_df))
 
 # PLOT SIMPLE FEATURES ---------------------------------------------------------
-map1 <- map_checklists(checklists_df=sp_df, kind="observations",
+sf <- records_as_sf(records_df=sp_df, kind="observations",
                        method="point-radius")
-plot(select(map1, c(sampling_event_identifier, geometry)))
+# Make a crude plot
+plot(select(sf, c(sampling_event_identifier, geometry)))
 

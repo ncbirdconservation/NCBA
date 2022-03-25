@@ -279,6 +279,7 @@ get_all_checklists <- function(ncba_config, drop_ncba_col=TRUE){
                           observation_date = as.Date(observation_date))
 }
 
+
 # ------------------------------------------------------------------------------
 lists_by_week <- function(checklists){
   # Return a figure of checklists per week
@@ -441,8 +442,9 @@ locality_type_pie <- function(checklists){
 }
 
 # ------------------------------------------------------------------------------
-map_records <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
-  # Create new simple features (spatial data frame) of checklists.  
+records_as_sf <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
+  # Create new simple features (spatial data frame) of checklists.  Output can
+  #   be plotted, but the primary use will be as input for other functions.
   # 
   #   Description: 
   #   Checklist records often need to be assigned geometries for visualization
@@ -462,9 +464,15 @@ map_records <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
   #     checklists_id or sampling_event_identifier, atlas_block, protocol_type,
   #     and effort_distance_km columns.
   #   kind -- "checklists" or "observations" to identify what type of records are
-  #     in the data frame.
+  #     in the data frame.  Individual species data will be observations.
   #   method -- how to represent each record spatially.  Options are "points",
   #     "point-radius", and "buffered_path".
+  #   
+  #   Results:
+  #   A spatial data data frame with columns for checklist_id or 
+  #     sampling_event_identifier, atlas_block, protocol_type, effort_distance_km,
+  #     latitude, longitude.
+  
   library(sf)
   
   if (kind == "checklists"){
@@ -502,4 +510,113 @@ map_records <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
   }
   
   return(checklists_sf)
+}
+
+# ------------------------------------------------------------------------------
+checklists_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT DRAFT
+  # Tallies the number of checklists per block.  Records_as_sf() produces
+  #   input for this function.
+  # 
+  # Description:
+  # Although coordinates are provided by eBird for checklists, they do not
+  # provide precise locations of eBirder effort for two reasons.  First, there
+  # are limits to the spatial precision of the points due to gps precision
+  # and/or observers ability to identify exactly where they birded on a map or
+  # in the app.  Second, many birders travel while birding but their paths are
+  # not available, only the distances they traveled.  
+  # 
+  # Locational uncertainty is important and problematic because if it is large
+  # in relation to the level of analysis, it creates uncertainty about which
+  # spatial subregions, such as counties or atlas blocks, a checklist should
+  # be attributed to.
+  #
+  # Parameters:
+  # records_sf -- a data frame of checklists from EBD or the atlas cache.
+  #
+  # blocks_sf -- a spatial data frame of atlas blacks
+  #
+  # method -- specify the method to use for attributing checklists to blocks.
+  #   Choices are: "A", "B", "C", or "D", but method C is unavailable.
+  #   
+  #   Method A uses the block identified by eBird in the column "atlas_block".
+  #       An abundance of empty values for atlas_block poses a problem.
+  #
+  #   Method B assigns each checklist to the block that the checklist
+  #   coordinate is located within.  This approach could generate deceptive
+  #   results if checklists represent birding effort from multiple blocks but
+  #   are assigned to a single block or if the coordinate is located in a block
+  #   adjacent to where the birding actually occurred.  This approach should
+  #   generally be expected to underestimate how many checklists covered some
+  #   portion of a given block.  Results are likely the same as with method A.
+  #   
+  #   Method C is currently unavailable.  It would involve acquiring checklist
+  #   tracks and buffering them before intersecting with blocks.
+  #
+  #   Method D uses polygons instead of the coordinates (points as in Method A) in
+  #   order to include the locational uncertainty.  Under this approach,
+  #   coordinates are buffered with the distance traveled by the observer
+  #   during the checklist period, plus 100 m to account for the fact that
+  #   observers may have recorded birds at a distance from where they were
+  #   located.  Each checklist is then assigned to all of the blocks that the
+  #   polygon intersects in order to acknowledge that the checklist could
+  #   represent effort from multiple blocks. Results from this approach can
+  #   logically be expected to exaggerate the true footprint of birding effort
+  #   and suggest blocks were sampled that actually were not, thus overestimating
+  #   how many checklists covered some portion of a given block.  Furthermore,
+  #   checklists with large effort distances produce enormous footprints than make
+  #   results unhelpful.  Thus, I excluded checklists with effort distances
+  #   greater than 5 km for this method.
+  # 
+  #   Results:
+  #   Spatial data frame of blocks with a checklist tally.
+  
+  if (method=="A") {
+    result <- records_sf %>%
+      # Summarize by number checklists within each block
+      group_by(atlas_block) %>%
+      summarize(checklists=n()) %>%
+      select(atlas_block, checklists) %>%
+      replace_na(list(checklists=0)) %>%
+      # Make spatial again
+      st_as_sf()}
+  
+  if (method=="B") {
+    records_sf <- records_as_sf(records_df, kind="checklists",
+                                method="points")
+    result <- records_sf %>%
+      # Find which blocks each coordinate is within
+      st_join(blocks_sf, join = st_within, left=TRUE) %>%
+      # Summarize by number checklists within each block
+      group_by(name) %>%
+      summarize(checklists=n()) %>%
+      select(name, checklists) %>%
+      # Join back with blocks spatial frame to fill in zeros (as a data
+      # frame)
+      data.frame() %>%
+      select(-c(geometry)) %>%
+      right_join(blocks_sf, by=("name" = "name")) %>%
+      replace_na(list(checklists=0)) %>%
+      # Make spatial again
+      st_as_sf()}
+  
+  if (method=="C") {
+    records_as_sf(checklists_df, method="buffer-tracks", kind="checklists")
+    result <- NULL}
+  
+  if (method=="D") {
+    records_sf <- records_as_sf(checklists_df, method="point-radius", 
+                                kind="checklists")
+    result <- records_sf %>%
+      # Intersect footprints with blocks, NOTE this keeps "withins" and fragments
+      st_intersection(blocks_sf) %>%
+      # Find count by block
+      group_by(name) %>%
+      summarise(checklists = n()) %>%
+      st_drop_geometry() %>%
+      # Add zero blocks via a join
+      right_join(blocks_sf, by="name") %>%
+      select(name, checklists, geometry) %>%
+      replace_na(list(checklists=0)) %>%
+      st_as_sf()}
+  return(result)
 }
