@@ -305,6 +305,7 @@ lists_by_week <- function(checklists){
     scale_y_continuous(breaks=seq(0,30000,5000))
 }
 
+
 # ------------------------------------------------------------------------------
 counties <- function(){
   # Read in a county spatial data frame in EPSG 6542
@@ -331,7 +332,7 @@ plot_checklists_coords <- function(checklists){
   # coords.map <- plot_checklists_coords(get_all_checklists(config, 
   #                                                        drop_ncba_col=TRUE))
   # plot(coords.map)
-  
+  library(tidyverse)
   ggplot(data=checklists) +
     geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
                shape=3) + 
@@ -466,7 +467,7 @@ records_as_sf <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
   #   kind -- "checklists" or "observations" to identify what type of records are
   #     in the data frame.  Individual species data will be observations.
   #   method -- how to represent each record spatially.  Options are "points",
-  #     "point-radius", and "buffered_path".
+  #     "point-radius", and "buffered-tracks".
   #   
   #   Results:
   #   A spatial data data frame with columns for checklist_id or 
@@ -513,7 +514,7 @@ records_as_sf <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
 }
 
 # ------------------------------------------------------------------------------
-checklists_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT DRAFT
+checklists_per_block <- function(records_df, blocks_sf, attribute, method){ # DRAFT DRAFT DRAFT
   # Tallies the number of checklists per block.  Records_as_sf() produces
   #   input for this function.
   # 
@@ -533,8 +534,12 @@ checklists_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT D
   # Parameters:
   # records_sf -- a data frame of checklists from EBD or the atlas cache.
   #
+  # kind -- what the records are, "checklists" or "observations"?
+  #
   # blocks_sf -- a spatial data frame of atlas blacks
   #
+  # attribute -- column to summarize, such as "checklists"  FORTHCOMING
+  # 
   # method -- specify the method to use for attributing checklists to blocks.
   #   Choices are: "A", "B", "C", or "D", but method C is unavailable.
   #   
@@ -611,7 +616,7 @@ checklists_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT D
       st_intersection(blocks_sf) %>%
       # Find count by block
       group_by(name) %>%
-      summarise(checklists = n()) %>%
+      summarize(checklists = n()) %>%
       st_drop_geometry() %>%
       # Add zero blocks via a join
       right_join(blocks_sf, by="name") %>%

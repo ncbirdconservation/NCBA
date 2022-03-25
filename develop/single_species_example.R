@@ -16,7 +16,7 @@ setwd("~/Documents/NCBA/species/")
 
 
 # WHAT SPECIES? ----------------------------------------------------------------
-species <- "Little Blue Heron"
+species <- "Kentucky Warbler"
 
 
 # GET NCBA DATA ----------------------------------------------------------------
@@ -65,3 +65,7 @@ sf <- records_as_sf(records_df=sp_df, kind="observations",
 # Make a crude plot
 plot(select(sf, c(sampling_event_identifier, geometry)))
 
+# OBSERVATION PER BLOCK --------------------------------------------------------
+blocks_path <- "/Volumes/nmtarr1/Datasets/ncba_blocks.shp"
+blocks <- st_read(blocks_path) %>% st_transform(6542)
+checklists_per_block(records_df=sp_df, blocks_sf=blocks, method="B")
