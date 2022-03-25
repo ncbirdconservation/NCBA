@@ -1,14 +1,8 @@
 # Code for parsing block data
 #
 #
-plot_spp_accumulation <- function(block) {
+plot_spp_accumulation <- function(block_recs) {
 
-  # make sure to get onlyl species (no spp, or slash)
-  tquery <- str_interp('{"ID_NCBA_BLOCK":"${block}", "OBSERVATIONS.CATEGORY":"species"}')
-  tfilter <- '{"SAMPLING_EVENT_IDENTIFIER":1, "OBSERVATION_DATE":1, "DURATION_MINUTES":1, "OBSERVATIONS.BREEDING_CODE":1, "OBSERVATIONS.BREEDING_CATEGORY":1, "OBSERVATIONS.COMMON_NAME":1}'
-
-
-  block_recs <- get_ebd_data(tquery, tfilter)
 
   # spp_acc <- data.frame(matrix(ncol=6, nrow=0))
   spp_acc <- data.frame(matrix(ncol=2, nrow=0))
@@ -57,6 +51,7 @@ plot_spp_accumulation <- function(block) {
 
   plot_response <- ggplot(data=spp_acc,aes(min, ntot)) +
     geom_smooth(aes(y = ntot), color="#2a3b4d") +
+    # geom_line() +
     ylab("# Species") + xlab("Observation Time")
 
   #figure out how to provide multiple return data
