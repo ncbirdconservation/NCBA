@@ -19,7 +19,7 @@ m_spp <- mongo("ebd_taxonomy", url = URI, options = ssl_options(weak_cert_valida
 m_blocks <- mongo("blocks", url = URI, options = ssl_options(weak_cert_validation = T))
 
 
-# return records for the species
+
 # this query follows JSON based query syntax (see here for the basics: https://jeroen.github.io/mongolite/query-data.html#query-syntax)
 # TESTING INFO
 # low checklist block -> "PAMLICO_BEACH-CW" or "GRIMESLAND-NW"
@@ -45,10 +45,10 @@ get_ebd_data <- function(query="{}", filter="{}"){
 
   # do not run if no query passed
   if (query != "{}"){
-
-    if (grepl("OBSERVATIONS", filter, fixed=TRUE)){
+    sortquery <- '{"OBSERVATION_DATE":1, "TIME_OBSERVATIONS_STARTED":1, "SAMPLING_EVENT_IDENTIFIER":1}'
+    if (grepl("OBSERVATIONS", filter, fixed=TRUE) | filter=="{}"){
       # WORKING VERSION - downloads and returns all checklist obs
-      mongodata <- m$find(query, filter) %>%
+      mongodata <- m$find(query, filter, sort=sortquery) %>%
       unnest(cols = (c(OBSERVATIONS))) # Expand observations
 
       # EXAMPLE/TESTING
@@ -64,40 +64,43 @@ get_ebd_data <- function(query="{}", filter="{}"){
     return(mongodata)
   }
 }
+
 get_block_data <- function() {
   # Retrieves block data table from MongoDB Atlas implementation
   blockdata <- m_blocks$find("{}","{}")
   return(blockdata)
 
 }
-get_block_checklists <- function(block = "", portal = FALSE) (
-  # Retrieves data from MongoDB Atlas implementation
-  #
-  # Description:
-  #   Returns a dataframe of records from the NC Bird Atlas MongoDB implementation in a format to plot on the map.
-  #
-  # Arguments:
-  # block -- string that corresponds to the ID_NCBA_BLOCK field
-  #
-  # Examples:
-  #   1. Retrieve checklists submitted to the portal from the GRIMESLAND-CW block
-  #     get_block_checklists('GRIMESLAND-CW', TRUE)
 
-  if (block != ""){
-    if (portal) {
-      query <- str_interp('{"ID_NCBA_BLOCK":"${block}", "PROJECT_CODE":"EBIRD_ATL_NC"}')
-    } else {
-      query <- str_interp('{"ID_NCBA_BLOCK":"${block}"}')
-    }
-    print(query)
-
-    filter <- '{"LATITUDE":1, "LONGITUDE":1, "SAMPLING_EVENT_IDENTIFIER":1, "LOCALITY_ID":1, "OBSERVATION_DATE":1}'
-    print(filter)
-
-    return(get_ebd_data(query, filter))
-  }
-
-)
+# DEPRECATED
+# get_block_checklists <- function(block = "", portal = FALSE) (
+#   # Retrieves data from MongoDB Atlas implementation
+#   #
+#   # Description:
+#   #   Returns a dataframe of records from the NC Bird Atlas MongoDB implementation in a format to plot on the map.
+#   #
+#   # Arguments:
+#   # block -- string that corresponds to the ID_NCBA_BLOCK field
+#   #
+#   # Examples:
+#   #   1. Retrieve checklists submitted to the portal from the GRIMESLAND-CW block
+#   #     get_block_checklists('GRIMESLAND-CW', TRUE)
+#
+#   if (block != ""){
+#     if (portal) {
+#       query <- str_interp('{"ID_NCBA_BLOCK":"${block}", "PROJECT_CODE":"EBIRD_ATL_NC"}')
+#     } else {
+#       query <- str_interp('{"ID_NCBA_BLOCK":"${block}"}')
+#     }
+#     print(query)
+#
+#     filter <- '{"LATITUDE":1, "LONGITUDE":1, "SAMPLING_EVENT_IDENTIFIER":1, "LOCALITY_ID":1, "OBSERVATION_DATE":1}'
+#     print(filter)
+#
+#     return(get_ebd_data(query, filter))
+#   }
+#
+# )
 #####################################################################################
 # Species
 get_spp_obs <- function(species, filter){
