@@ -44,8 +44,8 @@ ui <- bootstrapPage(
   navbarPage(
     theme = shinytheme("flatly"), collapsible=TRUE,
     # theme = shinytheme("cosmo"), collapsible=TRUE,
-    HTML('<a style="text-decoration:none;cursor:default;color:#FFFFFF;" class="active" href="#">NC Bird Atlas Data Explorer</a>'), id="nav",
-    windowTitle = "NCBA Explorer",
+    HTML('<a style="text-decoration:none;cursor:default;color:#FFFFFF;" class="active" href="#">NC Bird AtlasCache Explorer</a>'), id="nav",
+    windowTitle = "Quackalacky",
     tags$head(includeCSS("styles.css")),
     tabPanel("Blocks",
       div(class="col-md-2 panel sidebar", id = "block_controls",
@@ -90,6 +90,13 @@ ui <- bootstrapPage(
           h4("Species Accumulation"),
           plotOutput("spp_accumulation")
         ),
+        div(class="col-md-3 panel",
+          h4("Species"),
+          # div(tableOutput("spp_observed"), style="font-size:85%; height:442.995px; overflow-y:scroll;")
+          dataTableOutput("spp_observed"),
+          downloadButton("download_spplist", "Download")
+
+        ),
         div(class="col-md-12 panel",
           h4("Test Panel"),
           div(tableOutput("testing_output"), style="font-size:60%")
@@ -99,8 +106,12 @@ ui <- bootstrapPage(
     tabPanel("Species",
       div(class="container-fluid", tags$head(includeCSS("styles.css")),
         div(class="col-md-3",
-          selectInput("spp_select", h3("Species"),
-          choices = species_list, selected=" ")
+          # selectInput("spp_select", h3("Species"),
+          selectizeInput("spp_select", h3("Species"),
+          choices = species_list, options=list(
+            placeholder = 'Select species',
+            onInitialize = I('function() {this.setValue(""); }')
+          ))
         ),
         div(class="col-md-9",
           plotOutput("spp_breedingbox_plot"),
@@ -230,6 +241,19 @@ server <- function(input, output, session) {
   )
 
 
+  # BREEDING STATS
+  output$block_breeding_stats <- renderUI({
+    sa_list <- spp_accumulation_results()$spp_unique
+    #add conditional formatting if criteria met
+    num_breed_confirm <- paste("Confirmed Spp (C4):",length(filter(sa_list, bcat == "C4" )))
+    num_breed_prob <- paste("Probable Spp (C3):", length(filter(sa_list, bcat == "C3" )))
+    num_breed_poss <- paste("Possible Spp (C2):", length(filter(sa_list, bcat == "C2" )))
+    num_breed_hours <- paste("Dirunal Hours:", sum(current_block_ebd_checklistsonly_filtered()["DURATION_MINUTES"])/60)
+    num_spp <- paste("# Species: ", length(sa_list["spp"]) )
+
+    HTML(paste(num_spp, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
+  })
+
 
   # DISPLAY BLOCK HOURS SUMMARY PLOT
   output$blockhours <- renderPlot({
@@ -241,15 +265,33 @@ server <- function(input, output, session) {
   })
 
   # DISPLAY SPECIES ACCUMULATION PLOT
-  output$spp_accumulation <- renderPlot({
-
+  spp_accumulation_results <- reactive({
     req(current_block_ebd_filtered())
     # pass only those columns needed
-    sa <- current_block_ebd_filtered()[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES", "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME")]
+    sa <- filter(current_block_ebd_filtered(), CATEGORY == "species")[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES", "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME")]
 
     plot_spp_accumulation(sa)
 
   })
+
+  output$spp_accumulation <- renderPlot({
+    spp_accumulation_results()$plot
+
+  })
+
+  # DISPLAY SPECIES LIST
+  output$spp_observed <- renderDataTable(
+    spp_accumulation_results()$spp_unique[c("spp","bcat")], options=list(pageLength=25)
+  )
+  output$download_spplist <- downloadHandler(
+    filename = function() {
+      paste("spp_list", ".csv", sep = "")
+    },
+    content = function(file) (
+      write.csv(spp_accumulation_results()$spp_unique, file, row.names = FALSE)
+    )
+  )
+
 
   ########################################################################################
   # MAP
@@ -276,12 +318,12 @@ server <- function(input, output, session) {
   })
 
   # DISPLAY CHECKLISTS ON THE MAP
-  observeEvent(current_block_ebd_filtered(), {
+  observeEvent(current_block_ebd_checklistsonly_filtered(), {
     # req(current_block_r())
-    req(current_block_ebd_filtered())
+    req(current_block_ebd_checklistsonly_filtered())
     # check to make sure records returned!
     # checklists <- get_block_checklists(current_block_r(),input$portal_records)
-    checklists <- current_block_ebd_filtered()[c("LATITUDE","LONGITUDE", "SAMPLING_EVENT_IDENTIFIER", "LOCALITY_ID", "LOCALITY", "OBSERVATION_DATE")]
+    checklists <- current_block_ebd_checklistsonly_filtered()[c("LATITUDE","LONGITUDE", "SAMPLING_EVENT_IDENTIFIER", "LOCALITY_ID", "LOCALITY", "OBSERVATION_DATE")]
     if (length(checklists) > 0){
       leafletProxy("mymap") %>%
         clearMarkers() %>%
