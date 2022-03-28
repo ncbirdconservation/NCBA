@@ -455,8 +455,8 @@ records_as_sf <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
   #   checklist tracks.  Buffer length is meant to represent locational
   #   uncertainty and can be approximated in different ways that are currently
   #   supported.  Stationary or short lists should likely be buffered 100 m or
-  #   more to account for area surveyed.  Lists traveling > 5 km are just
-  #   problematic and not informative so removed here.  Null effort_distance_km
+  #   more to account for area surveyed.  Lists traveling > 5 km are
+  #   problematic so removed here.  Null effort_distance_km
   #   values are filled with zero, which assumes those records are stationary
   #   counts.
   #
@@ -470,9 +470,9 @@ records_as_sf <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
   #     "point-radius", and "buffered-tracks".
   #   
   #   Results:
-  #   A spatial data data frame with columns for checklist_id or 
-  #     sampling_event_identifier, atlas_block, protocol_type, effort_distance_km,
-  #     latitude, longitude.
+  #   A spatial (simple features) data frame with columns for checklist_id or 
+  #     sampling_event_identifier, atlas_block, protocol_type, 
+  #     effort_distance_km, latitude, longitude.
   
   library(sf)
   
@@ -524,7 +524,7 @@ checklists_per_block <- function(records_df, blocks_sf, attribute, method){ # DR
   # are limits to the spatial precision of the points due to gps precision
   # and/or observers ability to identify exactly where they birded on a map or
   # in the app.  Second, many birders travel while birding but their paths are
-  # not available, only the distances they traveled.  
+  # not yet available, only the distances they traveled.  
   # 
   # Locational uncertainty is important and problematic because if it is large
   # in relation to the level of analysis, it creates uncertainty about which
@@ -532,9 +532,10 @@ checklists_per_block <- function(records_df, blocks_sf, attribute, method){ # DR
   # be attributed to.
   #
   # Parameters:
-  # records_sf -- a data frame of checklists from EBD or the atlas cache.
+  # records_sf -- a data frame of checklists from EBD or the atlas cache.  
+  #   The functions "records_as_sf()" can provide this.
   #
-  # kind -- what the records are, "checklists" or "observations"?
+  # kind -- what the records are, "checklists" or "observations"? FORTHCOMING
   #
   # blocks_sf -- a spatial data frame of atlas blacks
   #
