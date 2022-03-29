@@ -305,6 +305,7 @@ lists_by_week <- function(checklists){
     scale_y_continuous(breaks=seq(0,30000,5000))
 }
 
+
 # ------------------------------------------------------------------------------
 counties <- function(){
   # Read in a county spatial data frame in EPSG 6542
@@ -331,7 +332,7 @@ plot_checklists_coords <- function(checklists){
   # coords.map <- plot_checklists_coords(get_all_checklists(config, 
   #                                                        drop_ncba_col=TRUE))
   # plot(coords.map)
-  
+  library(tidyverse)
   ggplot(data=checklists) +
     geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
                shape=3) + 
@@ -454,8 +455,8 @@ records_as_sf <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
   #   checklist tracks.  Buffer length is meant to represent locational
   #   uncertainty and can be approximated in different ways that are currently
   #   supported.  Stationary or short lists should likely be buffered 100 m or
-  #   more to account for area surveyed.  Lists traveling > 5 km are just
-  #   problematic and not informative so removed here.  Null effort_distance_km
+  #   more to account for area surveyed.  Lists traveling > 5 km are
+  #   problematic so removed here.  Null effort_distance_km
   #   values are filled with zero, which assumes those records are stationary
   #   counts.
   #
@@ -466,12 +467,12 @@ records_as_sf <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
   #   kind -- "checklists" or "observations" to identify what type of records are
   #     in the data frame.  Individual species data will be observations.
   #   method -- how to represent each record spatially.  Options are "points",
-  #     "point-radius", and "buffered_path".
+  #     "point-radius", and "buffered-tracks".
   #   
   #   Results:
-  #   A spatial data data frame with columns for checklist_id or 
-  #     sampling_event_identifier, atlas_block, protocol_type, effort_distance_km,
-  #     latitude, longitude.
+  #   A spatial (simple features) data frame with columns for checklist_id or 
+  #     sampling_event_identifier, atlas_block, protocol_type, 
+  #     effort_distance_km, latitude, longitude.
   
   library(sf)
   
@@ -513,7 +514,7 @@ records_as_sf <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
 }
 
 # ------------------------------------------------------------------------------
-checklists_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT DRAFT
+checklists_per_block <- function(records_df, blocks_sf, attribute, method){ # DRAFT DRAFT DRAFT
   # Tallies the number of checklists per block.  Records_as_sf() produces
   #   input for this function.
   # 
@@ -523,7 +524,7 @@ checklists_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT D
   # are limits to the spatial precision of the points due to gps precision
   # and/or observers ability to identify exactly where they birded on a map or
   # in the app.  Second, many birders travel while birding but their paths are
-  # not available, only the distances they traveled.  
+  # not yet available, only the distances they traveled.  
   # 
   # Locational uncertainty is important and problematic because if it is large
   # in relation to the level of analysis, it creates uncertainty about which
@@ -531,10 +532,15 @@ checklists_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT D
   # be attributed to.
   #
   # Parameters:
-  # records_sf -- a data frame of checklists from EBD or the atlas cache.
+  # records_sf -- a data frame of checklists from EBD or the atlas cache.  
+  #   The functions "records_as_sf()" can provide this.
+  #
+  # kind -- what the records are, "checklists" or "observations"? FORTHCOMING
   #
   # blocks_sf -- a spatial data frame of atlas blacks
   #
+  # attribute -- column to summarize, such as "checklists"  FORTHCOMING
+  # 
   # method -- specify the method to use for attributing checklists to blocks.
   #   Choices are: "A", "B", "C", or "D", but method C is unavailable.
   #   
@@ -611,7 +617,7 @@ checklists_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT D
       st_intersection(blocks_sf) %>%
       # Find count by block
       group_by(name) %>%
-      summarise(checklists = n()) %>%
+      summarize(checklists = n()) %>%
       st_drop_geometry() %>%
       # Add zero blocks via a join
       right_join(blocks_sf, by="name") %>%

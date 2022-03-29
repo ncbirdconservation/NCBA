@@ -1,22 +1,25 @@
 # N. Tarr, 10/29/2021
 # 
-# Example script showing how to use the ncba_functions "connect_ncba_db()", 
-#   "to_ebd_format()", and "breeding_boxplot()"
+# Example script showing how to use the ncba_functions.
 
 library(stringr)
 library(tidyr)
 library(dplyr)
 library(lubridate)
 
+# Import the atlas functions
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
 
-config <- "~/Documents/NCBA/Scripts/ncba_config.R"
-setwd("~/Documents/NCBA/species/")
+# Identify location of config file
+config <- "~/enter/pathhere/ncba_config.R"
+
+# Set a working environment
+setwd("~/enter/path/here/")
 
 
 # WHAT SPECIES? ----------------------------------------------------------------
-species <- "Little Blue Heron"
+species <- "Kentucky Warbler"
 
 
 # GET NCBA DATA ----------------------------------------------------------------
@@ -33,6 +36,9 @@ nc_data <- connection$find(query) %>%
 
 # format columns
 sp_df <- to_ebd_format(nc_data, drop=FALSE)
+
+# !!!!!!!!!!!!!!!!! handle shared checklist duplication  # DEVELOP THIS !!!!!!!!!!!!!!!!!!!!!!!!!!
+#sp_df2 <- auk_ebd(x=sp_df)
 
 
 # PLOT BREEDING CODES ----------------------------------------------------------
@@ -53,7 +59,7 @@ plot(start_time_boxplot(sp_df))
 # SUMMARIZE TRAVEL DISTANCE ----------------------------------------------------
 plot(effort_distance_boxplot(sp_df))
 
-# SUMMARIZE MINUTES EFFORT --------------------------------------------------------
+# SUMMARIZE MINUTES EFFORT -----------------------------------------------------
 plot(duration_minutes_boxplot(sp_df))
 
 # LOCALITY TYPE BREAKDOWN ------------------------------------------------------
@@ -65,3 +71,7 @@ sf <- records_as_sf(records_df=sp_df, kind="observations",
 # Make a crude plot
 plot(select(sf, c(sampling_event_identifier, geometry)))
 
+# OBSERVATION PER BLOCK ---------------------------------------------- IN PROGRESS
+#blocks_path <- "/Volumes/nmtarr1/Datasets/ncba_blocks.shp"
+#blocks <- st_read(blocks_path) %>% st_transform(6542) # Correct projection???????????
+#checklists_per_block(records_df=sp_df, blocks_sf=blocks, method="B")
