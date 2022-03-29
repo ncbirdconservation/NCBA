@@ -87,23 +87,27 @@ plot_spp_accumulation <- function(block_recs) {
   # print(c(obs_min,length(spp_unique$spp),c1,c2, c3, c4))
   spp_acc[nrow(spp_acc)+1,]<-c(obs_min,length(spp_unique$spp),c1,c2, c3, c4)
 
+  spp_tot <- nrow(spp_unique)
+  spp_tot_half <- spp_tot * 0.5
+  hrs_total = obs_min * 0.0166666666666
 
   #plot the data
-
-  plot_response <- ggplot(data=spp_acc,aes(min/60, all)) +
+  plot_response <- ggplot(data=spp_acc,aes((min), all)) +
+    geom_hline(aes(yintercept=(spp_tot_half), colour = "50% total")) +
+    geom_text(aes(0,spp_tot_half), label = "50% total spp", vjust = -1) +
     geom_smooth(method = 'loess', formula = 'y ~ x', aes(y = all, colour="all")) +
     geom_smooth(method = 'loess', formula = 'y ~ x', aes(y = c4, colour="confirmed")) +
     geom_smooth(method = 'loess', formula = 'y ~ x', aes(y = c3, color="probable")) +
     geom_smooth(method = 'loess', formula = 'y ~ x', aes(y = c2, color="possible")) +
-    ylab("# Species") + xlab("Observation Time") +
-    scale_colour_manual(values = c("#2a3b4d", "#ff1a1a", "#ffbf00", "#ccccff"))
+    scale_colour_manual(name="", values = c("#444444", "#2a3b4d", "#ff1a1a", "#ffbf00", "#ccccff")) +
+    ylab("# Species") + xlab("Observation Time") + xlim(c(0,obs_min))
     # geom_line() +
 
   #figure out how to provide multiple return data
   # plot = accumulation plot output
   # spp_uniques = list of species found
   # spp_acc + Number of unique spp found
-  response <- list("plot" = plot_response, "spp_unique" = spp_unique)
+  response <- list("plot" = plot_response, "spp_unique" = spp_unique, "spp_acc_data" = spp_acc, "hrs_total" = hrs_total)
   # print(test_spp)
 
   return(response)

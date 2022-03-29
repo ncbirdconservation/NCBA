@@ -7,8 +7,7 @@
 HOST = "cluster0-shard-00-00.rzpx8.mongodb.net:27017"
 DB = "ebd_mgmt"
 COLLECTION = "ebd"
-USER = "ncba_ruser"
-PASS = "Sternacaspia"
+
 # other relevant collections include: blocks and ebd_taxonomy
 
 URI = sprintf("mongodb://%s:%s@%s/%s?authSource=admin&replicaSet=atlas-3olgg1-shard-0&readPreference=primary&ssl=true",USER, PASS, HOST, DB)
@@ -48,9 +47,14 @@ get_ebd_data <- function(query="{}", filter="{}"){
     sortquery <- '{"OBSERVATION_DATE":1, "TIME_OBSERVATIONS_STARTED":1, "SAMPLING_EVENT_IDENTIFIER":1}'
     if (grepl("OBSERVATIONS", filter, fixed=TRUE) | filter=="{}"){
       # WORKING VERSION - downloads and returns all checklist obs
-      mongodata <- m$find(query, filter, sort=sortquery) %>%
-      unnest(cols = (c(OBSERVATIONS))) # Expand observations
+      print("getting Observations from AtlasCache")
+      mongodata <- m$find(query, filter, sort=sortquery)
+      if (nrows(mongodata)>0) {
+        unnest(mongodata, cols = (c(OBSERVATIONS))) # Expand observations
+      }
 
+      print("AtlasCache records retrieved")
+      print(head(mongodata))
       # EXAMPLE/TESTING
       # USE aggregation pipeline syntax to return only needed observations
       # pipeline <- str_interp('[{$match: ${query}}, {$project:${filter}}, {$unwind: {path: "$OBSERVATIONS"}}]')

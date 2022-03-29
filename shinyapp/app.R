@@ -76,11 +76,11 @@ ui <- bootstrapPage(
         ),
         div(class="col-md-3 panel",
           h4("Block Stats (placeholder)"),
-          h5("Breeding"),
-          htmlOutput("block_breeding_stats"),
+          # h5("Breeding"),
+          htmlOutput("block_breeding_stats")
           #should include all the requirements for completing - color coded if hit metric or not - also build/require block_status table in AtlasCache
-          h5("Non-Breeding"),
-          htmlOutput("block_nonbreeding_stats")
+          # h5("Non-Breeding"),
+          # htmlOutput("block_nonbreeding_stats")
         ),
         div(class="col-md-3 panel",
           h4("Block Hours"),
@@ -164,6 +164,7 @@ server <- function(input, output, session) {
   })
 
   criteria_changes <- reactive({
+    # add other criteria here
     list(input$portal_records)
   })
 
@@ -191,13 +192,23 @@ server <- function(input, output, session) {
 
     cblock <- current_block_r()
     q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}"}')
-    get_ebd_data(q, "{}") #get all fields
+    records <- get_ebd_data(q, "{}") #get all fields
+
+    print(head(records))
+    # make sure records returned, otherwise return false
+    if (nrows(records)>0) {
+      paste(records)
+    } else {
+      paste(FALSE)
+    }
 
   })
 
   # FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES
   current_block_ebd_filtered <- reactive({
     req(current_block_ebd())
+    print("applying filters to block records")
+    print(head(current_block_ebd()))
 
     current_block_ebd() %>%
       filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
@@ -206,7 +217,8 @@ server <- function(input, output, session) {
   })
   # FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES - RETURNS CHECKLIST LEVEL DATA
   current_block_ebd_checklistsonly_filtered <- reactive({
-    req(current_block_ebd_filtered())
+
+    req(current_block_ebd(), current_block_ebd_filtered())
 
     current_block_ebd_filtered() %>%
       filter(CATEGORY == "species") %>% # make sure only species counted
@@ -234,24 +246,29 @@ server <- function(input, output, session) {
   # })
 
   ## TESTING - table output
-  output$testing_output <- renderTable(
-    select(current_block_ebd_checklistsonly_filtered()),
-    striped = TRUE,
-    spacing = "xs"
-  )
+  # output$testing_output <- renderTable({
+  #
+  #
+  #   paste(select(current_block_ebd_checklistsonly_filtered()),
+  #   striped = TRUE,
+  #   spacing = "xs")
+  # })
 
 
   # BREEDING STATS
   output$block_breeding_stats <- renderUI({
-    sa_list <- spp_accumulation_results()$spp_unique
-    #add conditional formatting if criteria met
-    num_breed_confirm <- paste("Confirmed Spp (C4):",length(filter(sa_list, bcat == "C4" )))
-    num_breed_prob <- paste("Probable Spp (C3):", length(filter(sa_list, bcat == "C3" )))
-    num_breed_poss <- paste("Possible Spp (C2):", length(filter(sa_list, bcat == "C2" )))
-    num_breed_hours <- paste("Dirunal Hours:", sum(current_block_ebd_checklistsonly_filtered()["DURATION_MINUTES"])/60)
-    num_spp <- paste("# Species: ", length(sa_list["spp"]) )
+    req(current_block_ebd(), current_block_ebd_filtered())
 
-    HTML(paste(num_spp, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
+    sa_list <- spp_accumulation_results()$spp_unique
+
+    #add conditional formatting if criteria met
+    num_spp_total <- paste("# Species: ", nrow(sa_list["spp"]) )
+    num_breed_confirm <- paste("Confirmed Spp (C4):",nrow(filter(sa_list, bcat == "C4" )))
+    num_breed_prob <- paste("Probable Spp (C3):", nrow(filter(sa_list, bcat == "C3" )))
+    num_breed_poss <- paste("Possible Spp (C2):", nrow(filter(sa_list, bcat == "C2" )))
+    num_breed_hours <- paste("Dirunal Hours:", spp_accumulation_results()$hrs_total)
+
+    HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
   })
 
 
@@ -266,7 +283,8 @@ server <- function(input, output, session) {
 
   # DISPLAY SPECIES ACCUMULATION PLOT
   spp_accumulation_results <- reactive({
-    req(current_block_ebd_filtered())
+    req(current_block_ebd(), current_block_ebd_filtered())
+
     # pass only those columns needed
     sa <- filter(current_block_ebd_filtered(), CATEGORY == "species")[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES", "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME")]
 
@@ -275,14 +293,17 @@ server <- function(input, output, session) {
   })
 
   output$spp_accumulation <- renderPlot({
+    req(spp_accumulation_results())
     spp_accumulation_results()$plot
 
   })
 
   # DISPLAY SPECIES LIST
-  output$spp_observed <- renderDataTable(
-    spp_accumulation_results()$spp_unique[c("spp","bcat")], options=list(pageLength=25)
-  )
+  output$spp_observed <- renderDataTable({
+    req(spp_accumulation_results())
+    datatable(spp_accumulation_results()$spp_unique[c("spp","bcat")], options=list(pageLength=5))
+  })
+
   output$download_spplist <- downloadHandler(
     filename = function() {
       paste("spp_list", ".csv", sep = "")
