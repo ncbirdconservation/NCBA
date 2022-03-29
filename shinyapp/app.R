@@ -192,15 +192,16 @@ server <- function(input, output, session) {
 
     cblock <- current_block_r()
     q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}"}')
-    records <- get_ebd_data(q, "{}") #get all fields
-
-    print(head(records))
-    # make sure records returned, otherwise return false
-    if (nrows(records)>0) {
-      paste(records)
-    } else {
-      paste(FALSE)
-    }
+    get_ebd_data(q, "{}") #get all fields
+    # records <- get_ebd_data(q, "{}") #get all fields
+    #
+    # # print(head(records))
+    # # make sure records returned, otherwise return false
+    # if (nrow(records)>0) {
+    #   paste(records)
+    # } else {
+    #   paste(FALSE)
+    # }
 
   })
 
@@ -208,8 +209,8 @@ server <- function(input, output, session) {
   current_block_ebd_filtered <- reactive({
     req(current_block_ebd())
     print("applying filters to block records")
-    print(head(current_block_ebd()))
 
+    # current_block_ebd()
     current_block_ebd() %>%
       filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
@@ -224,7 +225,7 @@ server <- function(input, output, session) {
       filter(CATEGORY == "species") %>% # make sure only species counted
       group_by(SAMPLING_EVENT_IDENTIFIER) %>%
       mutate(SPP_COUNT = unique(GLOBAL_UNIQUE_IDENTIFIER)) %>%
-      select(ALL_SPECIES_REPORTED,ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NCBA_BLOCK,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR, SPP_COUNT)
+      select(ALL_SPECIES_REPORTED,ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR, SPP_COUNT)
       # summarise(spp_count = unique(GLOBAL_UNIQUE_IDENTIFIER), .groups = 'drop')
       # filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
@@ -240,10 +241,6 @@ server <- function(input, output, session) {
 
     # paste(current_block_r())
   })
-
-  # output$block_breeding_stats <- reactive({
-  #   renderText('<span>Testing</span>')
-  # })
 
   ## TESTING - table output
   # output$testing_output <- renderTable({
@@ -262,11 +259,11 @@ server <- function(input, output, session) {
     sa_list <- spp_accumulation_results()$spp_unique
 
     #add conditional formatting if criteria met
-    num_spp_total <- paste("# Species: ", nrow(sa_list["spp"]) )
-    num_breed_confirm <- paste("Confirmed Spp (C4):",nrow(filter(sa_list, bcat == "C4" )))
-    num_breed_prob <- paste("Probable Spp (C3):", nrow(filter(sa_list, bcat == "C3" )))
-    num_breed_poss <- paste("Possible Spp (C2):", nrow(filter(sa_list, bcat == "C2" )))
-    num_breed_hours <- paste("Dirunal Hours:", spp_accumulation_results()$hrs_total)
+    num_spp_total <- paste("Species: ", nrow(sa_list["spp"]) )
+    num_breed_confirm <- paste("Confirmed (C4):",nrow(filter(sa_list, bcat == "C4" )))
+    num_breed_prob <- paste("Probable (C3):", nrow(filter(sa_list, bcat == "C3" )))
+    num_breed_poss <- paste("Possible (C2):", nrow(filter(sa_list, bcat == "C2" )))
+    num_breed_hours <- paste("Dirunal Min:", spp_accumulation_results()$hrs_total)
 
     HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
   })
@@ -284,9 +281,8 @@ server <- function(input, output, session) {
   # DISPLAY SPECIES ACCUMULATION PLOT
   spp_accumulation_results <- reactive({
     req(current_block_ebd(), current_block_ebd_filtered())
-
     # pass only those columns needed
-    sa <- filter(current_block_ebd_filtered(), CATEGORY == "species")[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES", "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME")]
+    sa <- filter(current_block_ebd_filtered(), CATEGORY == "species")[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES", "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME", "CATEGORY")]
 
     plot_spp_accumulation(sa)
 
@@ -299,17 +295,16 @@ server <- function(input, output, session) {
   })
 
   # DISPLAY SPECIES LIST
-  output$spp_observed <- renderDataTable({
-    req(spp_accumulation_results())
-    datatable(spp_accumulation_results()$spp_unique[c("spp","bcat")], options=list(pageLength=5))
-  })
+  output$spp_observed <- renderDataTable(
+    spp_accumulation_results()$spp_unique[c("spp","bcat")], options=list(pageLength=5)
+  )
 
   output$download_spplist <- downloadHandler(
     filename = function() {
       paste("spp_list", ".csv", sep = "")
     },
     content = function(file) (
-      write.csv(spp_accumulation_results()$spp_unique, file, row.names = FALSE)
+      write.csv(spp_accumulation_results()$spp_unique, file, row.names = TRUE)
     )
   )
 

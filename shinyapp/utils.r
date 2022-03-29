@@ -42,20 +42,30 @@ get_ebd_data <- function(query="{}", filter="{}"){
 #   2. Retrieve OBSERVATION_DATE, SAMPLING_EVENT_IDENTIFIER, OBSERVATIONS.COMMON_NAME, OBSERVATIONS.OBSERVATION_COUNT, OBSERVATIONS.BEHAVIOR_CODE, OBSERVATIONS.BREEDING_CATEGORY for all Cerulean Warbler detections.
 #     get_ebd_data('{"OBSERVATIONS.COMMON_NAME":"Cerulean Warbler"}', '{"OBSERVATION_DATE":1, "SAMPLING_EVENT_IDENTIFIER":1, "OBSERVATIONS.COMMON_NAME":1, "OBSERVATIONS.OBSERVATION_COUNT":1, "OBSERVATIONS.BEHAVIOR_CODE":1, "OBSERVATIONS.BREEDING_CATEGORY":1}')
 
+#specify the default  fields to return if no filter passed
   # do not run if no query passed
   if (query != "{}"){
     sortquery <- '{"OBSERVATION_DATE":1, "TIME_OBSERVATIONS_STARTED":1, "SAMPLING_EVENT_IDENTIFIER":1}'
     if (grepl("OBSERVATIONS", filter, fixed=TRUE) | filter=="{}"){
       # WORKING VERSION - downloads and returns all checklist obs
-      print("getting Observations from AtlasCache")
-      mongodata <- m$find(query, filter, sort=sortquery)
-      if (nrows(mongodata)>0) {
-        unnest(mongodata, cols = (c(OBSERVATIONS))) # Expand observations
+      if (filter == "{}") {
+        # DEFINE DEFAULT FILTER that excludes unused fields
+        filter <- '{"ALL_SPECIES_REPORTED":1,"ATLAS_BLOCK":1,"BCR_CODE":1,"COUNTRY":1,"COUNTRY_CODE":1,"COUNTY":1,"COUNTY_CODE":1,"DURATION_MINUTES":1,"EFFORT_AREA_HA":1,"EFFORT_DISTANCE_KM":1,"GROUP_IDENTIFIER":1,"IBA_CODE":1,"ID_BLOCK_CODE":1,"ID_NCBA_BLOCK":1,"LAST_EDITED_DATE":1,"LATITUDE":1,"LOCALITY":1,"LOCALITY_ID":1,"LOCALITY_TYPE":1,"LONGITUDE":1,"MONTH":1,"NUMBER_OBSERVERS":1,"OBSERVATIONS":1,"OBSERVATION_DATE":1,"OBSERVER_ID":1,"PRIORITY_BLOCK":1,"PROJECT_CODE":1,"PROTOCOL_CODE":1,"PROTOCOL_TYPE":1,"SAMPLING_EVENT_IDENTIFIER":1,"STATE":1,"STATE_CODE":1,"TIME_OBSERVATIONS_STARTED":1,"TRIP_COMMENTS":1,"USFWS_CODE":1,"YEAR":1}'
+
+        # fields excluded
+        # "GEOM.coordinates":1,"GEOM.type":1,"NCBA_APPROVED":1,"NCBA_BLOCK":1,"NCBA_COMMENTS":1,"NCBA_REVIEWED":1,"NCBA_REVIEWER":1,"NCBA_REVIEW_DATE":1,
       }
 
-      print("AtlasCache records retrieved")
-      print(head(mongodata))
+      print("getting Observations from AtlasCache")
+      mongodata <- m$find(query, filter, sort=sortquery)
+
+      if (nrow(mongodata)>0) {
+        mongodata <- unnest(mongodata, cols = (c(OBSERVATIONS)))
+      } # Expand observations if records returned
+
       # EXAMPLE/TESTING
+      print("AtlasCache records retrieved")
+      # print(head(mongodata))
       # USE aggregation pipeline syntax to return only needed observations
       # pipeline <- str_interp('[{$match: ${query}}, {$project:${filter}}, {$unwind: {path: "$OBSERVATIONS"}}]')
       #
