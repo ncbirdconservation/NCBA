@@ -290,9 +290,17 @@ server <- function(input, output, session) {
 
     sa_list <- spp_accumulation_results()$spp_unique
 
+    spp_total <- nrow(sa_list["spp"])
+    confirmed_total <- nrow(filter(sa_list, bcat == "C4" ))
+    if ((spp_total*0.5)<confirmed_total) {
+      confirmed_class = "success"
+    } else {
+      confirmed_class = "failed"
+    }
+
     #add conditional formatting if criteria met
     num_spp_total <- paste("Species: ", nrow(sa_list["spp"]) )
-    num_breed_confirm <- paste("Confirmed (C4):",nrow(filter(sa_list, bcat == "C4" )))
+    num_breed_confirm <- paste("Confirmed (C4):<span class='",confirmed_class, "'>", confirmed_total, "</span>")
     num_breed_prob <- paste("Probable (C3):", nrow(filter(sa_list, bcat == "C3" )))
     num_breed_poss <- paste("Possible (C2):", nrow(filter(sa_list, bcat == "C2" )))
     num_breed_hours <- paste("Hours:", format(spp_accumulation_results()$hrs_total, trim=TRUE, digits=1))
@@ -328,7 +336,7 @@ server <- function(input, output, session) {
 
   # DISPLAY SPECIES LIST
   output$spp_observed <- renderDataTable(
-    spp_accumulation_results()$spp_unique[c("spp","bcat")], options=list(pageLength=5)
+    spp_accumulation_results()$spp_unique[c("spp","bcat")], options=list(pageLength=5, autoWidth = TRUE)
   )
 
   output$download_spplist <- downloadHandler(
