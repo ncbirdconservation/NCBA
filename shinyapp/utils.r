@@ -7,7 +7,7 @@
 HOST = "cluster0-shard-00-00.rzpx8.mongodb.net:27017"
 DB = "ebd_mgmt"
 COLLECTION = "ebd"
-
+source("ncba_config.r")
 # other relevant collections include: blocks and ebd_taxonomy
 
 URI = sprintf("mongodb://%s:%s@%s/%s?authSource=admin&replicaSet=atlas-3olgg1-shard-0&readPreference=primary&ssl=true",USER, PASS, HOST, DB)

@@ -89,7 +89,8 @@ plot_spp_accumulation <- function(block_recs) {
 
   spp_tot <- nrow(spp_unique)
   spp_tot_half <- spp_tot * 0.5
-  hrs_total = obs_min * 0.0166666666666
+  hrs_convert <- 60.0
+  hrs_total = obs_min/hrs_convert
 
   #plot the data
   plot_response <- ggplot(data=spp_acc,aes((min), all)) +
@@ -100,7 +101,8 @@ plot_spp_accumulation <- function(block_recs) {
     geom_smooth(method = 'loess', formula = 'y ~ x', aes(y = c3, color="probable")) +
     geom_smooth(method = 'loess', formula = 'y ~ x', aes(y = c2, color="possible")) +
     scale_colour_manual(name="", values = c("#444444", "#2a3b4d", "#ff1a1a", "#ffbf00", "#ccccff")) +
-    ylab("# Species") + xlab("Observation Time") + xlim(c(0,obs_min))
+    xlim(0,obs_min) +
+    ylab("# Species") + xlab("Observation Time")
     # geom_line() +
 
   #figure out how to provide multiple return data

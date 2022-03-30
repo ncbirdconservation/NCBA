@@ -84,7 +84,7 @@ ui <- bootstrapPage(
           leafletOutput("mymap")
         ),
         div(class="col-md-3 panel",
-          h4("Block Stats (placeholder)"),
+          h4("Block Statistics"),
           # h5("Breeding"),
           htmlOutput("block_breeding_stats")
           #should include all the requirements for completing - color coded if hit metric or not - also build/require block_status table in AtlasCache
@@ -219,7 +219,7 @@ server <- function(input, output, session) {
   # Applies filter WHEN CRITERIA CHANGES
   current_block_ebd_filtered <- reactive({
     req(current_block_ebd())
-    
+
     #make sure there are records to filter!
     validate(
       need(checklist_count()>0,"")
@@ -238,6 +238,7 @@ server <- function(input, output, session) {
     req(current_block_ebd(), current_block_ebd_filtered(), checklist_count(), checklist_filtered_count())
     all <- paste(checklist_count(), " Total Checklists Found")
     filtered <- paste(checklist_filtered_count(), " Filtered Checklists Found")
+
     HTML(paste(all, filtered, sep='<br/>'))
 
   })
@@ -294,7 +295,7 @@ server <- function(input, output, session) {
     num_breed_confirm <- paste("Confirmed (C4):",nrow(filter(sa_list, bcat == "C4" )))
     num_breed_prob <- paste("Probable (C3):", nrow(filter(sa_list, bcat == "C3" )))
     num_breed_poss <- paste("Possible (C2):", nrow(filter(sa_list, bcat == "C2" )))
-    num_breed_hours <- paste("Dirunal Min:", spp_accumulation_results()$hrs_total)
+    num_breed_hours <- paste("Hours:", format(spp_accumulation_results()$hrs_total, trim=TRUE, digits=1))
 
     HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
   })
