@@ -31,6 +31,7 @@ nc_center_lng = -79.2
 nc_center_zoom = 7
 nc_block_zoom = 13
 ncba_blue = "#2a3b4d"
+checklists_found = 0
 
 # SETUP FILES
 # basemap = leaflet(ebd_data) %>% setView(lng = -78.6778808, lat = 35.7667941, zoom = 12) %>% addTiles() %>% addProviderTiles(providers$CartoDB.Positron) %>% addCircles()
@@ -56,14 +57,22 @@ ui <- bootstrapPage(
           tags$p("Summary statistics page for block-level data."),
           div(class="tab-control-group",
             h4("Priority Block"),
-            htmlOutput("selected_block", inline=FALSE)
+            htmlOutput("selected_block", inline=FALSE),
+            htmlOutput("checklist_counter")
           ),
           div(class="tab-control-group",
             h4("Checklists"),
             # checkboxInput("show_checklists","Display Checklists", FALSE ),
             # prettySwitch("show_checklists","Display Checklists", value=TRUE ),
-            prettySwitch("portal_records","Portal Records Only", FALSE )
-          ),
+            prettySwitch("portal_records","Portal Records Only", FALSE ),
+  #           h5("Month Range"),
+  #           selectInput("start_month", label=NULL,
+  # choices = list("Jan" = 1, "Feb" = 2, "Mar" = 3, "Apr" = 4, "May" = 5, "Jun" = 6, "Jul" = 7, "Aug" = 8, "Sep" = 9, "Oct" = 10, "Nov" = 11, "Dec" = 12),
+  # selected = 1),
+  #           selectInput("end_month",label = NULL,
+  # choices = list("Jan" = 1, "Feb" = 2, "Mar" = 3, "Apr" = 4, "May" = 5, "Jun" = 6, "Jul" = 7, "Aug" = 8, "Sep" = 9, "Oct" = 10, "Nov" = 11, "Dec" = 12),
+  # selected = 12)
+          )
           # div(class="tab-control-group",
           #   h4("Date Range"),
           #   dateRangeInput("date_range", ""),
@@ -168,6 +177,16 @@ server <- function(input, output, session) {
     list(input$portal_records)
   })
 
+  checklist_count <- reactive({
+    unique_sei <- unique(current_block_ebd()$SAMPLING_EVENT_IDENTIFIER)
+    length(unique_sei)
+  })
+
+  checklist_filtered_count <- reactive({
+    unique_sei <- unique(current_block_ebd_filtered()$SAMPLING_EVENT_IDENTIFIER)
+    length(unique_sei)
+  })
+
   ########################################################################################
   # BLOCKS
   # reactive listener for block select
@@ -192,31 +211,37 @@ server <- function(input, output, session) {
 
     cblock <- current_block_r()
     q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}"}')
+
     get_ebd_data(q, "{}") #get all fields
-    # records <- get_ebd_data(q, "{}") #get all fields
-    #
-    # # print(head(records))
-    # # make sure records returned, otherwise return false
-    # if (nrow(records)>0) {
-    #   paste(records)
-    # } else {
-    #   paste(FALSE)
-    # }
 
   })
 
-  # FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES
+  # Applies filter WHEN CRITERIA CHANGES
   current_block_ebd_filtered <- reactive({
     req(current_block_ebd())
+    
+    #make sure there are records to filter!
+    validate(
+      need(checklist_count()>0,"")
+    )
     print("applying filters to block records")
 
     # current_block_ebd()
 
-    current_block_ebd() %>%
-      filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
-      # ADD ADDITIONAL FILTERS HERE AS NEEDED
+      current_block_ebd() %>%
+        filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
 
   })
+
+  # UPDAATE CHECKLIST COUNT
+  output$checklist_counter <- renderUI({
+    req(current_block_ebd(), current_block_ebd_filtered(), checklist_count(), checklist_filtered_count())
+    all <- paste(checklist_count(), " Total Checklists Found")
+    filtered <- paste(checklist_filtered_count(), " Filtered Checklists Found")
+    HTML(paste(all, filtered, sep='<br/>'))
+
+  })
+
   # FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES - RETURNS CHECKLIST LEVEL DATA
   current_block_ebd_checklistsonly_filtered <- reactive({
 
@@ -226,7 +251,7 @@ server <- function(input, output, session) {
       filter(CATEGORY == "species") %>% # make sure only species counted
       group_by(SAMPLING_EVENT_IDENTIFIER) %>%
       mutate(SPP_COUNT = unique(GLOBAL_UNIQUE_IDENTIFIER)) %>%
-      select(ALL_SPECIES_REPORTED,ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR, SPP_COUNT)
+      select(ALL_SPECIES_REPORTED,ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR)
       # summarise(spp_count = unique(GLOBAL_UNIQUE_IDENTIFIER), .groups = 'drop')
       # filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
@@ -256,6 +281,11 @@ server <- function(input, output, session) {
   # BREEDING STATS
   output$block_breeding_stats <- renderUI({
     req(current_block_ebd(), current_block_ebd_filtered())
+
+    #ensure records returned
+    validate(
+      need(current_block_ebd(), "No checklists submitted.")
+    )
 
     sa_list <- spp_accumulation_results()$spp_unique
 
