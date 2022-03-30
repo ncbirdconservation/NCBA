@@ -57,9 +57,11 @@ get_ebd_data <- function(query="{}", filter="{}"){
       }
 
       print("getting Observations from AtlasCache")
-      mongodata <- m$find(query, filter, sort=sortquery)
+      mongodata <- m$find(query, filter)
+      # mongodata <- m$find(query, filter, sort=sortquery) #sorting breaks for big queries
 
       if (nrow(mongodata)>0) {
+        print("unnesting observation records")
         mongodata <- unnest(mongodata, cols = (c(OBSERVATIONS)))
       } # Expand observations if records returned
 

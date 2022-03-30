@@ -211,6 +211,7 @@ server <- function(input, output, session) {
     print("applying filters to block records")
 
     # current_block_ebd()
+
     current_block_ebd() %>%
       filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
@@ -356,10 +357,10 @@ server <- function(input, output, session) {
   #######################################################
   # Species info
 
-  current_spp_r <- reactive({
-    # get(input$block_select)
-    current_spp <- input$spp_select
-  })
+  # current_spp_r <- reactive({
+  #   # get(input$block_select)
+  #   current_spp <- input$spp_select
+  # })
 
 output$breeding_code_legend <- renderTable(
   breeding_codes_key,
@@ -369,16 +370,22 @@ output$breeding_code_legend <- renderTable(
 
 output$spp_breedingbox_plot <- renderPlot({
 
+  # check to make sure species is selected
+  validate(
+    need(input$spp_select, 'select a species from the list')
+  )
   # PLOT BREEDING CODES ----------------------------------------------------------
   lump <- list(S = c("S", "S7", "M"), O = c("", "F", "O", "NC"))
   no_plot_codes <- NULL
   out_pdf <- NULL
-  spp <- current_spp_r()
-  query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${spp}"}')
+  spp <- input$spp_select
+  # query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${spp}"}')
   filter <- str_interp('{"OBSERVATION_DATE":1, "OBSERVATIONS.BREEDING_CODE":1, "OBSERVATIONS.COMMON_NAME":1}')
+  print("get ebd records")
   ebird <- get_spp_obs(spp, filter)
 
-  grid::current.viewport()
+  print("ebd records retrieved, plotting data")
+  # grid::current.viewport()
   breeding_boxplot(spp, ebird, pallet="Paired", out_pdf=NULL, no_plot_codes=no_plot_codes, lump=lump, drop=TRUE)
 })
 
