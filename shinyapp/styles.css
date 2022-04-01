@@ -1,5 +1,10 @@
+:root {
+  --ncba-success-color: #43AA8B;
+  --ncba-failed-color: #DB504A;
+}
+
+max-width: 80%;
 input[type="number"] {
-  max-width: 80%;
 }
 
 div.outer {
@@ -15,7 +20,8 @@ div.outer {
 /* Customize fonts */
 body, label, input, button, select {
   font-family: 'Helvetica Neue', Helvetica;
-  font-weight: 200;
+  /* font-weight: 200; */
+  font-size:0.95rem;
 }
 h1, h2, h3, h4 { font-weight: 400; color:#2a3b4d;}
 .sidebar{
@@ -24,16 +30,25 @@ h1, h2, h3, h4 { font-weight: 400; color:#2a3b4d;}
   padding: 0 10px 10px 10px;
   transition: opacity 500ms 1s;
 }
+
+.failed {
+  font-weight: 700;
+  color: var(--ncba-failed-color) !important;
+}
+.passed {
+  font-weight: 700;
+  color: var(--ncba-success-color) !important;
+}
 .panel {
   boder-color: #2a3b4d;
 
 }
 .tab-control-title {
-  margin-top: 10px !important;
+  margin-top: 5px !important;
   padding-top: 0px !important;
 }
 .tab-control-group {
-  padding-top: 20px;
+  padding-top: 5px;
 }
 .ol-nodots{
   list-style:none;

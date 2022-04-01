@@ -32,7 +32,10 @@ nc_center_zoom = 7
 nc_block_zoom = 13
 ncba_blue = "#2a3b4d"
 checklists_found = 0
-
+ncba_failed = "#DB504A"
+# ncba_failed = "#D05353"
+ncba_success = "#43AA8B"
+# ncba_success = "#A2FAA3"
 # SETUP FILES
 # basemap = leaflet(ebd_data) %>% setView(lng = -78.6778808, lat = 35.7667941, zoom = 12) %>% addTiles() %>% addProviderTiles(providers$CartoDB.Positron) %>% addCircles()
 current_block = ""
@@ -66,6 +69,9 @@ ui <- bootstrapPage(
             # checkboxInput("show_checklists","Display Checklists", FALSE ),
             # prettySwitch("show_checklists","Display Checklists", value=TRUE ),
             prettySwitch("portal_records","Portal Records Only", FALSE ),
+            radioButtons("season_radio",label = h4("Season"),
+              choices = list("All Records" = "All", "Breeding" = "Breeding", "Non-Breeding" = "Non-Breeding"),
+              selected = "All")
   #           h5("Month Range"),
   #           selectInput("start_month", label=NULL,
   # choices = list("Jan" = 1, "Feb" = 2, "Mar" = 3, "Apr" = 4, "May" = 5, "Jun" = 6, "Jul" = 7, "Aug" = 8, "Sep" = 9, "Oct" = 10, "Nov" = 11, "Dec" = 12),
@@ -169,14 +175,14 @@ server <- function(input, output, session) {
   # })
 
   #reactive function that listens for all sidget changes
-  checklist_events <- reactive({
-    # list(input$show_checklists, input$portal_records, current_block_r())
-    list(input$portal_records, current_block_r())
-  })
+  # checklist_events <- reactive({
+  #   # list(input$show_checklists, input$portal_records, current_block_r())
+  #   list(input$portal_records, current_block_r(), input$season_radio)
+  # })
 
   criteria_changes <- reactive({
     # add other criteria here
-    list(input$portal_records)
+    list(input$portal_records, input$season_radio)
   })
 
   checklist_count <- reactive({
@@ -233,7 +239,8 @@ server <- function(input, output, session) {
     # current_block_ebd()
 
       current_block_ebd() %>%
-        filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
+        filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE) %>%
+        filter(if(input$season_radio != "All") SEASON == input$season_radio else TRUE)
 
   })
 
@@ -302,12 +309,17 @@ server <- function(input, output, session) {
       confirmed_class = "failed"
     }
 
+    breed_hours_class <- "failed"
+    if (spp_accumulation_results()$hrs_total >= 20) {
+      breed_hours_class <- "success"
+    }
+
     #add conditional formatting if criteria met
     num_spp_total <- paste("Species: ", nrow(sa_list["spp"]) )
     num_breed_confirm <- paste("Confirmed (C4):<span class='",confirmed_class, "'>", confirmed_total, "</span>")
     num_breed_prob <- paste("Probable (C3):", nrow(filter(sa_list, bcat == "C3" )))
     num_breed_poss <- paste("Possible (C2):", nrow(filter(sa_list, bcat == "C2" )))
-    num_breed_hours <- paste("Hours:", format(spp_accumulation_results()$hrs_total, trim=TRUE, digits=1))
+    num_breed_hours <- paste("Hours:<span class='", breed_hours_class, "'>", format(spp_accumulation_results()$hrs_total, trim=TRUE, digits=1), "</span>")
 
     HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
   })

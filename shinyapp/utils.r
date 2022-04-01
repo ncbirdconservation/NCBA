@@ -18,7 +18,17 @@ m_spp <- mongo("ebd_taxonomy", url = URI, options = ssl_options(weak_cert_valida
 m_blocks <- mongo("blocks", url = URI, options = ssl_options(weak_cert_validation = T))
 m_sd <- mongo("safe_dates", url = URI, options = ssl_options(weak_cert_validation = T))
 
+get_safe_dates <- function(){
+  sd <- m_sd$find("{}","{}")
 
+  #ADD JULIAN DATE COLUMNS
+  sd$B_SAFE_START_JULIAN <- apply(sd['B_SAFE_START_DATE'],1,function(x){yday(x[1])})
+  sd$B_SAFE_END_JULIAN <- apply(sd['B_SAFE_END_DATE'],1,function(x){yday(x[1])})
+
+  return(sd[c('TAX_NO','COMMON_NAME','B_SAFE_START_JULIAN', 'B_SAFE_END_JULIAN')])
+}
+
+safe_dates <- get_safe_dates()
 
 # this query follows JSON based query syntax (see here for the basics: https://jeroen.github.io/mongolite/query-data.html#query-syntax)
 # TESTING INFO
@@ -64,7 +74,32 @@ get_ebd_data <- function(query="{}", filter="{}"){
       if (nrow(mongodata)>0) {
         print("unnesting observation records")
         mongodata <- unnest(mongodata, cols = (c(OBSERVATIONS)))
+
+        #ADD SEASON COLUMN FROM SAFE DATES TABLE AND POPULATE
+        gen_breeding_start <- yday("2021-05-01")
+        gen_breeding_end <- yday("2021-08-30")
+
+        mongodata$SEASON <- apply(mongodata[c('OBSERVATION_DATE','COMMON_NAME')],1, function(x) {
+          odj <- yday(x[1])
+          sd <- filter(sd,COMMON_NAME == x[2])
+
+          if (nrow(sd) == 0 ) {
+            begin <- gen_breeding_start
+            end <- gen_breeding_end
+          } else {
+            begin <- sd['B_SAFE_START_JULIAN']
+            end <- sd['B_SAFE_END_JULIAN']
+          }
+
+          season <- "Non-Breeding"
+          if (begin <= odj & odj <= end){
+            season <- "Breeding"
+          }
+          return(season)
+
+        })
       } # Expand observations if records returned
+
 
       # EXAMPLE/TESTING
       print("AtlasCache records retrieved")
@@ -81,10 +116,10 @@ get_ebd_data <- function(query="{}", filter="{}"){
     return(mongodata)
   }
 }
-get_safe_dates <- function(){
-  sd <- m_sd$find("{}","{}")
-  return(sd)
-}
+
+
+
+
 get_block_data <- function() {
   # Retrieves block data table from MongoDB Atlas implementation
   blockdata <- m_blocks$find("{}","{}")
@@ -163,8 +198,21 @@ block_data <- get_block_data()
 # priority_block_geojson <- readLines("input_data/blocks_priority.geojson")
 # priority_block_data <- block_data
 
-print("filtering block records")
 priority_block_data <- filter(block_data, PRIORITY == 1)[c("ID_NCBA_BLOCK", "ID_BLOCK_CODE", "NW_X", "NW_Y", "SE_X", "SE_Y", "PRIORITY", "COUNTY", "REGION")]
+
+# priority_block_data <- block_data %>%
+  # filter(PRIORITY == 1) %>%
+  # select(ID_NCBA_BLOCK, ID_BLOCK_CODE, NW_X, NW_Y, SE_X, SE_Y, PRIORITY, COUNTY, REGION)
+
+print("filtering block records")
+# print(head(priority_block_data))
+
+# priority_bock_geojson$style = list(
+#   weight = 2,
+#   color = ncba_blue,
+#   fillOpacity = 0
+# )
+
 
 
 block_hours_month <- read.csv("input_data/block_month_year_hours.csv")
