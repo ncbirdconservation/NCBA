@@ -16,6 +16,7 @@ URI = sprintf("mongodb://%s:%s@%s/%s?authSource=admin&replicaSet=atlas-3olgg1-sh
 m <- mongo(COLLECTION, url = URI, options = ssl_options(weak_cert_validation = T))
 m_spp <- mongo("ebd_taxonomy", url = URI, options = ssl_options(weak_cert_validation = T))
 m_blocks <- mongo("blocks", url = URI, options = ssl_options(weak_cert_validation = T))
+m_sd <- mongo("safe_dates", url = URI, options = ssl_options(weak_cert_validation = T))
 
 
 
@@ -80,7 +81,10 @@ get_ebd_data <- function(query="{}", filter="{}"){
     return(mongodata)
   }
 }
-
+get_safe_dates <- function(){
+  sd <- m_sd$find("{}","{}")
+  return(sd)
+}
 get_block_data <- function() {
   # Retrieves block data table from MongoDB Atlas implementation
   blockdata <- m_blocks$find("{}","{}")
@@ -134,7 +138,7 @@ get_spp_obs <- function(species, filter){
 
   query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
   results <- get_ebd_data(query, filter) %>%
-  filter(COMMON_NAME == species) #remove other obervations from the checklist
+    filter(COMMON_NAME == species) #remove other obervations from the checklist
 
   return(results)
 }
@@ -156,14 +160,11 @@ species_list = get_spp_list(filter='{"PRIMARY_COM_NAME":1}')$PRIMARY_COM_NAME
 
 # block_data <- read.csv("input_data/blocks.csv") %>% filter(COUNTY == "WAKE")
 block_data <- get_block_data()
-priority_block_geojson <- readLines("input_data/blocks_priority.geojson")
-# priority_bock_geojson$style = list(
-#   weight = 2,
-#   color = ncba_blue,
-#   fillOpacity = 0
-# )
-priority_block_data <- filter(block_data, PRIORITY==1)
-priority_block_list <- select(priority_block_data,ID_NCBA_BLOCK,ID_BLOCK_CODE)
+# priority_block_geojson <- readLines("input_data/blocks_priority.geojson")
+# priority_block_data <- block_data
+
+print("filtering block records")
+priority_block_data <- filter(block_data, PRIORITY == 1)[c("ID_NCBA_BLOCK", "ID_BLOCK_CODE", "NW_X", "NW_Y", "SE_X", "SE_Y", "PRIORITY", "COUNTY", "REGION")]
 
 
 block_hours_month <- read.csv("input_data/block_month_year_hours.csv")

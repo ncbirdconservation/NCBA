@@ -37,6 +37,7 @@ checklists_found = 0
 # basemap = leaflet(ebd_data) %>% setView(lng = -78.6778808, lat = 35.7667941, zoom = 12) %>% addTiles() %>% addProviderTiles(providers$CartoDB.Positron) %>% addCircles()
 current_block = ""
 
+sd <- get_safe_dates()
 
 
 # Define UI for miles per gallon app ----
@@ -105,11 +106,12 @@ ui <- bootstrapPage(
           dataTableOutput("spp_observed"),
           downloadButton("download_spplist", "Download")
 
-        ),
-        div(class="col-md-12 panel",
-          h4("Test Panel"),
-          div(tableOutput("testing_output"), style="font-size:60%")
         )
+        # ,
+        # div(class="col-md-12 panel",
+        #   h4("Test Panel"),
+        #   div(tableOutput("testing_output"), style="font-size:60%")
+        # )
 
     ),
     tabPanel("Species",
@@ -193,8 +195,10 @@ server <- function(input, output, session) {
   #
   # current block changes when map is clicked
   current_block_r <- reactive({
-    geojson_info <- input$mymap_geojson_click
-    paste(geojson_info$properties$ID_NCBA_BLOCK)
+    print("map clicked")
+    blockmap_info <- input$mymap_shape_click
+    print(blockmap_info$id)
+    paste(blockmap_info$id)
 
   })
 
@@ -353,11 +357,21 @@ server <- function(input, output, session) {
   # MAP
   # SETUP LEAFLET MAP, RENDER BASEMAP
   output$mymap <- renderLeaflet({
+
+    #setup block geojson layer
+    print("starting map, adding blocks")
+
     leaflet() %>%
       setView(lng = nc_center_lng, lat = nc_center_lat, zoom = nc_center_zoom) %>%
       # addTiles() %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
-      addGeoJSON(priority_block_geojson, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE)
+      # addGeoJSON(priority_block_geojson, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE)
+      addRectangles(data = priority_block_data, layerId = ~ ID_NCBA_BLOCK, lng1 = ~ NW_X, lat1 = ~ NW_Y, lng2 = ~ SE_X, lat2 = ~ SE_Y, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE, label = ~ ID_NCBA_BLOCK)
+      # addRectangles(data = priority_block_data, layerId = ~ ID_NCBA_BLOCK, lng1 = ~ NW_X, lat1 = ~ NW_Y, lng2 = ~ SE_X, lat2 = ~ SE_Y, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE, label = ~ ID_NCBA_BLOCK , labelOptions = labelOptions(noHide = T, textOnly = TRUE, offset(c(-30, 30)),
+      #   style = list(
+      #     "color" = "#444444",
+      #     "font-size" = "8px"
+      #   )))
   })
 
   # ZOOM MAP TO SELECTED BLOCK
@@ -373,6 +387,9 @@ server <- function(input, output, session) {
         setView(lat = block_center_lat, lng = block_center_lng , zoom = nc_block_zoom)
   })
 
+  # popup menu on hover over checklist
+
+
   # DISPLAY CHECKLISTS ON THE MAP
   observeEvent(current_block_ebd_checklistsonly_filtered(), {
     # req(current_block_r())
@@ -383,8 +400,14 @@ server <- function(input, output, session) {
     if (length(checklists) > 0){
       leafletProxy("mymap") %>%
         clearMarkers() %>%
-        clearShapes() %>%
-        addCircles(data=checklists, color=ncba_blue)
+        # clearShapes() %>%
+        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, color=ncba_blue, stroke=FALSE, fillOpacity = 0.6, label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML) )
+        # addMarkers(data=checklists, layerId = paste("checklist",~ SAMPLING_EVENT_IDENTIFIER), lat = ~ LATITUDE, lng = ~ LONGITUDE, color=ncba_blue,
+        #   label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
+        #   labelOptions = labelOptions(
+        #    style = list("font-weight" = "normal", padding = "3px 8px", "color" = ncba_blue),
+        #    textsize = "0.8rem", direction = "auto")
+        #   )
     }
 
   })

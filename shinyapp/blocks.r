@@ -6,7 +6,7 @@ plot_spp_accumulation <- function(block_recs) {
   # TODO - collecct data for categories
   #  C1 – Observed; C2 – Possible; C3 – Probable; C4 – Confirmed
   #  observed can be "" or "C1"
-  print(head(block_recs))
+  # print(head(block_recs))
   # spp_acc <- data.frame(matrix(ncol=2, nrow=0))
   # colnames(spp_acc) <- c('min','ntot')
   spp_acc <- data.frame(matrix(ncol=6, nrow=0))
