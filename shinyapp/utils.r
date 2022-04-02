@@ -7,8 +7,7 @@
 HOST = "cluster0-shard-00-00.rzpx8.mongodb.net:27017"
 DB = "ebd_mgmt"
 COLLECTION = "ebd"
-USER = "ncba_ruser"
-PASS = "Sternacaspia"
+source("ncba_config.r")
 # other relevant collections include: blocks and ebd_taxonomy
 
 URI = sprintf("mongodb://%s:%s@%s/%s?authSource=admin&replicaSet=atlas-3olgg1-shard-0&readPreference=primary&ssl=true",USER, PASS, HOST, DB)
@@ -17,8 +16,19 @@ URI = sprintf("mongodb://%s:%s@%s/%s?authSource=admin&replicaSet=atlas-3olgg1-sh
 m <- mongo(COLLECTION, url = URI, options = ssl_options(weak_cert_validation = T))
 m_spp <- mongo("ebd_taxonomy", url = URI, options = ssl_options(weak_cert_validation = T))
 m_blocks <- mongo("blocks", url = URI, options = ssl_options(weak_cert_validation = T))
+m_sd <- mongo("safe_dates", url = URI, options = ssl_options(weak_cert_validation = T))
 
+get_safe_dates <- function(){
+  sd <- m_sd$find("{}","{}")
 
+  #ADD JULIAN DATE COLUMNS
+  sd$B_SAFE_START_JULIAN <- apply(sd['B_SAFE_START_DATE'],1,function(x){yday(x[1])})
+  sd$B_SAFE_END_JULIAN <- apply(sd['B_SAFE_END_DATE'],1,function(x){yday(x[1])})
+
+  return(sd[c('TAX_NO','COMMON_NAME','B_SAFE_START_JULIAN', 'B_SAFE_END_JULIAN')])
+}
+
+safe_dates <- get_safe_dates()
 
 # this query follows JSON based query syntax (see here for the basics: https://jeroen.github.io/mongolite/query-data.html#query-syntax)
 # TESTING INFO
@@ -43,15 +53,57 @@ get_ebd_data <- function(query="{}", filter="{}"){
 #   2. Retrieve OBSERVATION_DATE, SAMPLING_EVENT_IDENTIFIER, OBSERVATIONS.COMMON_NAME, OBSERVATIONS.OBSERVATION_COUNT, OBSERVATIONS.BEHAVIOR_CODE, OBSERVATIONS.BREEDING_CATEGORY for all Cerulean Warbler detections.
 #     get_ebd_data('{"OBSERVATIONS.COMMON_NAME":"Cerulean Warbler"}', '{"OBSERVATION_DATE":1, "SAMPLING_EVENT_IDENTIFIER":1, "OBSERVATIONS.COMMON_NAME":1, "OBSERVATIONS.OBSERVATION_COUNT":1, "OBSERVATIONS.BEHAVIOR_CODE":1, "OBSERVATIONS.BREEDING_CATEGORY":1}')
 
+#specify the default  fields to return if no filter passed
   # do not run if no query passed
   if (query != "{}"){
     sortquery <- '{"OBSERVATION_DATE":1, "TIME_OBSERVATIONS_STARTED":1, "SAMPLING_EVENT_IDENTIFIER":1}'
     if (grepl("OBSERVATIONS", filter, fixed=TRUE) | filter=="{}"){
       # WORKING VERSION - downloads and returns all checklist obs
-      mongodata <- m$find(query, filter, sort=sortquery) %>%
-      unnest(cols = (c(OBSERVATIONS))) # Expand observations
+      if (filter == "{}") {
+        # DEFINE DEFAULT FILTER that excludes unused fields
+        filter <- '{"ALL_SPECIES_REPORTED":1,"ATLAS_BLOCK":1,"BCR_CODE":1,"COUNTRY":1,"COUNTRY_CODE":1,"COUNTY":1,"COUNTY_CODE":1,"DURATION_MINUTES":1,"EFFORT_AREA_HA":1,"EFFORT_DISTANCE_KM":1,"GROUP_IDENTIFIER":1,"IBA_CODE":1,"ID_BLOCK_CODE":1,"ID_NCBA_BLOCK":1,"LAST_EDITED_DATE":1,"LATITUDE":1,"LOCALITY":1,"LOCALITY_ID":1,"LOCALITY_TYPE":1,"LONGITUDE":1,"MONTH":1,"NUMBER_OBSERVERS":1,"OBSERVATIONS":1,"OBSERVATION_DATE":1,"OBSERVER_ID":1,"PRIORITY_BLOCK":1,"PROJECT_CODE":1,"PROTOCOL_CODE":1,"PROTOCOL_TYPE":1,"SAMPLING_EVENT_IDENTIFIER":1,"STATE":1,"STATE_CODE":1,"TIME_OBSERVATIONS_STARTED":1,"TRIP_COMMENTS":1,"USFWS_CODE":1,"YEAR":1}'
+
+        # fields excluded
+        # "GEOM.coordinates":1,"GEOM.type":1,"NCBA_APPROVED":1,"NCBA_BLOCK":1,"NCBA_COMMENTS":1,"NCBA_REVIEWED":1,"NCBA_REVIEWER":1,"NCBA_REVIEW_DATE":1,
+      }
+
+      print("getting Observations from AtlasCache")
+      mongodata <- m$find(query, filter)
+      # mongodata <- m$find(query, filter, sort=sortquery) #sorting breaks for big queries
+
+      if (nrow(mongodata)>0) {
+        print("unnesting observation records")
+        mongodata <- unnest(mongodata, cols = (c(OBSERVATIONS)))
+
+        #ADD SEASON COLUMN FROM SAFE DATES TABLE AND POPULATE
+        gen_breeding_start <- yday("2021-05-01")
+        gen_breeding_end <- yday("2021-08-30")
+
+        mongodata$SEASON <- apply(mongodata[c('OBSERVATION_DATE','COMMON_NAME')],1, function(x) {
+          odj <- yday(x[1])
+          sd <- filter(sd,COMMON_NAME == x[2])
+
+          if (nrow(sd) == 0 ) {
+            begin <- gen_breeding_start
+            end <- gen_breeding_end
+          } else {
+            begin <- sd['B_SAFE_START_JULIAN']
+            end <- sd['B_SAFE_END_JULIAN']
+          }
+
+          season <- "Non-Breeding"
+          if (begin <= odj & odj <= end){
+            season <- "Breeding"
+          }
+          return(season)
+
+        })
+      } # Expand observations if records returned
+
 
       # EXAMPLE/TESTING
+      print("AtlasCache records retrieved")
+      # print(head(mongodata))
       # USE aggregation pipeline syntax to return only needed observations
       # pipeline <- str_interp('[{$match: ${query}}, {$project:${filter}}, {$unwind: {path: "$OBSERVATIONS"}}]')
       #
@@ -64,6 +116,9 @@ get_ebd_data <- function(query="{}", filter="{}"){
     return(mongodata)
   }
 }
+
+
+
 
 get_block_data <- function() {
   # Retrieves block data table from MongoDB Atlas implementation
@@ -118,7 +173,7 @@ get_spp_obs <- function(species, filter){
 
   query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
   results <- get_ebd_data(query, filter) %>%
-  filter(COMMON_NAME == species) #remove other obervations from the checklist
+    filter(COMMON_NAME == species) #remove other obervations from the checklist
 
   return(results)
 }
@@ -140,14 +195,24 @@ species_list = get_spp_list(filter='{"PRIMARY_COM_NAME":1}')$PRIMARY_COM_NAME
 
 # block_data <- read.csv("input_data/blocks.csv") %>% filter(COUNTY == "WAKE")
 block_data <- get_block_data()
-priority_block_geojson <- readLines("input_data/blocks_priority.geojson")
+# priority_block_geojson <- readLines("input_data/blocks_priority.geojson")
+# priority_block_data <- block_data
+
+priority_block_data <- filter(block_data, PRIORITY == 1)[c("ID_NCBA_BLOCK", "ID_BLOCK_CODE", "NW_X", "NW_Y", "SE_X", "SE_Y", "PRIORITY", "COUNTY", "REGION")]
+
+# priority_block_data <- block_data %>%
+  # filter(PRIORITY == 1) %>%
+  # select(ID_NCBA_BLOCK, ID_BLOCK_CODE, NW_X, NW_Y, SE_X, SE_Y, PRIORITY, COUNTY, REGION)
+
+print("filtering block records")
+# print(head(priority_block_data))
+
 # priority_bock_geojson$style = list(
 #   weight = 2,
 #   color = ncba_blue,
 #   fillOpacity = 0
 # )
-priority_block_data <- filter(block_data, PRIORITY==1)
-priority_block_list <- select(priority_block_data,ID_NCBA_BLOCK,ID_BLOCK_CODE)
+
 
 
 block_hours_month <- read.csv("input_data/block_month_year_hours.csv")

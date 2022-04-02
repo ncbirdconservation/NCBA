@@ -31,11 +31,16 @@ nc_center_lng = -79.2
 nc_center_zoom = 7
 nc_block_zoom = 13
 ncba_blue = "#2a3b4d"
-
+checklists_found = 0
+ncba_failed = "#DB504A"
+# ncba_failed = "#D05353"
+ncba_success = "#43AA8B"
+# ncba_success = "#A2FAA3"
 # SETUP FILES
 # basemap = leaflet(ebd_data) %>% setView(lng = -78.6778808, lat = 35.7667941, zoom = 12) %>% addTiles() %>% addProviderTiles(providers$CartoDB.Positron) %>% addCircles()
 current_block = ""
 
+sd <- get_safe_dates()
 
 
 # Define UI for miles per gallon app ----
@@ -56,14 +61,25 @@ ui <- bootstrapPage(
           tags$p("Summary statistics page for block-level data."),
           div(class="tab-control-group",
             h4("Priority Block"),
-            htmlOutput("selected_block", inline=FALSE)
+            htmlOutput("selected_block", inline=FALSE),
+            htmlOutput("checklist_counter")
           ),
           div(class="tab-control-group",
             h4("Checklists"),
             # checkboxInput("show_checklists","Display Checklists", FALSE ),
             # prettySwitch("show_checklists","Display Checklists", value=TRUE ),
-            prettySwitch("portal_records","Portal Records Only", FALSE )
-          ),
+            prettySwitch("portal_records","Portal Records Only", FALSE ),
+            radioButtons("season_radio",label = h4("Season"),
+              choices = list("All Records" = "All", "Breeding" = "Breeding", "Non-Breeding" = "Non-Breeding"),
+              selected = "All")
+  #           h5("Month Range"),
+  #           selectInput("start_month", label=NULL,
+  # choices = list("Jan" = 1, "Feb" = 2, "Mar" = 3, "Apr" = 4, "May" = 5, "Jun" = 6, "Jul" = 7, "Aug" = 8, "Sep" = 9, "Oct" = 10, "Nov" = 11, "Dec" = 12),
+  # selected = 1),
+  #           selectInput("end_month",label = NULL,
+  # choices = list("Jan" = 1, "Feb" = 2, "Mar" = 3, "Apr" = 4, "May" = 5, "Jun" = 6, "Jul" = 7, "Aug" = 8, "Sep" = 9, "Oct" = 10, "Nov" = 11, "Dec" = 12),
+  # selected = 12)
+          )
           # div(class="tab-control-group",
           #   h4("Date Range"),
           #   dateRangeInput("date_range", ""),
@@ -75,12 +91,12 @@ ui <- bootstrapPage(
           leafletOutput("mymap")
         ),
         div(class="col-md-3 panel",
-          h4("Block Stats (placeholder)"),
-          h5("Breeding"),
-          htmlOutput("block_breeding_stats"),
+          h4("Block Statistics"),
+          # h5("Breeding"),
+          htmlOutput("block_breeding_stats")
           #should include all the requirements for completing - color coded if hit metric or not - also build/require block_status table in AtlasCache
-          h5("Non-Breeding"),
-          htmlOutput("block_nonbreeding_stats")
+          # h5("Non-Breeding"),
+          # htmlOutput("block_nonbreeding_stats")
         ),
         div(class="col-md-3 panel",
           h4("Block Hours"),
@@ -96,11 +112,12 @@ ui <- bootstrapPage(
           dataTableOutput("spp_observed"),
           downloadButton("download_spplist", "Download")
 
-        ),
-        div(class="col-md-12 panel",
-          h4("Test Panel"),
-          div(tableOutput("testing_output"), style="font-size:60%")
         )
+        # ,
+        # div(class="col-md-12 panel",
+        #   h4("Test Panel"),
+        #   div(tableOutput("testing_output"), style="font-size:60%")
+        # )
 
     ),
     tabPanel("Species",
@@ -158,13 +175,24 @@ server <- function(input, output, session) {
   # })
 
   #reactive function that listens for all sidget changes
-  checklist_events <- reactive({
-    # list(input$show_checklists, input$portal_records, current_block_r())
-    list(input$portal_records, current_block_r())
-  })
+  # checklist_events <- reactive({
+  #   # list(input$show_checklists, input$portal_records, current_block_r())
+  #   list(input$portal_records, current_block_r(), input$season_radio)
+  # })
 
   criteria_changes <- reactive({
-    list(input$portal_records)
+    # add other criteria here
+    list(input$portal_records, input$season_radio)
+  })
+
+  checklist_count <- reactive({
+    unique_sei <- unique(current_block_ebd()$SAMPLING_EVENT_IDENTIFIER)
+    length(unique_sei)
+  })
+
+  checklist_filtered_count <- reactive({
+    unique_sei <- unique(current_block_ebd_filtered()$SAMPLING_EVENT_IDENTIFIER)
+    length(unique_sei)
   })
 
   ########################################################################################
@@ -173,8 +201,10 @@ server <- function(input, output, session) {
   #
   # current block changes when map is clicked
   current_block_r <- reactive({
-    geojson_info <- input$mymap_geojson_click
-    paste(geojson_info$properties$ID_NCBA_BLOCK)
+    print("map clicked")
+    blockmap_info <- input$mymap_shape_click
+    print(blockmap_info$id)
+    paste(blockmap_info$id)
 
   })
 
@@ -191,28 +221,49 @@ server <- function(input, output, session) {
 
     cblock <- current_block_r()
     q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}"}')
+
     get_ebd_data(q, "{}") #get all fields
 
   })
 
-  # FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES
+  # Applies filter WHEN CRITERIA CHANGES
   current_block_ebd_filtered <- reactive({
     req(current_block_ebd())
 
-    current_block_ebd() %>%
-      filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
-      # ADD ADDITIONAL FILTERS HERE AS NEEDED
+    #make sure there are records to filter!
+    validate(
+      need(checklist_count()>0,"")
+    )
+    print("applying filters to block records")
+
+    # current_block_ebd()
+
+      current_block_ebd() %>%
+        filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE) %>%
+        filter(if(input$season_radio != "All") SEASON == input$season_radio else TRUE)
 
   })
+
+  # UPDAATE CHECKLIST COUNT
+  output$checklist_counter <- renderUI({
+    req(current_block_ebd(), current_block_ebd_filtered(), checklist_count(), checklist_filtered_count())
+    all <- paste(checklist_count(), " Total Checklists Found")
+    filtered <- paste(checklist_filtered_count(), " Filtered Checklists Found")
+
+    HTML(paste(all, filtered, sep='<br/>'))
+
+  })
+
   # FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES - RETURNS CHECKLIST LEVEL DATA
   current_block_ebd_checklistsonly_filtered <- reactive({
-    req(current_block_ebd_filtered())
+
+    req(current_block_ebd(), current_block_ebd_filtered())
 
     current_block_ebd_filtered() %>%
       filter(CATEGORY == "species") %>% # make sure only species counted
       group_by(SAMPLING_EVENT_IDENTIFIER) %>%
       mutate(SPP_COUNT = unique(GLOBAL_UNIQUE_IDENTIFIER)) %>%
-      select(ALL_SPECIES_REPORTED,ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NCBA_BLOCK,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR, SPP_COUNT)
+      select(ALL_SPECIES_REPORTED,ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR)
       # summarise(spp_count = unique(GLOBAL_UNIQUE_IDENTIFIER), .groups = 'drop')
       # filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
@@ -229,29 +280,48 @@ server <- function(input, output, session) {
     # paste(current_block_r())
   })
 
-  # output$block_breeding_stats <- reactive({
-  #   renderText('<span>Testing</span>')
-  # })
-
   ## TESTING - table output
-  output$testing_output <- renderTable(
-    select(current_block_ebd_checklistsonly_filtered()),
-    striped = TRUE,
-    spacing = "xs"
-  )
+  # output$testing_output <- renderTable({
+  #
+  #
+  #   paste(select(current_block_ebd_checklistsonly_filtered()),
+  #   striped = TRUE,
+  #   spacing = "xs")
+  # })
 
 
   # BREEDING STATS
   output$block_breeding_stats <- renderUI({
-    sa_list <- spp_accumulation_results()$spp_unique
-    #add conditional formatting if criteria met
-    num_breed_confirm <- paste("Confirmed Spp (C4):",length(filter(sa_list, bcat == "C4" )))
-    num_breed_prob <- paste("Probable Spp (C3):", length(filter(sa_list, bcat == "C3" )))
-    num_breed_poss <- paste("Possible Spp (C2):", length(filter(sa_list, bcat == "C2" )))
-    num_breed_hours <- paste("Dirunal Hours:", sum(current_block_ebd_checklistsonly_filtered()["DURATION_MINUTES"])/60)
-    num_spp <- paste("# Species: ", length(sa_list["spp"]) )
+    req(current_block_ebd(), current_block_ebd_filtered())
 
-    HTML(paste(num_spp, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
+    #ensure records returned
+    validate(
+      need(current_block_ebd(), "No checklists submitted.")
+    )
+
+    sa_list <- spp_accumulation_results()$spp_unique
+
+    spp_total <- nrow(sa_list["spp"])
+    confirmed_total <- nrow(filter(sa_list, bcat == "C4" ))
+    if ((spp_total*0.5)<confirmed_total) {
+      confirmed_class = "success"
+    } else {
+      confirmed_class = "failed"
+    }
+
+    breed_hours_class <- "failed"
+    if (spp_accumulation_results()$hrs_total >= 20) {
+      breed_hours_class <- "success"
+    }
+
+    #add conditional formatting if criteria met
+    num_spp_total <- paste("Species: ", nrow(sa_list["spp"]) )
+    num_breed_confirm <- paste("Confirmed (C4):<span class='",confirmed_class, "'>", confirmed_total, "</span>")
+    num_breed_prob <- paste("Probable (C3):", nrow(filter(sa_list, bcat == "C3" )))
+    num_breed_poss <- paste("Possible (C2):", nrow(filter(sa_list, bcat == "C2" )))
+    num_breed_hours <- paste("Hours:<span class='", breed_hours_class, "'>", format(spp_accumulation_results()$hrs_total, trim=TRUE, digits=1), "</span>")
+
+    HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
   })
 
 
@@ -266,29 +336,31 @@ server <- function(input, output, session) {
 
   # DISPLAY SPECIES ACCUMULATION PLOT
   spp_accumulation_results <- reactive({
-    req(current_block_ebd_filtered())
+    req(current_block_ebd(), current_block_ebd_filtered())
     # pass only those columns needed
-    sa <- filter(current_block_ebd_filtered(), CATEGORY == "species")[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES", "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME")]
+    sa <- filter(current_block_ebd_filtered(), CATEGORY == "species")[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES", "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME", "CATEGORY")]
 
     plot_spp_accumulation(sa)
 
   })
 
   output$spp_accumulation <- renderPlot({
+    req(spp_accumulation_results())
     spp_accumulation_results()$plot
 
   })
 
   # DISPLAY SPECIES LIST
   output$spp_observed <- renderDataTable(
-    spp_accumulation_results()$spp_unique[c("spp","bcat")], options=list(pageLength=25)
+    spp_accumulation_results()$spp_unique[c("spp","bcat")], options=list(pageLength=5, autoWidth = TRUE)
   )
+
   output$download_spplist <- downloadHandler(
     filename = function() {
       paste("spp_list", ".csv", sep = "")
     },
     content = function(file) (
-      write.csv(spp_accumulation_results()$spp_unique, file, row.names = FALSE)
+      write.csv(spp_accumulation_results()$spp_unique, file, row.names = TRUE)
     )
   )
 
@@ -297,11 +369,21 @@ server <- function(input, output, session) {
   # MAP
   # SETUP LEAFLET MAP, RENDER BASEMAP
   output$mymap <- renderLeaflet({
+
+    #setup block geojson layer
+    print("starting map, adding blocks")
+
     leaflet() %>%
       setView(lng = nc_center_lng, lat = nc_center_lat, zoom = nc_center_zoom) %>%
       # addTiles() %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
-      addGeoJSON(priority_block_geojson, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE)
+      # addGeoJSON(priority_block_geojson, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE)
+      addRectangles(data = priority_block_data, layerId = ~ ID_NCBA_BLOCK, lng1 = ~ NW_X, lat1 = ~ NW_Y, lng2 = ~ SE_X, lat2 = ~ SE_Y, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE, label = ~ ID_NCBA_BLOCK)
+      # addRectangles(data = priority_block_data, layerId = ~ ID_NCBA_BLOCK, lng1 = ~ NW_X, lat1 = ~ NW_Y, lng2 = ~ SE_X, lat2 = ~ SE_Y, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE, label = ~ ID_NCBA_BLOCK , labelOptions = labelOptions(noHide = T, textOnly = TRUE, offset(c(-30, 30)),
+      #   style = list(
+      #     "color" = "#444444",
+      #     "font-size" = "8px"
+      #   )))
   })
 
   # ZOOM MAP TO SELECTED BLOCK
@@ -317,6 +399,9 @@ server <- function(input, output, session) {
         setView(lat = block_center_lat, lng = block_center_lng , zoom = nc_block_zoom)
   })
 
+  # popup menu on hover over checklist
+
+
   # DISPLAY CHECKLISTS ON THE MAP
   observeEvent(current_block_ebd_checklistsonly_filtered(), {
     # req(current_block_r())
@@ -327,8 +412,14 @@ server <- function(input, output, session) {
     if (length(checklists) > 0){
       leafletProxy("mymap") %>%
         clearMarkers() %>%
-        clearShapes() %>%
-        addCircles(data=checklists, color=ncba_blue)
+        # clearShapes() %>%
+        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, color=ncba_blue, stroke=FALSE, fillOpacity = 0.6, label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML) )
+        # addMarkers(data=checklists, layerId = paste("checklist",~ SAMPLING_EVENT_IDENTIFIER), lat = ~ LATITUDE, lng = ~ LONGITUDE, color=ncba_blue,
+        #   label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
+        #   labelOptions = labelOptions(
+        #    style = list("font-weight" = "normal", padding = "3px 8px", "color" = ncba_blue),
+        #    textsize = "0.8rem", direction = "auto")
+        #   )
     }
 
   })
@@ -340,10 +431,10 @@ server <- function(input, output, session) {
   #######################################################
   # Species info
 
-  current_spp_r <- reactive({
-    # get(input$block_select)
-    current_spp <- input$spp_select
-  })
+  # current_spp_r <- reactive({
+  #   # get(input$block_select)
+  #   current_spp <- input$spp_select
+  # })
 
 output$breeding_code_legend <- renderTable(
   breeding_codes_key,
@@ -353,16 +444,22 @@ output$breeding_code_legend <- renderTable(
 
 output$spp_breedingbox_plot <- renderPlot({
 
+  # check to make sure species is selected
+  validate(
+    need(input$spp_select, 'select a species from the list')
+  )
   # PLOT BREEDING CODES ----------------------------------------------------------
   lump <- list(S = c("S", "S7", "M"), O = c("", "F", "O", "NC"))
   no_plot_codes <- NULL
   out_pdf <- NULL
-  spp <- current_spp_r()
-  query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${spp}"}')
+  spp <- input$spp_select
+  # query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${spp}"}')
   filter <- str_interp('{"OBSERVATION_DATE":1, "OBSERVATIONS.BREEDING_CODE":1, "OBSERVATIONS.COMMON_NAME":1}')
+  print("get ebd records")
   ebird <- get_spp_obs(spp, filter)
 
-  grid::current.viewport()
+  print("ebd records retrieved, plotting data")
+  # grid::current.viewport()
   breeding_boxplot(spp, ebird, pallet="Paired", out_pdf=NULL, no_plot_codes=no_plot_codes, lump=lump, drop=TRUE)
 })
 
