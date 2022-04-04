@@ -1,25 +1,28 @@
-# N. Tarr, 10/29/2021
+# N. Tarr, 4/2/2022
 # 
 # Example script showing how to use the ncba_functions.
+blocks.path <- "~/Datasets/ncba_blocks.shp"
+config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+setwd("~/Documents/NCBA/Workspace/")
 
-library(stringr)
-library(tidyr)
-library(dplyr)
-library(lubridate)
+library(tidyverse)
+library(tmap)
 
 # Import the atlas functions
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
 
 # Identify location of config file
-config <- "~/enter/pathhere/ncba_config.R"
+config <- "~/Documents/NCBA/Scripts/ncba_config.R"
 
 # Set a working environment
-setwd("~/enter/path/here/")
+setwd("~/Documents/NCBA/species/")
 
 
 # WHAT SPECIES? ----------------------------------------------------------------
-species <- "Kentucky Warbler"
+species <- "American Bittern"
 
 
 # GET NCBA DATA ----------------------------------------------------------------
@@ -67,11 +70,37 @@ plot(locality_type_pie(sp_df))
 
 # PLOT SIMPLE FEATURES ---------------------------------------------------------
 sf <- records_as_sf(records_df=sp_df, kind="observations",
-                       method="point-radius")
+                    method="point-radius")
 # Make a crude plot
 plot(select(sf, c(sampling_event_identifier, geometry)))
 
-# OBSERVATION PER BLOCK ---------------------------------------------- IN PROGRESS
-#blocks_path <- "/Volumes/nmtarr1/Datasets/ncba_blocks.shp"
-#blocks <- st_read(blocks_path) %>% st_transform(6542) # Correct projection???????????
-#checklists_per_block(records_df=sp_df, blocks_sf=blocks, method="B")
+# OBSERVATION PER BLOCK ----------------------------------------------
+blocks.path <- "/Volumes/nmtarr1/Datasets/ncba_blocks.shp"
+blocks <- st_read(blocks.path) %>% st_transform(6542) # Correct projection???????????
+
+priority.n.B <- observations_per_block(records_df=sp_df, blocks_sf=blocks, 
+                                       method="B")
+priority.n.D <- observations_per_block(records_df=sp_df, blocks_sf=blocks, 
+                                       method="D")
+
+
+# Isolate priority blocks with fewer than 10 checklists
+high.priority.B <- priority.n.B %>%
+  filter(priority == 1, individuals <= 0)
+high.priority.D <- priority.n.D %>%
+  filter(priority == 1, individuals <= 0)
+
+# Plot the map
+tmap_mode("view")
+
+tm_shape(priority.n.D) +
+  tm_fill(col = "individuals", palette = "Reds", style="fixed", alpha = .7,
+          breaks = c(0, 1, 2, 3, 5, 10, 1000), as.count = TRUE) +
+  tm_shape(priority.n.B) +
+  tm_fill(col = "individuals", palette = "Blues", style="fixed", alpha = .7,
+          breaks = c(0, 1, 2, 3, 5, 10, 1000), as.count = TRUE) +
+  tm_shape(high.priority.B) + 
+  tm_fill(col = "individuals", style = "cat", palette=c("red","yellow")) +
+  tm_shape(high.priority.D) + 
+  tm_fill(col = "individuals", style = "cat", palette=c("blue","green")) +
+  tm_borders()
