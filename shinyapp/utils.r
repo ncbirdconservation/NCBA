@@ -37,7 +37,7 @@ safe_dates <- get_safe_dates()
 #   get_mongo_data('{"ID_NCBA_BLOCK":"GRIMESLAND-CW"}', '{"OBSERVATION_DATE":1, "SAMPLING_EVENT_IDENTIFIER":1}', FALSE)
 #   get_mongo_data('{"OBSERVATIONS.COMMON_NAME":"Cerulean Warbler"}', '{"OBSERVATION_DATE":1, "SAMPLING_EVENT_IDENTIFIER":1, "OBSERVATIONS.COMMON_NAME":1, "OBSERVATIONS.OBSERVATION_COUNT":1, "OBSERVATIONS.BEHAVIOR_CODE":1, "OBSERVATIONS.BREEDING_CATEGORY":1}')
 
-get_ebd_data <- function(query="{}", filter="{}"){
+get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
 # Retrieves data from MongoDB Atlas implementation
 #
 # Description:
@@ -76,28 +76,32 @@ get_ebd_data <- function(query="{}", filter="{}"){
         mongodata <- unnest(mongodata, cols = (c(OBSERVATIONS)))
 
         #ADD SEASON COLUMN FROM SAFE DATES TABLE AND POPULATE
-        gen_breeding_start <- yday("2021-05-01")
-        gen_breeding_end <- yday("2021-08-30")
+        gen_breeding_start = yday("2021-05-01")
+        gen_breeding_end = yday("2021-08-30")
 
+        print("adding safe dates")
         mongodata$SEASON <- apply(mongodata[c('OBSERVATION_DATE','COMMON_NAME')],1, function(x) {
-          odj <- yday(x[1])
-          sd <- filter(sd,COMMON_NAME == x[2])
+          odj = yday(x[1]) #Convert observation_date to julian day
+          spp_s_d = sd[sd$COMMON_NAME == x[2],] #lookup spp safe dates (if any)
 
-          if (nrow(sd) == 0 ) {
-            begin <- gen_breeding_start
-            end <- gen_breeding_end
+          if (nrow(spp_s_d) == 0 ) {
+            begin = gen_breeding_start
+            end = gen_breeding_end
           } else {
-            begin <- sd['B_SAFE_START_JULIAN']
-            end <- sd['B_SAFE_END_JULIAN']
+            begin = spp_s_d['B_SAFE_START_JULIAN']
+            end = spp_s_d['B_SAFE_END_JULIAN']
           }
 
-          season <- "Non-Breeding"
           if (begin <= odj & odj <= end){
-            season <- "Breeding"
+            season = "Breeding"
+          } else {
+            season = "Non-Breeding"
           }
+
           return(season)
 
         })
+        print("safe dates added")
       } # Expand observations if records returned
 
 

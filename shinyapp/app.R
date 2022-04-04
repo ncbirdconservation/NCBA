@@ -13,6 +13,7 @@ if(!require(dplyr)) install.packages("dplyr", repos = "http://cran.us.r-project.
 if(!require(leaflet)) install.packages("leaflet", repos = "http://cran.us.r-project.org")
 #if(!require(geojsonio)) install.packages("geojsonio", repos = "http://cran.us.r-project.org")
 if(!require(shinythemes)) install.packages("shinythemes", repos = "http://cran.us.r-project.org")
+if(!require(shinyBS)) install.packages("shinyBS", repos = "http://cran.us.r-project.org") #adds functions for tooltips
 
 #libraries for spp data
 if(!require(lubridate)) install.packages("lubridate", repos = "http://cran.us.r-project.org")
@@ -71,7 +72,8 @@ ui <- bootstrapPage(
             prettySwitch("portal_records","Portal Records Only", FALSE ),
             radioButtons("season_radio",label = h4("Season"),
               choices = list("All Records" = "All", "Breeding" = "Breeding", "Non-Breeding" = "Non-Breeding"),
-              selected = "All")
+              selected = "All"),
+              bsTooltip("season_radio", "Seasons calculated from species-specific safe dates (where available).", "right", options = list(container="body"))
   #           h5("Month Range"),
   #           selectInput("start_month", label=NULL,
   # choices = list("Jan" = 1, "Feb" = 2, "Mar" = 3, "Apr" = 4, "May" = 5, "Jun" = 6, "Jul" = 7, "Aug" = 8, "Sep" = 9, "Oct" = 10, "Nov" = 11, "Dec" = 12),
