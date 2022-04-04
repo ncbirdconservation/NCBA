@@ -53,6 +53,7 @@ ui <- bootstrapPage(
     HTML('<a style="text-decoration:none;cursor:default;color:#FFFFFF;" class="active" href="#">NC Bird AtlasCache Explorer</a>'), id="nav",
     windowTitle = "Quackalacky",
     tags$head(includeCSS("styles.css")),
+    tags$head(tags$link(rel="icon", href="/input_data/ncba_blue_wbnu.ico")),
     tabPanel("Blocks",
       div(class="col-md-2 panel sidebar", id = "block_controls",
 
