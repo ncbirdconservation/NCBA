@@ -96,7 +96,8 @@ ui <- bootstrapPage(
         div(class="col-md-3 panel",
           h4("Block Statistics"),
           # h5("Breeding"),
-          htmlOutput("block_breeding_stats")
+          htmlOutput("block_breeding_stats"),
+          downloadButton("download_block_checklists", "Download Checklists")
           #should include all the requirements for completing - color coded if hit metric or not - also build/require block_status table in AtlasCache
           # h5("Non-Breeding"),
           # htmlOutput("block_nonbreeding_stats")
@@ -247,6 +248,7 @@ server <- function(input, output, session) {
 
   })
 
+
   # UPDAATE CHECKLIST COUNT
   output$checklist_counter <- renderUI({
     req(current_block_ebd(), current_block_ebd_filtered(), checklist_count(), checklist_filtered_count())
@@ -272,6 +274,10 @@ server <- function(input, output, session) {
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
 
   })
+
+
+
+
   # POPULATE LABEL FOR CURRENT BLOCK
   output$selected_block <-renderText({
     req(current_block_r())
@@ -282,16 +288,35 @@ server <- function(input, output, session) {
 
     # paste(current_block_r())
   })
+  output$download_block_checklists <- downloadHandler(
+    filename = function() {
+      p <- ""
+      if (input$portal_records){ p <- "portal"}
 
-  ## TESTING - table output
-  # output$testing_output <- renderTable({
-  #
-  #
-  #   paste(select(current_block_ebd_checklistsonly_filtered()),
-  #   striped = TRUE,
-  #   spacing = "xs")
-  # })
+      paste(current_block_r(), input$season_radio,p, "blockchecklists.csv", sep = "_")
+      # paste("test.RData")
+    },
+    content = function(file) (
+      # save(current_block_ebd_checklistsonly_filtered(), file)
+      # save(current_block_ebd_checklistsonly_filtered(), file)
+      # load(file, verbose=T)
+      write.csv(current_block_ebd_checklistsonly_filtered(), file, row.names = TRUE)
+    )
 
+  )
+
+# For downloading testing datasets when conditions change
+# observeEvent(current_block_ebd_checklistsonly_filtered(),{
+#   # req(current_block_ebd_checklistsonly_filtered())
+#   print("saving data to file...")
+#   recs <- current_block_ebd_checklistsonly_filtered()
+#   p <- ""
+#   if (input$portal_records){ p <- "portal"}
+#
+#   fn <- paste(current_block_r(), input$season_radio,p, "blockchecklists.RData", sep = "_")
+#   save(recs, file=fn, compress="gzip")
+#   print("successfullly saved data")
+# })
 
   # BREEDING STATS
   output$block_breeding_stats <- renderUI({
@@ -424,6 +449,8 @@ server <- function(input, output, session) {
         #    textsize = "0.8rem", direction = "auto")
         #   )
     }
+
+
 
   })
 
