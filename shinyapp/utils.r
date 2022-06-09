@@ -126,7 +126,21 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
 
 get_block_data <- function() {
   # Retrieves block data table from MongoDB Atlas implementation
-  blockdata <- m_blocks$find("{}","{}")
+  filter <- '{"_id": 1, "COUNTY": 1, "GEOM": 1, "ID_BLOCK": 1, "ID_BLOCK_CODE": 1, "ID_EBD_NAME": 1, "ID_NCBA_BLOCK": 1, "ID_OLD_ID": 1, "NW_X": 1, "NW_Y": 1, "PRIORITY": 1, "QUADID": 1, "QUAD_BLOCK": 1, "QUAD_NAME": 1, "REGION": 1, "SE_X": 1, "SE_Y": 1, "SUBNAT2": 1, "TYPE": 1, "ID_S123_NOSPACES_TEMP": 1, "ID_S123_SPACES_TEMP": 1}'
+  # blockdata <- m_blocks$find("{}","{}")
+  blockdata <- m_blocks$find("{}",filter)
+  return(blockdata)
+
+}
+
+get_block_gap_spp <- function(blockid){
+# Retrieves list of species for the passed block id
+  filter <- '{"GAP_SPP":1}'
+  query <- '{"_id":"${blockid}"}'
+  blockdata <- m_blocks$find("{}",filter)
+
+# add code here to unnest data (like observations above)
+
   return(blockdata)
 
 }

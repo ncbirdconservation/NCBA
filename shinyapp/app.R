@@ -1,6 +1,6 @@
 # NC Bird Atlas Shiny App
 # v0.2
-# 03/18/2022
+# 05/02/2022
 # Scott K. Anderson
 # https://github.com/skaclmbr
 
@@ -25,6 +25,7 @@ if(!require(RColorBrewer)) install.packages("RColorBrewer", repos = "http://cran
 source("blocks.r")
 source("utils.r") #utilities file
 source("spp.r") #species function file
+source("Blk_cum_hr_func.r") #block hour graph
 
 # MAP CONSTANTS
 nc_center_lat = 35.5
@@ -60,14 +61,14 @@ ui <- bootstrapPage(
           # span(tags$i(h6("Checklists submitted to the NC Bird Atlas.")), style="color:#045a8d"),
           # h4("Map Controls"),
           h3("Block Explorer", class="tab-control-title"),
-          tags$p("Summary statistics page for block-level data."),
+          tags$p("Summary statistics page for block-level data.", class="desc-text"),
           div(class="tab-control-group",
             h4("Priority Block"),
             htmlOutput("selected_block", inline=FALSE),
             htmlOutput("checklist_counter")
           ),
           div(class="tab-control-group",
-            h4("Checklists"),
+            # h4("Checklists"),
             # checkboxInput("show_checklists","Display Checklists", FALSE ),
             # prettySwitch("show_checklists","Display Checklists", value=TRUE ),
             prettySwitch("portal_records","Portal Records Only", FALSE ),
@@ -321,12 +322,14 @@ server <- function(input, output, session) {
   # BREEDING STATS
   output$block_breeding_stats <- renderUI({
     req(current_block_ebd(), current_block_ebd_filtered())
-
+    print("rendering block stats")
     #ensure records returned
     validate(
       need(current_block_ebd(), "No checklists submitted.")
     )
 
+    ###########################
+    # block spp
     sa_list <- spp_accumulation_results()$spp_unique
 
     spp_total <- nrow(sa_list["spp"])
@@ -337,29 +340,52 @@ server <- function(input, output, session) {
       confirmed_class = "failed"
     }
 
-    breed_hours_class <- "failed"
-    if (spp_accumulation_results()$hrs_total >= 20) {
-      breed_hours_class <- "success"
-    }
-
     #add conditional formatting if criteria met
     num_spp_total <- paste("Species: ", nrow(sa_list["spp"]) )
     num_breed_confirm <- paste("Confirmed (C4):<span class='",confirmed_class, "'>", confirmed_total, "</span>")
     num_breed_prob <- paste("Probable (C3):", nrow(filter(sa_list, bcat == "C3" )))
     num_breed_poss <- paste("Possible (C2):", nrow(filter(sa_list, bcat == "C2" )))
-    num_breed_hours <- paste("Hours:<span class='", breed_hours_class, "'>", format(spp_accumulation_results()$hrs_total, trim=TRUE, digits=1), "</span>")
 
-    HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
+    ###########################
+    # block hours
+    diurnal_hours <- block_hrs_results()$total_hr - block_hrs_results()$noc_hr
+
+    diurnal_hours_target <- 20
+    if (input$season_radio == "Non-Breeding") {
+      diurnal_hours_target <- 10
+    }
+
+    diurnal_hours_class <- "failed"
+    if (diurnal_hours >= diurnal_hours_target) {
+      diurnal_hours_class <- "success"
+    }
+
+    nocturnal_hours_class <- "failed"
+    if (block_hrs_results()$noc_hr >= 2) {
+      nocturnal_hours_class <- "success"
+    }
+
+    # num_breed_hours <- paste("Hours:<span class='", breed_hours_class, "'>", format(spp_accumulation_results()$hrs_total, trim=TRUE, digits=1), "</span>")
+    num_diurnal_hours <- paste("Diurnal:<span class='", diurnal_hours_class, "'>", format(diurnal_hours, trim=TRUE, digits=1), " hrs</span>")
+    num_nocturnal_hours <- paste("Nocturnal:<span class='", nocturnal_hours_class, "'>", format(block_hrs_results()$noc_hr, trim=TRUE, digits=1), " hrs</span>")
+    num_total_hours <- paste("Total:<span class=''>", format(block_hrs_results()$total_hr, trim=TRUE, digits=1), " hrs</span>")
+
+    # HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
+    HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_diurnal_hours, num_nocturnal_hours, num_total_hours, sep='<br/>'))
+    # paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_diurnal_hours, num_nocturnal_hours, num_total_hours, sep='<br/>')
   })
 
 
   # DISPLAY BLOCK HOURS SUMMARY PLOT
+  block_hrs_results <- reactive({
+    req(current_block_ebd_checklistsonly_filtered())
+    print("running block hrs results")
+    block_hrs(current_block_ebd_checklistsonly_filtered())
+
+  })
   output$blockhours <- renderPlot({
-    # ggplot2(get_block_hours(current_block_r())$Value)
-    # ggplot(get_block_hours(current_block_r()), aes(YEAR_MONTH, Value, color="#2a3b4d"))
-    # ggplot(data=get_block_hours("RALEIGH_EAST-SE")) + geom_bar(mapping = aes(YEAR_MONTH, Value, color="#2a3b4d"))
-    req(current_block_r())
-    ggplot(data=get_block_hours(current_block_r()),aes(YEAR_MONTH, Value)) + geom_col(fill=ncba_blue)+ guides(x = guide_axis(angle = 90)) + ylab("Hours") + xlab("Year-Month")
+    req(current_block_ebd_checklistsonly_filtered())
+    block_hrs_results()$hr_plot
   })
 
   # DISPLAY SPECIES ACCUMULATION PLOT

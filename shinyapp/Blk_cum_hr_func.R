@@ -15,7 +15,8 @@
 library(tidyverse)
 library(lubridate)
 library(ggplot2)
-library(suncalc)
+if (!require(suncalc)) install.packages("suncalc", repos = "http://cran.us.r-project.org")
+# library(suncalc)
 library(grid)
 
 block_hrs <- function(d){	# pass a dataframe of eBird checklists
@@ -31,7 +32,7 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
   d.t <- d.t[!(d.t$TIME_OBSERVATIONS_STARTED)=="",]
   # Treating all times as "local" to avoid problem with daylight savings time.
   # Converting all local times to UTC
-  q24dyx <- data.frame(date=as.Date(d.t$date, tz="EST"), lat=d.t$LATITUDE, 
+  q24dyx <- data.frame(date=as.Date(d.t$date, tz="EST"), lat=d.t$LATITUDE,
 				lon=d.t$LONGITUDE)
   q24dyx$date <- as.Date(with_tz(q24dyx$date, tzone="UTC"), tz="UTC")	# convert obs times to UTC
   tm <- getSunlightTimes(data=q24dyx, keep=c("sunrise", "sunset"), tz="UTC")
@@ -84,9 +85,9 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
   		"Total nocturnal hours: ", round(noc.hr,2),sep="")
   grob <- grobTree(textGrob(txt, x=0.1,  y=0.92, hjust=0,
      gp=gpar(col="black", fontsize=10, fontface="italic")))				# font size
-  hr.plt <- ggplot(blkhr.df, aes(fill=Year, y=value, x=month) ) + 
+  hr.plt <- ggplot(blkhr.df, aes(fill=Year, y=value, x=month) ) +
     geom_bar(position="stack", stat="identity") +
-    scale_fill_brewer(palette="Accent") + 
+    scale_fill_brewer(palette="Accent") +
     labs(x="Month", y="Hours", title="Survey Hours") +
     theme(axis.text=element_text(size=11), axis.title=element_text(size=12),	# font size
         	plot.title=element_text(size=12,face="bold")) +				# font size
@@ -94,4 +95,3 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
 
   blkhr.list <- list(blk_hrs=blk.hr, total_hr=total.hr, noc_hr=noc.hr, hr_plot=hr.plt)
   return(blkhr.list) }
-

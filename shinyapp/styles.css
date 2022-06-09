@@ -21,7 +21,7 @@ div.outer {
 body, label, input, button, select {
   font-family: 'Helvetica Neue', Helvetica;
   /* font-weight: 200; */
-  font-size:0.95rem;
+  /* font-size:0.98rem; */
 }
 h1, h2, h3, h4 { font-weight: 400; color:#2a3b4d;}
 .sidebar{
@@ -31,6 +31,9 @@ h1, h2, h3, h4 { font-weight: 400; color:#2a3b4d;}
   transition: opacity 500ms 1s;
 }
 
+.desc-text {
+  font-size:0.98rem;
+}
 .failed {
   font-weight: 700;
   color: var(--ncba-failed-color) !important;
