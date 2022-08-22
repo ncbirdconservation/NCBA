@@ -642,7 +642,7 @@ observations_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT
   # 
   # Locational uncertainty is important and problematic because if it is large
   # in relation to the level of analysis, it creates uncertainty about which
-  # spatial subregions, such as counties or atlas blocks, a checklist should
+  # spatial subregions, such as counties or atlas blocks, an observation should
   # be attributed to.
   #
   # Parameters:
@@ -650,13 +650,13 @@ observations_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT
   #
   # blocks_sf -- a spatial data frame of atlas blacks
   #
-  # method -- specify the method to use for attributing checklists to blocks.
+  # method -- specify the method to use for attributing observations to blocks.
   #   Choices are: "A", "B", "C", or "D", but method C is unavailable.
   #   
   #   Method A uses the block identified by eBird in the column "atlas_block".
   #       An abundance of empty values for atlas_block poses a problem.
   #
-  #   Method B assigns each checklist to the block that the checklist
+  #   Method B assigns each observation to the block that the checklist
   #   coordinate is located within.  This approach could generate deceptive
   #   results if checklists represent birding effort from multiple blocks but
   #   are assigned to a single block or if the coordinate is located in a block
@@ -683,7 +683,7 @@ observations_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT
   #   greater than 5 km for this method.
   # 
   #   Results:
-  #   Spatial data frame of blocks with a checklist tally.
+  #   Spatial data frame of blocks with a tally of individuals reported.
   
   if (method=="A") {
     result <- records_sf %>%

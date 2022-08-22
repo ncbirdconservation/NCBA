@@ -9,6 +9,8 @@ setwd("~/Documents/NCBA/Workspace/")
 
 library(tidyverse)
 library(tmap)
+library(hms)
+library(sf)
 
 # Import the atlas functions
 setwd("~/Code/NCBA/resources")
@@ -57,7 +59,7 @@ breeding_boxplot(species, sp_df, pallet="Paired", out_pdf=NULL,
 plot(plot_checklists_coords(sp_df))
 
 # SUMMARIZE START TIMES --------------------------------------------------------
-plot(start_time_boxplot(sp_df))
+#plot(start_time_boxplot(sp_df))
 
 # SUMMARIZE TRAVEL DISTANCE ----------------------------------------------------
 plot(effort_distance_boxplot(sp_df))
@@ -104,3 +106,4 @@ tm_shape(priority.n.D) +
   tm_shape(high.priority.D) + 
   tm_fill(col = "individuals", style = "cat", palette=c("blue","green")) +
   tm_borders()
+
