@@ -1,6 +1,5 @@
 # utility function to use throughout
 
-
 #####################################################################################
 # MongoDB
 # this is a read only account
@@ -36,6 +35,18 @@ safe_dates <- get_safe_dates()
 # this works:
 #   get_mongo_data('{"ID_NCBA_BLOCK":"GRIMESLAND-CW"}', '{"OBSERVATION_DATE":1, "SAMPLING_EVENT_IDENTIFIER":1}', FALSE)
 #   get_mongo_data('{"OBSERVATIONS.COMMON_NAME":"Cerulean Warbler"}', '{"OBSERVATION_DATE":1, "SAMPLING_EVENT_IDENTIFIER":1, "OBSERVATIONS.COMMON_NAME":1, "OBSERVATIONS.OBSERVATION_COUNT":1, "OBSERVATIONS.BEHAVIOR_CODE":1, "OBSERVATIONS.BREEDING_CATEGORY":1}')
+aggregate_ebd_data <- function (pipeline) {
+  # Perform aggregation on ebd collection in MongoDB Atlas implementation
+  #
+  # Description:
+  #   Returns records resulting from the passed aggregation pipeline
+  #
+  # Arguments:
+  # pipeline -- valid JSON formatted aggregation pipeline
+
+  mongodata <- m$aggregate(pipeline)
+  return(mongodata)
+}
 
 get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
 # Retrieves data from MongoDB Atlas implementation
@@ -56,6 +67,7 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
 #specify the default  fields to return if no filter passed
   # do not run if no query passed
   if (query != "{}"){
+    # don't pass blank queries!
     sortquery <- '{"OBSERVATION_DATE":1, "TIME_OBSERVATIONS_STARTED":1, "SAMPLING_EVENT_IDENTIFIER":1}'
     if (grepl("OBSERVATIONS", filter, fixed=TRUE) | filter=="{}"){
       # WORKING VERSION - downloads and returns all checklist obs

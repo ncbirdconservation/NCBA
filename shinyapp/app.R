@@ -25,7 +25,7 @@ if(!require(RColorBrewer)) install.packages("RColorBrewer", repos = "http://cran
 source("blocks.r")
 source("utils.r") #utilities file
 source("spp.r") #species function file
-source("Blk_cum_hr_func.r") #block hour graph
+source("blkcumhrfunc.r") #block hour graph
 
 # MAP CONSTANTS
 nc_center_lat = 35.5
@@ -111,7 +111,7 @@ ui <- bootstrapPage(
           h4("Species Accumulation"),
           plotOutput("spp_accumulation")
         ),
-        div(class="col-md-3 panel",
+        div(class="col-md-6 panel",
           h4("Species"),
           # div(tableOutput("spp_observed"), style="font-size:85%; height:442.995px; overflow-y:scroll;")
           dataTableOutput("spp_observed"),
@@ -369,7 +369,9 @@ server <- function(input, output, session) {
     num_diurnal_hours <- paste("Diurnal:<span class='", diurnal_hours_class, "'>", format(diurnal_hours, trim=TRUE, digits=1), " hrs</span>")
     num_nocturnal_hours <- paste("Nocturnal:<span class='", nocturnal_hours_class, "'>", format(block_hrs_results()$noc_hr, trim=TRUE, digits=1), " hrs</span>")
     num_total_hours <- paste("Total:<span class=''>", format(block_hrs_results()$total_hr, trim=TRUE, digits=1), " hrs</span>")
-
+    print("troubleshooting duplicate block stats:")
+    print("block hrs reslults:total_hr", format(block_hrs_results()$total_hr, trim=TRUE, digits=1))
+    # print(block_hrs_results())
     # HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
     HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_diurnal_hours, num_nocturnal_hours, num_total_hours, sep='<br/>'))
     # paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_diurnal_hours, num_nocturnal_hours, num_total_hours, sep='<br/>')
@@ -394,12 +396,19 @@ server <- function(input, output, session) {
     # pass only those columns needed
     sa <- filter(current_block_ebd_filtered(), CATEGORY == "species")[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES", "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME", "CATEGORY")]
 
-    plot_spp_accumulation(sa)
+    cblock <- current_block_r()
+    # pipeline <- str_interp('[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},{"$unwind": {"path": "$OBSERVATIONS"}}, {"$group": {"_id": {"blockName": "$ID_NCBA_BLOCK","spp": "$OBSERVATIONS.COMMON_NAME"},"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]')
+    pipeline <- str_interp('[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},{"$unwind": {"path": "$OBSERVATIONS"}}, {"$match": {"OBSERVATIONS.CATEGORY": "species"}},{"$group": {"_id": {"blockName": "$ID_NCBA_BLOCK","spp": "$OBSERVATIONS.COMMON_NAME"},"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]')
+    # pipeline <- str_interp('[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},{"$unwind": {"path": "$OBSERVATIONS"}}, {"$group": {"_id": {"block": "$ID_BLOCK_CODE","blockName": "$ID_NCBA_BLOCK","spp": "$OBSERVATIONS.COMMON_NAME","taxon": "$OBSERVATIONS.SCIENTIFIC_NAME"},"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"},"bcList": {"$push": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]')
+
+    spp_bcs <- aggregate_ebd_data(pipeline)
+    plot_spp_accumulation(sa, spp_bcs)
 
   })
 
   output$spp_accumulation <- renderPlot({
     req(spp_accumulation_results())
+    print(spp_accumulation_results()$spp_acc_data)
     spp_accumulation_results()$plot
 
   })
@@ -431,7 +440,7 @@ server <- function(input, output, session) {
       setView(lng = nc_center_lng, lat = nc_center_lat, zoom = nc_center_zoom) %>%
       # addTiles() %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
-      # addGeoJSON(priority_block_geojson, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE)
+      # addGeoJSON(priority_block_geojson, weight= 1, color=ncba_blue, opacity=0.6, fillColor="#777777', fillOpacity = 0.05, fill = TRUE)
       addRectangles(data = priority_block_data, layerId = ~ ID_NCBA_BLOCK, lng1 = ~ NW_X, lat1 = ~ NW_Y, lng2 = ~ SE_X, lat2 = ~ SE_Y, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE, label = ~ ID_NCBA_BLOCK)
       # addRectangles(data = priority_block_data, layerId = ~ ID_NCBA_BLOCK, lng1 = ~ NW_X, lat1 = ~ NW_Y, lng2 = ~ SE_X, lat2 = ~ SE_Y, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE, label = ~ ID_NCBA_BLOCK , labelOptions = labelOptions(noHide = T, textOnly = TRUE, offset(c(-30, 30)),
       #   style = list(

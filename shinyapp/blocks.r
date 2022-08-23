@@ -1,7 +1,7 @@
 # Code for parsing block data
 #
 #
-plot_spp_accumulation <- function(block_recs) {
+plot_spp_accumulation <- function(block_recs, spp_bcs) {
   # TODO - list highest behavior code by spp
   # TODO - collecct data for categories
   #  C1 – Observed; C2 – Possible; C3 – Probable; C4 – Confirmed
@@ -87,6 +87,7 @@ plot_spp_accumulation <- function(block_recs) {
   # print(c(obs_min,length(spp_unique$spp),c1,c2, c3, c4))
   spp_acc[nrow(spp_acc)+1,]<-c(obs_min,length(spp_unique$spp),c1,c2, c3, c4)
 
+
   spp_tot <- nrow(spp_unique)
   spp_tot_half <- spp_tot * 0.5
   hrs_convert <- 60.0
@@ -115,4 +116,3 @@ plot_spp_accumulation <- function(block_recs) {
   return(response)
 
 }
- 
