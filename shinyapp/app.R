@@ -474,9 +474,9 @@ server <- function(input, output, session) {
     checklists <- current_block_ebd_checklistsonly_filtered()[c("LATITUDE","LONGITUDE", "SAMPLING_EVENT_IDENTIFIER", "LOCALITY_ID", "LOCALITY", "OBSERVATION_DATE")]
     if (length(checklists) > 0){
       leafletProxy("mymap") %>%
-        clearMarkerClusters() %>%
+        clearMarkers() %>%
         # clearShapes() %>%
-        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, clusterOptions = markerClusterOptions(maxClusterRadius = 20), color=ncba_blue, stroke=FALSE, fillOpacity = 0.6, label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML) )
+        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, color=ncba_blue, stroke=FALSE, fillOpacity = 0.6, label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML) )
         # addMarkers(data=checklists, layerId = paste("checklist",~ SAMPLING_EVENT_IDENTIFIER), lat = ~ LATITUDE, lng = ~ LONGITUDE, color=ncba_blue,
         #   label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
         #   labelOptions = labelOptions(
