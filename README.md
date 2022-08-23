@@ -1,6 +1,6 @@
 # NC Bird Atlas
 
-Maintained by Nathan Tarr, Scott Anderson, Scott Pearson, and John Carpenter
+Contributions by Nathan Tarr, Scott Anderson, Scott Pearson, John Carpenter, and Elsa Chang.
 
 ## Purpose
 This repo houses code to support the NC Bird Atlas.
@@ -8,9 +8,7 @@ This repo houses code to support the NC Bird Atlas.
 ## Status
 Development
 
-## Using
-Copy a script to you local machine, edit paths and variables where necessary to reflect your computing environment, and run in RStudio.
-
+## Usage
 Scripts templates should remain organized into the following folders.
 
 __block_assessments__ -- descriptive analyses of individual blocks or groups of blocks, including priority blocks.
