@@ -11,6 +11,7 @@ if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-
 if(!require(mongolite)) install.packages("mongolite", repos = "http://cran.us.r-project.org")
 if(!require(dplyr)) install.packages("dplyr", repos = "http://cran.us.r-project.org")
 if(!require(leaflet)) install.packages("leaflet", repos = "http://cran.us.r-project.org")
+if(!require(htmltools)) install.packages("htmltools", repos = "http://cran.us.r-project.org")
 #if(!require(geojsonio)) install.packages("geojsonio", repos = "http://cran.us.r-project.org")
 if(!require(shinythemes)) install.packages("shinythemes", repos = "http://cran.us.r-project.org")
 if(!require(shinyBS)) install.packages("shinyBS", repos = "http://cran.us.r-project.org") #adds functions for tooltips
@@ -45,7 +46,7 @@ current_block = ""
 sd <- get_safe_dates()
 
 
-# Define UI for miles per gallon app ----
+# Define UI for Quackalacky Data app ----------------------------------------------------
 ui <- bootstrapPage(
   # titlePanel("NC Bird Atlas Explorer"),
   navbarPage(
@@ -159,15 +160,12 @@ ui <- bootstrapPage(
 
 )
 
-# Define server logic to plot various variables against mpg ----
+# Define server logic to plot various variables against mpg 
 server <- function(input, output, session) {
 
 
-  ########################################################################################
-  ########################################################################################
-  # BLOCK TAB
+## BLOCK TAB  ----------------------------------------------------
 
-  ########################################################################################
   # CHECKLISTS
   ## reactive listener for show checklist checkboxInput
   # show_checklists = reactive({
@@ -200,8 +198,7 @@ server <- function(input, output, session) {
     length(unique_sei)
   })
 
-  ########################################################################################
-  # BLOCKS
+  ### BLOCK TAB BLOCKS ----------------------------------------------------
   # reactive listener for block select
   #
   # current block changes when map is clicked
@@ -260,7 +257,7 @@ server <- function(input, output, session) {
 
   })
 
-  # FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES - RETURNS CHECKLIST LEVEL DATA
+  #### FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES - RETURNS CHECKLIST LEVEL DATA ------
   current_block_ebd_checklistsonly_filtered <- reactive({
 
     req(current_block_ebd(), current_block_ebd_filtered())
@@ -269,11 +266,22 @@ server <- function(input, output, session) {
       filter(CATEGORY == "species") %>% # make sure only species counted
       group_by(SAMPLING_EVENT_IDENTIFIER) %>%
       mutate(SPP_COUNT = unique(GLOBAL_UNIQUE_IDENTIFIER)) %>%
-      select(ALL_SPECIES_REPORTED,ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR)
+      select(ALL_SPECIES_REPORTED,ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR) %>% 
       # summarise(spp_count = unique(GLOBAL_UNIQUE_IDENTIFIER), .groups = 'drop')
       # filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
-
+      # create a column with the html link https://ebird.org/checklist/SID
+      mutate(link = paste(htmlEscape("https://ebird.org/checklist"), SAMPLING_EVENT_IDENTIFIER, sep = "/")) %>% 
+      # then a column with the HTML code for part of the popup label  
+      mutate(ebird_link = paste0("",'<a style="font-weight:bold" href="', # note the use of single quotes - to make a single " a legit piece of code
+                                 link,
+                                 '"target="_blank">',htmlEscape(SAMPLING_EVENT_IDENTIFIER), '</a> <br>',# again note the combination of single & double quotes
+                                 "Date: ", htmlEscape(OBSERVATION_DATE), "<br>",
+                                 "Start Time: ", htmlEscape(TIME_OBSERVATIONS_STARTED), "<br>",
+                                 "Length (Minutes): ", htmlEscape(DURATION_MINUTES), "<br>",
+                                 "Distance (km): ", htmlEscape(EFFORT_DISTANCE_KM), "<br>"
+                                 )
+             ) 
   })
 
 
@@ -306,7 +314,7 @@ server <- function(input, output, session) {
 
   )
 
-# For downloading testing datasets when conditions change
+### For downloading testing datasets when conditions change (Deprecated?) #### 
 # observeEvent(current_block_ebd_checklistsonly_filtered(),{
 #   # req(current_block_ebd_checklistsonly_filtered())
 #   print("saving data to file...")
@@ -319,7 +327,7 @@ server <- function(input, output, session) {
 #   print("successfullly saved data")
 # })
 
-  # BREEDING STATS
+  ## BREEDING STATS ----------------------------------------------------
   output$block_breeding_stats <- renderUI({
     req(current_block_ebd(), current_block_ebd_filtered())
     print("rendering block stats")
@@ -328,8 +336,8 @@ server <- function(input, output, session) {
       need(current_block_ebd(), "No checklists submitted.")
     )
 
-    ###########################
-    # block spp
+    
+    ### Block Species ----------------------------------------------------
     sa_list <- spp_accumulation_results()$spp_unique
 
     spp_total <- nrow(sa_list["spp"])
@@ -340,14 +348,13 @@ server <- function(input, output, session) {
       confirmed_class = "failed"
     }
 
-    #add conditional formatting if criteria met
+    # add conditional formatting if criteria met
     num_spp_total <- paste("Species: ", nrow(sa_list["spp"]) )
     num_breed_confirm <- paste("Confirmed (C4):<span class='",confirmed_class, "'>", confirmed_total, "</span>")
     num_breed_prob <- paste("Probable (C3):", nrow(filter(sa_list, bcat == "C3" )))
     num_breed_poss <- paste("Possible (C2):", nrow(filter(sa_list, bcat == "C2" )))
 
-    ###########################
-    # block hours
+    ### Block Hours ----------------------------------------------------
     diurnal_hours <- block_hrs_results()$total_hr - block_hrs_results()$noc_hr
 
     diurnal_hours_target <- 20
@@ -378,7 +385,7 @@ server <- function(input, output, session) {
   })
 
 
-  # DISPLAY BLOCK HOURS SUMMARY PLOT
+  #### DISPLAY BLOCK HOURS SUMMARY PLOT ------
   block_hrs_results <- reactive({
     req(current_block_ebd_checklistsonly_filtered())
     print("running block hrs results")
@@ -390,7 +397,7 @@ server <- function(input, output, session) {
     block_hrs_results()$hr_plot
   })
 
-  # DISPLAY SPECIES ACCUMULATION PLOT
+  #### DISPLAY SPECIES ACCUMULATION PLOT ------
   spp_accumulation_results <- reactive({
     req(current_block_ebd(), current_block_ebd_filtered())
     # pass only those columns needed
@@ -413,7 +420,7 @@ server <- function(input, output, session) {
 
   })
 
-  # DISPLAY SPECIES LIST
+  #### DISPLAY SPECIES LIST ------
   output$spp_observed <- renderDataTable(
     spp_accumulation_results()$spp_unique[c("spp","bcat")], options=list(pageLength=5, autoWidth = TRUE)
   )
@@ -428,9 +435,9 @@ server <- function(input, output, session) {
   )
 
 
-  ########################################################################################
-  # MAP
-  # SETUP LEAFLET MAP, RENDER BASEMAP
+  
+  ## MAP  ----------------------------------------------------
+  ### SETUP LEAFLET MAP, RENDER BASEMAP ------
   output$mymap <- renderLeaflet({
 
     #setup block geojson layer
@@ -449,7 +456,7 @@ server <- function(input, output, session) {
       #   )))
   })
 
-  # ZOOM MAP TO SELECTED BLOCK
+  ### ZOOM MAP TO SELECTED BLOCK ------
   observeEvent(current_block_r(), {
       req(current_block_r())
       block_info <- filter(block_data, ID_NCBA_BLOCK==current_block_r())
@@ -465,18 +472,20 @@ server <- function(input, output, session) {
   # popup menu on hover over checklist
 
 
-  # DISPLAY CHECKLISTS ON THE MAP
+  ### DISPLAY CHECKLISTS ON THE MAP ------
   observeEvent(current_block_ebd_checklistsonly_filtered(), {
     # req(current_block_r())
     req(current_block_ebd_checklistsonly_filtered())
     # check to make sure records returned!
     # checklists <- get_block_checklists(current_block_r(),input$portal_records)
-    checklists <- current_block_ebd_checklistsonly_filtered()[c("LATITUDE","LONGITUDE", "SAMPLING_EVENT_IDENTIFIER", "LOCALITY_ID", "LOCALITY", "OBSERVATION_DATE")]
+    checklists <- current_block_ebd_checklistsonly_filtered()[c("LATITUDE","LONGITUDE", "SAMPLING_EVENT_IDENTIFIER", "LOCALITY_ID", "LOCALITY", "OBSERVATION_DATE", "ebird_link")]
     if (length(checklists) > 0){
       leafletProxy("mymap") %>%
-        clearMarkerClusters() %>%
+        clearMarkers() %>%
         # clearShapes() %>%
-        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, clusterOptions = markerClusterOptions(maxClusterRadius = 20), color=ncba_blue, stroke=FALSE, fillOpacity = 0.6, label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML) )
+        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, color=ncba_blue, stroke=FALSE, fillOpacity = 0.6, 
+                          label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
+                          popup = ~ebird_link)
         # addMarkers(data=checklists, layerId = paste("checklist",~ SAMPLING_EVENT_IDENTIFIER), lat = ~ LATITUDE, lng = ~ LONGITUDE, color=ncba_blue,
         #   label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
         #   labelOptions = labelOptions(
@@ -489,11 +498,9 @@ server <- function(input, output, session) {
 
   })
 
-  ########################################################################################
-  ########################################################################################
-  # SPECIES TAB
 
-  #######################################################
+  # SPECIES TAB  ----------------------------------------------------
+
   # Species info
 
   # current_spp_r <- reactive({
@@ -501,19 +508,19 @@ server <- function(input, output, session) {
   #   current_spp <- input$spp_select
   # })
 
-output$breeding_code_legend <- renderTable(
-  breeding_codes_key,
-  striped = TRUE,
-  spacing = "xs"
-)
+  output$breeding_code_legend <- renderTable(
+    breeding_codes_key,
+    striped = TRUE,
+    spacing = "xs"
+  )
 
-output$spp_breedingbox_plot <- renderPlot({
+  output$spp_breedingbox_plot <- renderPlot({
 
   # check to make sure species is selected
   validate(
     need(input$spp_select, 'select a species from the list')
   )
-  # PLOT BREEDING CODES ----------------------------------------------------------
+  ### PLOT BREEDING CODES ----------------------------------------------------
   lump <- list(S = c("S", "S7", "M"), O = c("", "F", "O", "NC"))
   no_plot_codes <- NULL
   out_pdf <- NULL
@@ -529,20 +536,20 @@ output$spp_breedingbox_plot <- renderPlot({
 })
 
 #
-# # SUMMARIZE START TIMES --------------------------------------------------------
+# ## SUMMARIZE START TIMES ----------------------------------------------------
 # plot(start_time_boxplot(ebird))
 
-# # PLOT COORDINATES OF RECORDS --------------------------------------------------
+# ## PLOT COORDINATES OF RECORDS ----------------------------------------------------
 # coords.plot <- plot_checklists_coords(ebird)
 # plot(coords.plot)
 #
-# # SUMMARIZE TRAVEL DISTANCE ----------------------------------------------------
+# ## SUMMARIZE TRAVEL DISTANCE ----------------------------------------------------
 # plot(effort_distance_boxplot(ebird))
 #
-# # SUMMARIZE MINUTES EFFORT --------------------------------------------------------
+# ## SUMMARIZE MINUTES EFFORT ----------------------------------------------------
 # plot(duration_minutes_boxplot(ebird))
 #
-# # LOCALITY TYPE BREAKDOWN ------------------------------------------------------
+# ## LOCALITY TYPE BREAKDOWN ----------------------------------------------------
 # plot(locality_type_pie(ebird))
 
 
