@@ -9,6 +9,8 @@ This repo houses code to support the NC Bird Atlas.
 Development
 
 ## Usage
+Copy a script to you local machine, edit paths and variables where necessary to reflect your computing environment, and run in RStudio.
+
 Scripts templates should remain organized into the following folders.
 
 __block_assessments__ -- descriptive analyses of individual blocks or groups of blocks, including priority blocks.
