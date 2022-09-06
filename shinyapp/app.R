@@ -11,6 +11,7 @@ if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-
 if(!require(mongolite)) install.packages("mongolite", repos = "http://cran.us.r-project.org")
 if(!require(dplyr)) install.packages("dplyr", repos = "http://cran.us.r-project.org")
 if(!require(leaflet)) install.packages("leaflet", repos = "http://cran.us.r-project.org")
+if(!require(htmltools)) install.packages("htmltools", repos = "http://cran.us.r-project.org")
 #if(!require(geojsonio)) install.packages("geojsonio", repos = "http://cran.us.r-project.org")
 if(!require(shinythemes)) install.packages("shinythemes", repos = "http://cran.us.r-project.org")
 if(!require(shinyBS)) install.packages("shinyBS", repos = "http://cran.us.r-project.org") #adds functions for tooltips
@@ -111,7 +112,7 @@ ui <- bootstrapPage(
           h4("Species Accumulation"),
           plotOutput("spp_accumulation")
         ),
-        div(class="col-md-6 panel",
+        div(class="col-md-3 panel",
           h4("Species"),
           # div(tableOutput("spp_observed"), style="font-size:85%; height:442.995px; overflow-y:scroll;")
           dataTableOutput("spp_observed"),
@@ -268,11 +269,25 @@ server <- function(input, output, session) {
     current_block_ebd_filtered() %>%
       filter(CATEGORY == "species") %>% # make sure only species counted
       group_by(SAMPLING_EVENT_IDENTIFIER) %>%
-      mutate(SPP_COUNT = unique(GLOBAL_UNIQUE_IDENTIFIER)) %>%
-      select(ALL_SPECIES_REPORTED,ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR)
+      mutate(SPP_COUNT = length(unique(GLOBAL_UNIQUE_IDENTIFIER))) %>%
+      ungroup(SAMPLING_EVENT_IDENTIFIER) %>% 
+      distinct(SAMPLING_EVENT_IDENTIFIER, .keep_all = TRUE) %>%
+      select(ALL_SPECIES_REPORTED, SPP_COUNT, ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR) %>% 
       # summarise(spp_count = unique(GLOBAL_UNIQUE_IDENTIFIER), .groups = 'drop')
       # filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
+      # create a column with the html link https://ebird.org/checklist/SID
+      mutate(link = paste(htmlEscape("https://ebird.org/checklist"), SAMPLING_EVENT_IDENTIFIER, sep = "/")) %>% 
+      # then a column with the HTML code for part of the popup label  
+      mutate(ebird_link = paste0("",'<a style="font-weight:bold" href="', # note the use of single quotes - to make a single " a legit piece of code
+                                 link,
+                                 '"target="_blank">',htmlEscape(SAMPLING_EVENT_IDENTIFIER), '</a> <br>',# again note the combination of single & double quotes
+                                 "Date: ", htmlEscape(OBSERVATION_DATE), "<br>",
+                                 "Start Time: ", htmlEscape(TIME_OBSERVATIONS_STARTED), "<br>",
+                                 "Length (Minutes): ", htmlEscape(DURATION_MINUTES), "<br>",
+                                 "Distance (km): ", htmlEscape(EFFORT_DISTANCE_KM), "<br>"
+      )
+      ) 
 
   })
 
@@ -471,12 +486,14 @@ server <- function(input, output, session) {
     req(current_block_ebd_checklistsonly_filtered())
     # check to make sure records returned!
     # checklists <- get_block_checklists(current_block_r(),input$portal_records)
-    checklists <- current_block_ebd_checklistsonly_filtered()[c("LATITUDE","LONGITUDE", "SAMPLING_EVENT_IDENTIFIER", "LOCALITY_ID", "LOCALITY", "OBSERVATION_DATE")]
+    checklists <- current_block_ebd_checklistsonly_filtered()[c("LATITUDE","LONGITUDE", "SAMPLING_EVENT_IDENTIFIER", "LOCALITY_ID", "LOCALITY", "OBSERVATION_DATE", "ebird_link")]
     if (length(checklists) > 0){
       leafletProxy("mymap") %>%
         clearMarkerClusters() %>%
         # clearShapes() %>%
-        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, clusterOptions = markerClusterOptions(maxClusterRadius = 20), color=ncba_blue, stroke=FALSE, fillOpacity = 0.6, label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML) )
+        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, clusterOptions = markerClusterOptions(maxClusterRadius = 10, spiderfyDistanceMultiplier = 2), color=ncba_blue, stroke=FALSE, fillOpacity = 0.6, 
+                          label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
+                          popup = ~ebird_link)
         # addMarkers(data=checklists, layerId = paste("checklist",~ SAMPLING_EVENT_IDENTIFIER), lat = ~ LATITUDE, lng = ~ LONGITUDE, color=ncba_blue,
         #   label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
         #   labelOptions = labelOptions(
