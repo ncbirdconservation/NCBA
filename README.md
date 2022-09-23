@@ -2,6 +2,8 @@
 
 Contributions by Nathan Tarr, Scott Anderson, Scott Pearson, John Carpenter, and Elsa Chang.
 
+[Project Page](https://github.com/nmtarr/NCBA/projects/1)
+
 ## Purpose
 This repo houses code to support the NC Bird Atlas.
 
