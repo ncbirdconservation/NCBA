@@ -1,6 +1,6 @@
 # NC Bird Atlas
 
-Contributions by Nathan Tarr, Scott Anderson, Scott Pearson, John Carpenter, and Elsa Chang.
+Contributions by Nathan Tarr, Scott Anderson, Scott Pearson, John Carpenter, and Elsa Chen.
 
 [Project Page](https://github.com/nmtarr/NCBA/projects/1)
 
