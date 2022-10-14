@@ -64,8 +64,12 @@ ui <- bootstrapPage(
           h3("Block Explorer", class="tab-control-title"),
           tags$p("Summary statistics page for block-level data.", class="desc-text"),
           div(class="tab-control-group",
-            h4("Priority Block"),
-            htmlOutput("selected_block", inline=FALSE),
+            # h5("Priority Block:"),
+            selectInput(inputId = "APBlock", #name of input
+            label = "Selected Priority Block", #label displayed in ui
+            choices = c(as.character(unique(priority_block_data$ID_NCBA_BLOCK)),"NONE"),
+            # calls unique values from the ID_NCBA_BLOCK column in the previously created table
+            selected = "NONE"),
             htmlOutput("checklist_counter")
           ),
           div(class="tab-control-group",
@@ -201,15 +205,50 @@ server <- function(input, output, session) {
   ### BLOCK TAB BLOCKS ----------------------------------------------------
   # reactive listener for block select
   #
+  # Creating a reactive value so it can be updated outside of current_block_r()
+  # I think current_block_r() could just be totally replaced with rv_block$id?
+  
+  rv_block <- reactiveValues(chosen=NULL, id =NULL)
+  
+  # grab id from map click
+  observeEvent (input$mymap_shape_click, {
+    blockmap_info <- input$mymap_shape_click
+    blockmap_info_id <- input$mymap_shape_click$id
+    
+    rv_block$chosen <- blockmap_info
+    rv_block$id <-  blockmap_info_id
+  })
+  
   # current block changes when map is clicked
   current_block_r <- reactive({
     print("map clicked")
-    blockmap_info <- input$mymap_shape_click
-    print(blockmap_info$id)
-    paste(blockmap_info$id)
-
+    print(rv_block$id)
+    paste(rv_block$id) 
   })
-
+  
+  # # when map block clicked, update select input drop down list - WORKS
+  observeEvent(input$mymap_shape_click, {
+    print("Updating drop down list to match clicked block")
+    click <- input$mymap_shape_click
+    if(click$id %in% input$APBlock)
+      selected = input$APBlock[input$APBlock != click$id]
+    else
+      selected = c(input$APBlock, click$id)
+    updateSelectInput(session, "APBlock",
+                      selected = selected)
+  })
+  
+  #### React to Change of Selected Block in Drop down list instead of click, 
+  ## a bit redundant with the one above but I am not sure how to combine them?
+  observeEvent(input$APBlock, {
+    print("Block selected from drop down list")
+    blockmap_list_id <- input$APBlock
+    if(input$APBlock == "NONE")
+      rv_block$id = NULL
+    else
+      rv_block$id = blockmap_list_id
+  })
+  
   # retrieves current block records when current_block_r() changes
   current_block_ebd <- reactive({
     req(current_block_r())
@@ -220,13 +259,15 @@ server <- function(input, output, session) {
     #     - this returns a flattened dataset, with one row per checklist-species combination
     #   - if other parameters change, filter existing data with "current_block_ebd_filtered"
     #     - current_block_ebd_checklistsonly_filtered returns checklist level data
-
-    cblock <- current_block_r()
+    
+    cblock <- rv_block$id
+    
     q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}"}')
-
+    
     get_ebd_data(q, "{}") #get all fields
-
+    
   })
+  
 
   # Applies filter WHEN CRITERIA CHANGES
   current_block_ebd_filtered <- reactive({
@@ -247,7 +288,7 @@ server <- function(input, output, session) {
   })
 
 
-  # UPDAATE CHECKLIST COUNT
+  # UPDATE CHECKLIST COUNT
   output$checklist_counter <- renderUI({
     req(current_block_ebd(), current_block_ebd_filtered(), checklist_count(), checklist_filtered_count())
     all <- paste(checklist_count(), " Total Checklists Found")
@@ -259,14 +300,21 @@ server <- function(input, output, session) {
 
   #### FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES - RETURNS CHECKLIST LEVEL DATA ------
   current_block_ebd_checklistsonly_filtered <- reactive({
-
+    
     req(current_block_ebd(), current_block_ebd_filtered())
-
+    
     current_block_ebd_filtered() %>%
       filter(CATEGORY == "species") %>% # make sure only species counted
       group_by(SAMPLING_EVENT_IDENTIFIER) %>%
-      mutate(SPP_COUNT = unique(GLOBAL_UNIQUE_IDENTIFIER)) %>%
-      select(ALL_SPECIES_REPORTED,ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR) %>% 
+      mutate(SPP_COUNT = length(unique(GLOBAL_UNIQUE_IDENTIFIER))) %>%
+      ungroup(SAMPLING_EVENT_IDENTIFIER) %>% 
+      distinct(SAMPLING_EVENT_IDENTIFIER, .keep_all = TRUE) %>%
+      select(ALL_SPECIES_REPORTED, SPP_COUNT, ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,
+             DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,
+             ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,
+             LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,
+             PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,
+             TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR) %>% 
       # summarise(spp_count = unique(GLOBAL_UNIQUE_IDENTIFIER), .groups = 'drop')
       # filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
@@ -287,16 +335,16 @@ server <- function(input, output, session) {
 
 
 
-  # POPULATE LABEL FOR CURRENT BLOCK
-  output$selected_block <-renderText({
-    req(current_block_r())
-    blockname <- current_block_r()
-
-    strHTML <- str_interp('<strong>${blockname}</strong>')
-    HTML(strHTML)
+  # # POPULATE LABEL FOR CURRENT BLOCK
+  # output$selected_block <-renderText({
+  #   req(current_block_r())
+  #   blockname <- current_block_r()
+  # 
+  #   strHTML <- str_interp('<strong>${blockname}</strong>')
+  #   HTML(strHTML)
 
     # paste(current_block_r())
-  })
+  # })
   output$download_block_checklists <- downloadHandler(
     filename = function() {
       p <- ""
@@ -377,7 +425,7 @@ server <- function(input, output, session) {
     num_nocturnal_hours <- paste("Nocturnal:<span class='", nocturnal_hours_class, "'>", format(block_hrs_results()$noc_hr, trim=TRUE, digits=1), " hrs</span>")
     num_total_hours <- paste("Total:<span class=''>", format(block_hrs_results()$total_hr, trim=TRUE, digits=1), " hrs</span>")
     print("troubleshooting duplicate block stats:")
-    print("block hrs reslults:total_hr", format(block_hrs_results()$total_hr, trim=TRUE, digits=1))
+    # print("block hrs results:total_hr", format(block_hrs_results()$total_hr, trim=TRUE, digits=1))
     # print(block_hrs_results())
     # HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_breed_hours, sep='<br/>'))
     HTML(paste(num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss, num_diurnal_hours, num_nocturnal_hours, num_total_hours, sep='<br/>'))
@@ -473,6 +521,7 @@ server <- function(input, output, session) {
 
 
   ### DISPLAY CHECKLISTS ON THE MAP ------
+  # DISPLAY CHECKLISTS ON THE MAP
   observeEvent(current_block_ebd_checklistsonly_filtered(), {
     # req(current_block_r())
     req(current_block_ebd_checklistsonly_filtered())
@@ -481,22 +530,21 @@ server <- function(input, output, session) {
     checklists <- current_block_ebd_checklistsonly_filtered()[c("LATITUDE","LONGITUDE", "SAMPLING_EVENT_IDENTIFIER", "LOCALITY_ID", "LOCALITY", "OBSERVATION_DATE", "ebird_link")]
     if (length(checklists) > 0){
       leafletProxy("mymap") %>%
-        clearMarkers() %>%
+        clearMarkerClusters() %>%
         # clearShapes() %>%
-        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, color=ncba_blue, stroke=FALSE, fillOpacity = 0.6, 
+        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, clusterOptions = markerClusterOptions(maxClusterRadius = 10, spiderfyDistanceMultiplier = 2), color=ncba_blue, stroke=FALSE, fillOpacity = 0.6, 
                           label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
                           popup = ~ebird_link)
-        # addMarkers(data=checklists, layerId = paste("checklist",~ SAMPLING_EVENT_IDENTIFIER), lat = ~ LATITUDE, lng = ~ LONGITUDE, color=ncba_blue,
-        #   label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
-        #   labelOptions = labelOptions(
-        #    style = list("font-weight" = "normal", padding = "3px 8px", "color" = ncba_blue),
-        #    textsize = "0.8rem", direction = "auto")
-        #   )
+      # addMarkers(data=checklists, layerId = paste("checklist",~ SAMPLING_EVENT_IDENTIFIER), lat = ~ LATITUDE, lng = ~ LONGITUDE, color=ncba_blue,
+      #   label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
+      #   labelOptions = labelOptions(
+      #    style = list("font-weight" = "normal", padding = "3px 8px", "color" = ncba_blue),
+      #    textsize = "0.8rem", direction = "auto")
+      #   )
     }
-
-
-
-  })
+  }
+  )
+  
 
 
   # SPECIES TAB  ----------------------------------------------------
