@@ -32,5 +32,7 @@ Nathan Tarr, NCSU/USGS
 
 Dr. Scott Pearson
 
+Elsa Chen
+
 ## Contact
 scott.anderson@ncwildlife.org
