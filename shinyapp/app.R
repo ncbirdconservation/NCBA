@@ -164,7 +164,7 @@ ui <- bootstrapPage(
 
 )
 
-# Define server logic to plot various variables against mpg 
+# Define server logic to plot various variables against mpg
 server <- function(input, output, session) {
 
 
@@ -187,11 +187,14 @@ server <- function(input, output, session) {
   #   list(input$portal_records, current_block_r(), input$season_radio)
   # })
 
+  # listens for changes in the checklist filters: portal_records and season_radio
   criteria_changes <- reactive({
     # add other criteria here
     list(input$portal_records, input$season_radio)
   })
 
+  # listens for changes in the checklist filters: portal_records and season_radio
+  # used to ensure there is at least one record to query
   checklist_count <- reactive({
     unique_sei <- unique(current_block_ebd()$SAMPLING_EVENT_IDENTIFIER)
     length(unique_sei)
@@ -207,25 +210,25 @@ server <- function(input, output, session) {
   #
   # Creating a reactive value so it can be updated outside of current_block_r()
   # I think current_block_r() could just be totally replaced with rv_block$id?
-  
+
   rv_block <- reactiveValues(chosen=NULL, id =NULL)
-  
+
   # grab id from map click
   observeEvent (input$mymap_shape_click, {
     blockmap_info <- input$mymap_shape_click
     blockmap_info_id <- input$mymap_shape_click$id
-    
+
     rv_block$chosen <- blockmap_info
     rv_block$id <-  blockmap_info_id
   })
-  
+
   # current block changes when map is clicked
   current_block_r <- reactive({
     print("map clicked")
     print(rv_block$id)
-    paste(rv_block$id) 
+    paste(rv_block$id)
   })
-  
+
   # # when map block clicked, update select input drop down list - WORKS
   observeEvent(input$mymap_shape_click, {
     print("Updating drop down list to match clicked block")
@@ -237,8 +240,8 @@ server <- function(input, output, session) {
     updateSelectInput(session, "APBlock",
                       selected = selected)
   })
-  
-  #### React to Change of Selected Block in Drop down list instead of click, 
+
+  #### React to Change of Selected Block in Drop down list instead of click,
   ## a bit redundant with the one above but I am not sure how to combine them?
   observeEvent(input$APBlock, {
     print("Block selected from drop down list")
@@ -248,7 +251,7 @@ server <- function(input, output, session) {
     else
       rv_block$id = blockmap_list_id
   })
-  
+
   # retrieves current block records when current_block_r() changes
   current_block_ebd <- reactive({
     req(current_block_r())
@@ -259,15 +262,15 @@ server <- function(input, output, session) {
     #     - this returns a flattened dataset, with one row per checklist-species combination
     #   - if other parameters change, filter existing data with "current_block_ebd_filtered"
     #     - current_block_ebd_checklistsonly_filtered returns checklist level data
-    
+
     cblock <- rv_block$id
-    
+
     q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}"}')
-    
+
     get_ebd_data(q, "{}") #get all fields
-    
+
   })
-  
+
 
   # Applies filter WHEN CRITERIA CHANGES
   current_block_ebd_filtered <- reactive({
@@ -300,27 +303,27 @@ server <- function(input, output, session) {
 
   #### FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES - RETURNS CHECKLIST LEVEL DATA ------
   current_block_ebd_checklistsonly_filtered <- reactive({
-    
+
     req(current_block_ebd(), current_block_ebd_filtered())
-    
+
     current_block_ebd_filtered() %>%
       filter(CATEGORY == "species") %>% # make sure only species counted
       group_by(SAMPLING_EVENT_IDENTIFIER) %>%
       mutate(SPP_COUNT = length(unique(GLOBAL_UNIQUE_IDENTIFIER))) %>%
-      ungroup(SAMPLING_EVENT_IDENTIFIER) %>% 
+      ungroup(SAMPLING_EVENT_IDENTIFIER) %>%
       distinct(SAMPLING_EVENT_IDENTIFIER, .keep_all = TRUE) %>%
       select(ALL_SPECIES_REPORTED, SPP_COUNT, ATLAS_BLOCK,BCR_CODE,COUNTRY,COUNTRY_CODE,COUNTY,COUNTY_CODE,
              DURATION_MINUTES,EFFORT_AREA_HA,EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,
              ID_BLOCK_CODE,ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID,LOCALITY_TYPE,
              LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE,OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,
              PROTOCOL_CODE,PROTOCOL_TYPE,SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,
-             TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR) %>% 
+             TIME_OBSERVATIONS_STARTED,TRIP_COMMENTS,USFWS_CODE,YEAR) %>%
       # summarise(spp_count = unique(GLOBAL_UNIQUE_IDENTIFIER), .groups = 'drop')
       # filter(if(input$portal_records) PROJECT_CODE == "EBIRD_ATL_NC" else TRUE)
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
       # create a column with the html link https://ebird.org/checklist/SID
-      mutate(link = paste(htmlEscape("https://ebird.org/checklist"), SAMPLING_EVENT_IDENTIFIER, sep = "/")) %>% 
-      # then a column with the HTML code for part of the popup label  
+      mutate(link = paste(htmlEscape("https://ebird.org/checklist"), SAMPLING_EVENT_IDENTIFIER, sep = "/")) %>%
+      # then a column with the HTML code for part of the popup label
       mutate(ebird_link = paste0("",'<a style="font-weight:bold" href="', # note the use of single quotes - to make a single " a legit piece of code
                                  link,
                                  '"target="_blank">',htmlEscape(SAMPLING_EVENT_IDENTIFIER), '</a> <br>',# again note the combination of single & double quotes
@@ -329,7 +332,7 @@ server <- function(input, output, session) {
                                  "Length (Minutes): ", htmlEscape(DURATION_MINUTES), "<br>",
                                  "Distance (km): ", htmlEscape(EFFORT_DISTANCE_KM), "<br>"
                                  )
-             ) 
+             )
   })
 
 
@@ -339,7 +342,7 @@ server <- function(input, output, session) {
   # output$selected_block <-renderText({
   #   req(current_block_r())
   #   blockname <- current_block_r()
-  # 
+  #
   #   strHTML <- str_interp('<strong>${blockname}</strong>')
   #   HTML(strHTML)
 
@@ -362,7 +365,7 @@ server <- function(input, output, session) {
 
   )
 
-### For downloading testing datasets when conditions change (Deprecated?) #### 
+### For downloading testing datasets when conditions change (Deprecated?) ####
 # observeEvent(current_block_ebd_checklistsonly_filtered(),{
 #   # req(current_block_ebd_checklistsonly_filtered())
 #   print("saving data to file...")
@@ -384,7 +387,7 @@ server <- function(input, output, session) {
       need(current_block_ebd(), "No checklists submitted.")
     )
 
-    
+
     ### Block Species ----------------------------------------------------
     sa_list <- spp_accumulation_results()$spp_unique
 
@@ -483,7 +486,7 @@ server <- function(input, output, session) {
   )
 
 
-  
+
   ## MAP  ----------------------------------------------------
   ### SETUP LEAFLET MAP, RENDER BASEMAP ------
   output$mymap <- renderLeaflet({
@@ -532,7 +535,7 @@ server <- function(input, output, session) {
       leafletProxy("mymap") %>%
         clearMarkerClusters() %>%
         # clearShapes() %>%
-        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, clusterOptions = markerClusterOptions(maxClusterRadius = 10, spiderfyDistanceMultiplier = 2), color=ncba_blue, stroke=FALSE, fillOpacity = 0.6, 
+        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, clusterOptions = markerClusterOptions(maxClusterRadius = 10, spiderfyDistanceMultiplier = 2), color=ncba_blue, stroke=FALSE, fillOpacity = 0.6,
                           label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
                           popup = ~ebird_link)
       # addMarkers(data=checklists, layerId = paste("checklist",~ SAMPLING_EVENT_IDENTIFIER), lat = ~ LATITUDE, lng = ~ LONGITUDE, color=ncba_blue,
@@ -544,7 +547,7 @@ server <- function(input, output, session) {
     }
   }
   )
-  
+
 
 
   # SPECIES TAB  ----------------------------------------------------
@@ -573,10 +576,25 @@ server <- function(input, output, session) {
   no_plot_codes <- NULL
   out_pdf <- NULL
   spp <- input$spp_select
+  print(spp)
+
+  ##### SPP DATA RETRIEVAL WORKS, BUT IS SLOW
   # query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${spp}"}')
-  filter <- str_interp('{"OBSERVATION_DATE":1, "OBSERVATIONS.BREEDING_CODE":1, "OBSERVATIONS.COMMON_NAME":1}')
-  print("get ebd records")
-  ebird <- get_spp_obs(spp, filter)
+  # filter <- str_interp('{"OBSERVATION_DATE":1, "OBSERVATIONS.BREEDING_CODE":1, "OBSERVATIONS.COMMON_NAME":1}')
+  # print("get ebd records")
+  # ebird <- get_spp_obs(spp, filter)
+  # print(ebird)
+  # print("get ebd records completed")
+  ##### END WORKING SPP DATA RETRIEVAL
+
+  ##### EXPERIMENT TO RETRIEVE VIA AGGREGATION STRING
+  #faster, but still slow
+  pipeline <- str_interp('[{ "$match": { "OBSERVATIONS.COMMON_NAME": "${spp}" } }, { "$unwind": { "path": "$OBSERVATIONS" } }, { "$project": { "COMMON_NAME": "$OBSERVATIONS.COMMON_NAME", "BREEDING_CODE": "$OBSERVATIONS.BREEDING_CODE", "OBSERVATION_DATE": 1 } }, { "$match" : { "COMMON_NAME": "${spp}"}}, { "$lookup": { "from": "safe_dates", "localField": "COMMON_NAME", "foreignField": "COMMON_NAME", "as": "SPP_SAFE_DATES" } }, { "$unwind": { "path": "$SPP_SAFE_DATES" } }, { "$project": { "COMMON_NAME": 1, "BREEDING_CODE": 1, "OBSERVATION_DATE": 1, "SEASON": { "$cond": { "if": { "$and": [ { "$gte": [ "$OBSERVATION_DATE", "$SPP_SAFE_DATES.B_SAFE_START_DATE" ] }, { "$lte": [ "$OBSERVATION_DATE", "$SPP_SAFE_DATES.B_SAFE_END_DATE" ] } ] }, "then": "Breeding", "else": "Non-Breeding" } } } }]')
+
+  ebird <- aggregate_ebd_data(pipeline)
+  print("aggregate pipeline completed.")
+  print(ebird)
+  ##### END EXPERIMENT
 
   print("ebd records retrieved, plotting data")
   # grid::current.viewport()

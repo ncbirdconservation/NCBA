@@ -1,5 +1,9 @@
 # Git functions
 
+## Resources
+
+- Helpful website: [Oh Sh!t, Git!] (https://ohshitgit.com)
+
 ## Clone the main repo
 This makes a local copy to work from
 
