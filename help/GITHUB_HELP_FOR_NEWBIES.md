@@ -38,7 +38,8 @@ git push -u origin your-feature
 ## Pull down someone else's feature branch (for review)
 
 ```
-git pull origin their-feature
+git fetch origin their-feature
+git checkout origin their-feature
 ```
 
 ## Pull updated master branch
