@@ -54,7 +54,7 @@ ui <- bootstrapPage(
     theme = shinytheme("flatly"), collapsible=TRUE,
     # theme = shinytheme("cosmo"), collapsible=TRUE,
     HTML('<a style="text-decoration:none;cursor:default;color:#FFFFFF;" class="active" href="#">NC Bird AtlasCache Explorer</a>'), id="nav",
-    windowTitle = "Quackalacky",
+    windowTitle = "NCBA Block Explorer",
     tags$head(includeCSS("styles.css")),
     tags$head(tags$link(rel="icon", href="/input_data/ncba_blue_wbnu.ico")),
     tabPanel("Blocks",
@@ -501,7 +501,7 @@ server <- function(input, output, session) {
       addProviderTiles(providers$Esri.WorldImagery) %>%
       # addProviderTiles(providers$CartoDB.Positron) %>%
       # addGeoJSON(priority_block_geojson, weight= 1, color=ncba_blue, opacity=0.6, fillColor="#777777', fillOpacity = 0.05, fill = TRUE)
-      addRectangles(data = priority_block_data, layerId = ~ ID_NCBA_BLOCK, lng1 = ~ NW_X, lat1 = ~ NW_Y, lng2 = ~ SE_X, lat2 = ~ SE_Y, weight= 1.2, color=ncba_white, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE, label = ~ ID_NCBA_BLOCK)
+      addRectangles(data = priority_block_data, layerId = ~ ID_NCBA_BLOCK, lng1 = ~ NW_X, lat1 = ~ NW_Y, lng2 = ~ SE_X, lat2 = ~ SE_Y, weight= 2, color=ncba_white, opacity = 0.9, fillColor='#777777', fillOpacity = 0.05, fill = TRUE, label = ~ ID_NCBA_BLOCK)
       # addRectangles(data = priority_block_data, layerId = ~ ID_NCBA_BLOCK, lng1 = ~ NW_X, lat1 = ~ NW_Y, lng2 = ~ SE_X, lat2 = ~ SE_Y, weight= 1, color=ncba_blue, opacity=0.6, fillColor='#777777', fillOpacity = 0.05, fill = TRUE, label = ~ ID_NCBA_BLOCK , labelOptions = labelOptions(noHide = T, textOnly = TRUE, offset(c(-30, 30)),
       #   style = list(
       #     "color" = "#444444",
@@ -537,7 +537,7 @@ server <- function(input, output, session) {
       leafletProxy("mymap") %>%
         clearMarkerClusters() %>%
         # clearShapes() %>%
-        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, clusterOptions = markerClusterOptions(maxClusterRadius = 10, spiderfyDistanceMultiplier = 2), color=ncba_white, stroke=FALSE, fillOpacity = 0.6,
+        addCircleMarkers( data = checklists, lat = ~ LATITUDE, lng = ~ LONGITUDE, radius = 5, clusterOptions = markerClusterOptions(maxClusterRadius = 10, spiderfyDistanceMultiplier = 2), color=ncba_blue, opacity = 1, stroke=TRUE, weight = 1.8, fillColor= ncba_white, fillOpacity = 0.6,
                           label = sprintf("<strong>%s</strong><br/>%s<br/>%s",checklists$SAMPLING_EVENT_IDENTIFIER, checklists$LOCALITY, checklists$OBSERVATION_DATE) %>% lapply(htmltools::HTML),
                           popup = ~ebird_link)
       # addMarkers(data=checklists, layerId = paste("checklist",~ SAMPLING_EVENT_IDENTIFIER), lat = ~ LATITUDE, lng = ~ LONGITUDE, color=ncba_blue,
