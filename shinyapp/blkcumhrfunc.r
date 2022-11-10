@@ -21,9 +21,12 @@ library(grid)
 
 block_hrs <- function(d){	# pass a dataframe of eBird checklists
   d.t <- d[,c("DURATION_MINUTES", "LATITUDE", "LONGITUDE", "MONTH", "OBSERVATION_DATE",
-	"TIME_OBSERVATIONS_STARTED", "YEAR")]	# fields of interest
+	"TIME_OBSERVATIONS_STARTED", "YEAR", "ALL_SPECIES_REPORTED")]	# fields of interest
 
   d.t <- distinct(d.t)		# Save only one record per checklist; filter out shared checklists
+  
+  ## Filter out incomplete checklists
+  d.t <- d.t[(d.t$ALL_SPECIES_REPORTED)=="1",]
   
   # create new column with date and time together
   d.t$date <- paste(d.t$OBSERVATION_DATE, d.t$TIME_OBSERVATIONS_STARTED, sep=" ")
@@ -72,7 +75,7 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
 	rm(mdat, flds, j)
 			    }	# close if ncol(blk.hr)
 
-  # total cumlative hours
+  # total cumulative hours
   total.hr <- apply(blk.hr[,2:13],1,sum)
   # total nocturnal hours
   noc.hr <- ( sum(d.t$DURATION_MINUTES[d.t$diur.noc == "nocturnal"]) )/60
@@ -84,16 +87,16 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
   blkhr.df$month <- factor(blkhr.df$month)
   blkhr.df$Year <- factor(blk.hr$year, levels=sort(unique(blk.hr$year), decreasing=T))
   # put cumulative total hrs  and nocturnal hrs on plot
-  txt <- paste("Total cumulative hours: ", round(sum(total.hr),1), "\n",
-               "Total nocturnal hours: ", round(noc.hr,2),sep="")
+  txt <- paste("Total Cumulative: ", round(sum(total.hr),1), "\n",
+               "Total Nocturnal: ", round(noc.hr,2),sep="")
   grob <- grobTree(textGrob(txt, x=0.1,  y=0.92, hjust=0,
      gp=gpar(col="black", fontsize=10, fontface="italic")))				# font size
   hr.plt <- ggplot(blkhr.df, aes(fill=Year, y=value, x=month) ) +
     geom_bar(position="stack", stat="identity") +
     scale_fill_brewer(palette="Accent") +
-    labs(x="Month", y="Hours", title="Survey Hours") +
-    theme(axis.text=element_text(size=11), axis.title=element_text(size=12),	# font size
-        	plot.title=element_text(size=12,face="bold")) +				# font size
+    labs(x="Month", y="Hours") +
+    theme(axis.text=element_text(size=11), axis.title=element_text(size=12)) +	# font size
+        	# plot.title=element_text(size=12,face="bold")) +				# font size
     annotation_custom(grob)
 
   blkhr.list <- list(blk_hrs=blk.hr, total_hr=round(sum(total.hr),1), noc_hr=noc.hr, hr_plot=hr.plt)
