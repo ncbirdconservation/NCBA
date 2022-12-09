@@ -21,10 +21,11 @@ library(lubridate)
 library(ggplot2)
 if (!require(suncalc)) install.packages(
   "suncalc", repos = "http://cran.us.r-project.org")
-# library(suncalc)
+# library(suncalc) # nolint
 library(grid)
 
-block_hrs <- function(d){	# pass a dataframe of eBird checklists
+# pass a dataframe of eBird checklists
+block_hrs <- function(d){
   d.t <- d[,c(
     "DURATION_MINUTES",
     "LATITUDE",
@@ -36,7 +37,7 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
 
   # Save only one record per checklist; filter out shared checklists
   d.t <- distinct(d.t)
-  
+
   # create new column with date and time together
   d.t$date <- paste(
     d.t$OBSERVATION_DATE,
@@ -50,13 +51,13 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
   # Treating all times as "local" to avoid problem with daylight savings time.
   # Converting all local times to UTC
   q24dyx <- data.frame(date=as.Date(d.t$date, tz="EST"), lat=d.t$LATITUDE,
-				lon=d.t$LONGITUDE)
+    lon=d.t$LONGITUDE)
 
   # convert obs times to UTC
   q24dyx$date <- as.Date(with_tz(q24dyx$date, tzone="UTC"), tz="UTC")
   tm <- getSunlightTimes(data=q24dyx, keep=c("sunrise", "sunset"), tz="UTC")
 
-	# sunrise, sunset times
+  # sunrise, sunset times
   # convert observation times to UTC
   tm$obs.tm <- with_tz(d.t$date, tzone="UTC")
   tm$obs.rise <- as.numeric(
@@ -92,21 +93,21 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
 
   # add 0 data for missing months
   if (ncol(blk.hr)<13){
-	flds <- names(blk.hr)[-1]
-	mdat <- data.frame(matrix(data=NA, ncol=12, nrow=nrow(blk.hr)))
-	names(mdat) <- as.character(1:12)
-	j <- match(flds, names(mdat))
-	mdat[,j] <- blk.hr[,flds]
-	mdat[is.na(mdat)] <- 0
-	blk.hr <- cbind(blk.hr[,1],mdat)
-	names(blk.hr)[1] <- "year"
-	rm(mdat, flds, j)
-			    }	# close if ncol(blk.hr)
+    flds <- names(blk.hr)[-1]
+    mdat <- data.frame(matrix(data=NA, ncol=12, nrow=nrow(blk.hr)))
+    names(mdat) <- as.character(1:12)
+    j <- match(flds, names(mdat))
+    mdat[,j] <- blk.hr[,flds]
+    mdat[is.na(mdat)] <- 0
+    blk.hr <- cbind(blk.hr[,1],mdat)
+    names(blk.hr)[1] <- "year"
+    rm(mdat, flds, j)
+  }	# close if ncol(blk.hr)
 
   # total cumlative hours
   total.hr <- apply(blk.hr[,2:13],1,sum)
   # total nocturnal hours
-  noc.hr <- ( sum(d.t$DURATION_MINUTES[d.t$diur.noc == "nocturnal"]) )/60
+  noc.hr <- (sum(d.t$DURATION_MINUTES[d.t$diur.noc == "nocturnal"]))/60
 
   ## Stacked bar: hours by month, years stacked
   # reconfigure blk.hr for plotting
