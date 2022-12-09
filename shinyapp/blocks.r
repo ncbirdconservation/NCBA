@@ -1,4 +1,6 @@
 # Code for parsing block data
+# Functions:
+#   plot_spp_accumulation(block_recs, spp_bcs)
 #
 #
 plot_spp_accumulation <- function(block_recs, spp_bcs) {
@@ -34,7 +36,7 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
           c4 <- length(spp_unique["spp"][spp_unique["bcat"] == "C4"])
           # print(c(c1,c2,c3,c4))
           # print(c(obs_min,length(spp_unique$spp),c1,c2, c3, c4))
-          spp_acc[nrow(spp_acc)+1,]<-c(
+          spp_acc[nrow(spp_acc) + 1, ] <- c(
             obs_min,
             length(spp_unique$spp),
             c1,
@@ -62,7 +64,7 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
       curr_spp <- block_recs$COMMON_NAME[i]
       curr_bcat <- block_recs$BREEDING_CATEGORY[i]
       # "observed" stored as either "" or "C1"
-      if (curr_bcat == "") { curr_bcat <- "C1"} 
+      if (curr_bcat == "") {curr_bcat <- "C1"}
 
       curr_bcat_num <- strtoi(substr(curr_bcat,2,2))
 
@@ -152,7 +154,7 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
     "spp_unique" = spp_unique,
     "spp_acc_data" = spp_acc,
     "hrs_total" = hrs_total)
-    
+
   return(response)
 
 }
