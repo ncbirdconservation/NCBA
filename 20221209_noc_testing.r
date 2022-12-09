@@ -5,20 +5,19 @@ library(dplyr)
 if (!require(suncalc)) install.packages(
   "suncalc", repos = "http://cran.us.r-project.org")
 
-
 dt <- "2021-01-02"
 tm <- "10:11:00"
-
 
 dtfull <-paste(
     dt,
     tm,
     sep=" ")
 
-
 date=as.Date(dtfull, tz="EST")
 
-cData <- read.table("C:/Users/skanderson/OneDrive - State of North Carolina/@arcgis_projects/NCBA/20221209_noc_testing.csv", header=TRUE,sep=",")
+cData <- read.table(
+    paste0("C:/Users/skanderson/OneDrive - State of North Carolina/",
+    "@arcgis_projects/NCBA/20221209_noc_testing.csv"), header=TRUE,sep=",")
 
 cData$Date <- paste(
     cData$OBSERVATION_DATE,
@@ -61,10 +60,12 @@ st_labels <- c(
 
 test <- cut(as.Date(cData$Date),as.Date(savings_time_cutpoints),labels=st_labels)
 
-Species: 152
-Confirmed (C4): 35 
-Probable (C3): 20
-Possible (C2): 31
-Diurnal: 668 hrs
-Nocturnal: 2 hrs
-Total: 671 hrs
+
+# APEX-SE data
+# Species: 152
+# Confirmed (C4): 35 
+# Probable (C3): 20
+# Possible (C2): 31
+# Diurnal: 668 hrs
+# Nocturnal: 2 hrs
+# Total: 671 hrs
