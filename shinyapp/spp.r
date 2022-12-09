@@ -19,25 +19,26 @@ breeding_boxplot <- function(species, ebird, pallet, out_pdf, no_plot_codes,
   # Arguments:
   # species -- common name of the species
   # data -- data frame of ebird or NCBA data
-  # pallet -- choose a named RColorBrewer pallet (multiple colors), or a single color (name
-  #   or hex); see brewer.pal.info for list and display.brewer.all() to view all
-  #   pallets
+  # pallet -- choose a named RColorBrewer pallet (multiple colors), 
+  #   or a single color (name or hex); see brewer.pal.info for list and
+  #   display.brewer.all() to view all palletes
   # out_pdf -- path and name where to save an output pdf.  Set to NULL if you
   #   don't want to save output.
   # no_plot_codes -- a vector of evidence codes not be plotted. For example,
   #   c("PE", "UN")
   # lump -- a list of named vectors where the vector name is used to place all
-  #   codes in the corresponding vector (e.g. 'S = c("S", "S7", "M")' replaces all
+  #   codes in the corresponding vector
+  #   (e.g. 'S = c("S", "S7", "M")' replaces all
   #   "S", "S7", and "M" with "S"). Note that any code that is not already in
-  #   variable "codelevels" in function "chronplot" (below) will need to be added
-  #   there.
+  #   variable "codelevels" in function "chronplot" (below)
+  #   will need to be added there.
   # drop -- TRUE or FALSE whether to include unreported codes in the plot
 
 
   # Data prep
   # put all dates within the same year -- ignores leap year
   ebird$OBSERVATION_DATE <- sub("^20\\d\\d", "2016", ebird$OBSERVATION_DATE)
-
+# 
   # remove white space from evidence codes
   ebird$BREEDING_CODE <- trimws(ebird$BREEDING_CODE)
 
@@ -67,9 +68,9 @@ breeding_boxplot <- function(species, ebird, pallet, out_pdf, no_plot_codes,
   # http://stackoverflow.com/questions/19681586/ordering-bars-in-barplot
   # this will be the order that codes are plotted in.
   # this vector will need updating if any new codes are introduced via "lump".
-  codelevels <- c("H", "S", "S7", "M", "T", "P", "C", "B", "CN", "NB", "A", "N",
-                  "DD", "ON", "NE", "FS", "CF", "NY", "FY", "FL", "PE", "UN",
-                  "F", "", "O", "NC")
+  codelevels <- c("H", "S", "S7", "M", "T", "P", "C", "B", "CN", "NB", "A",
+    "N", "DD", "ON", "NE", "FS", "CF", "NY", "FY", "FL", "PE", "UN", "F", "",
+    "O", "NC")
 
   if (! all(ebird$code %in% codelevels)) {
     warn <- paste("Not all eBird codes (BREEDING_CODE) for",

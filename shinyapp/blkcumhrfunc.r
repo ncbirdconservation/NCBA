@@ -1,6 +1,7 @@
 ### NCBA - Block Completion Assessment
 # Scott M. Pearson, 29 April 2022
-# This R function computes metrics from NCBA Mongo data: cumulative survey hours,
+# This R function computes metrics from NCBA Mongo data: 
+# cumulative survey hours,
 # cumulative nocturnal hours. It creates a summary figure.
 # Cumulative hours are separated by month and season.
 
@@ -8,25 +9,39 @@
 #  Input is a dataframe of eBird checklists that has these required fields:
 #	DURATION_MINUTES, LATITUDE, LONGITUDE, MONTH, OBSERVATION_DATE,
 #	TIME_OBSERVATIONS_STARTED, YEAR (additional fields are ignored)
-# Function returns a list with 4 items: (a) blk_hrs: dataframe of cumulative hours by month and year,
-#	(b) total_hr: total cumulative survey hours, (c) noc_hr: total nocturnal survey hours,
-#	(d) hr_plot: stacked bar plot of hours by month and year with total_hr and noc_hr notation.
+# Function returns a list with 4 items:
+# (a) blk_hrs: dataframe of cumulative hours by month and year,
+#	(b) total_hr: total cumulative survey hours,
+# (c) noc_hr: total nocturnal survey hours,
+#	(d) hr_plot: stacked bar plot of hours by month and year with total_hr
+#     and noc_hr notation.
 
 library(tidyverse)
 library(lubridate)
 library(ggplot2)
-if (!require(suncalc)) install.packages("suncalc", repos = "http://cran.us.r-project.org")
+if (!require(suncalc)) install.packages(
+  "suncalc", repos = "http://cran.us.r-project.org")
 # library(suncalc)
 library(grid)
 
 block_hrs <- function(d){	# pass a dataframe of eBird checklists
-  d.t <- d[,c("DURATION_MINUTES", "LATITUDE", "LONGITUDE", "MONTH", "OBSERVATION_DATE",
-	"TIME_OBSERVATIONS_STARTED", "YEAR")]	# fields of interest
+  d.t <- d[,c(
+    "DURATION_MINUTES",
+    "LATITUDE",
+    "LONGITUDE",
+    "MONTH",
+    "OBSERVATION_DATE",
+    "TIME_OBSERVATIONS_STARTED",
+    "YEAR")]	# fields of interest
 
-  d.t <- distinct(d.t)		# Save only one record per checklist; filter out shared checklists
+  # Save only one record per checklist; filter out shared checklists
+  d.t <- distinct(d.t)
   
   # create new column with date and time together
-  d.t$date <- paste(d.t$OBSERVATION_DATE, d.t$TIME_OBSERVATIONS_STARTED, sep=" ")
+  d.t$date <- paste(
+    d.t$OBSERVATION_DATE,
+    d.t$TIME_OBSERVATIONS_STARTED,
+    sep=" ")
 
   ## Diurnal/nocturnal
   # remove records where TIME_OBSERVATIONS_STARTED is missing
@@ -36,16 +51,32 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
   # Converting all local times to UTC
   q24dyx <- data.frame(date=as.Date(d.t$date, tz="EST"), lat=d.t$LATITUDE,
 				lon=d.t$LONGITUDE)
-  q24dyx$date <- as.Date(with_tz(q24dyx$date, tzone="UTC"), tz="UTC")	# convert obs times to UTC
+
+  # convert obs times to UTC
+  q24dyx$date <- as.Date(with_tz(q24dyx$date, tzone="UTC"), tz="UTC")
   tm <- getSunlightTimes(data=q24dyx, keep=c("sunrise", "sunset"), tz="UTC")
+
 	# sunrise, sunset times
-  tm$obs.tm <- with_tz(d.t$date, tzone="UTC") # convert observation times to UTC
-  tm$obs.rise <- as.numeric(difftime(tm$sunrise, tm$obs.tm, units="hours", tz="UTC"))
-  tm$obs.set <- as.numeric(difftime(tm$sunset,tm$obs.tm, units="hours", tz="UTC"))
+  # convert observation times to UTC
+  tm$obs.tm <- with_tz(d.t$date, tzone="UTC")
+  tm$obs.rise <- as.numeric(
+    difftime(
+      tm$sunrise,
+      tm$obs.tm,
+      units="hours",
+      tz="UTC"))
+  tm$obs.set <- as.numeric(
+    difftime(
+      tm$sunset,tm$obs.tm,
+      units="hours",
+      tz="UTC"))
   tm$diur.noc <- "diurnal"
-  tm$diur.noc[tm$obs.rise>(0.666) | tm$obs.set<(-0.333)] <- "nocturnal"
+  tm$diur.noc[
+    tm$obs.rise>(0.666) | tm$obs.set<(-0.333)] <- "nocturnal"
+
   # nocturnal = >half hour before sunrise or >half hour after sunset
-  # changed to ebird nocturnal = >40 minutes before sunrise or >20 minutes after sunset
+  # changed to ebird nocturnal = >40 minutes before sunrise or 
+  # >20 minutes after sunset
   d.t$diur.noc <- tm$diur.noc
   rm(tm, q24dyx)
 
@@ -82,19 +113,30 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
   blkhr.df <- gather(blk.hr, year)
   blkhr.df$month <- as.numeric(blkhr.df$year)
   blkhr.df$month <- factor(blkhr.df$month)
-  blkhr.df$Year <- factor(blk.hr$year, levels=sort(unique(blk.hr$year), decreasing=T))
+  blkhr.df$Year <- factor(
+    blk.hr$year,
+    levels=sort(unique(blk.hr$year),
+    decreasing=T))
   # put cumulative total hrs  and nocturnal hrs on plot
   txt <- paste("Total cumulative hours: ", round(sum(total.hr),1), "\n",
                "Total nocturnal hours: ", round(noc.hr,2),sep="")
   grob <- grobTree(textGrob(txt, x=0.1,  y=0.92, hjust=0,
-     gp=gpar(col="black", fontsize=10, fontface="italic")))				# font size
+     gp=gpar(col="black", fontsize=10, fontface="italic")))	# font size
   hr.plt <- ggplot(blkhr.df, aes(fill=Year, y=value, x=month) ) +
     geom_bar(position="stack", stat="identity") +
     scale_fill_brewer(palette="Accent") +
     labs(x="Month", y="Hours", title="Survey Hours") +
-    theme(axis.text=element_text(size=11), axis.title=element_text(size=12),	# font size
-        	plot.title=element_text(size=12,face="bold")) +				# font size
+    theme(
+      axis.text=element_text(size=11),
+      axis.title=element_text(size=12),# font size
+      plot.title=element_text(size=12,
+      face="bold")) +	# font size
     annotation_custom(grob)
 
-  blkhr.list <- list(blk_hrs=blk.hr, total_hr=round(sum(total.hr),1), noc_hr=noc.hr, hr_plot=hr.plt)
-  return(blkhr.list) }
+  blkhr.list <- list(
+    blk_hrs=blk.hr,
+    total_hr=round(sum(total.hr),1),
+    noc_hr=noc.hr,
+    hr_plot=hr.plt)
+  return(blkhr.list) 
+  }

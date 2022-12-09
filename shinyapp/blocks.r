@@ -34,7 +34,13 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
           c4 <- length(spp_unique["spp"][spp_unique["bcat"] == "C4"])
           # print(c(c1,c2,c3,c4))
           # print(c(obs_min,length(spp_unique$spp),c1,c2, c3, c4))
-          spp_acc[nrow(spp_acc)+1,]<-c(obs_min,length(spp_unique$spp),c1,c2, c3, c4)
+          spp_acc[nrow(spp_acc)+1,]<-c(
+            obs_min,
+            length(spp_unique$spp),
+            c1,
+            c2,
+            c3,
+            c4)
         }
 
         # new checklist, add minutes to total
@@ -55,23 +61,30 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
       #set values for spp name and breeding category
       curr_spp <- block_recs$COMMON_NAME[i]
       curr_bcat <- block_recs$BREEDING_CATEGORY[i]
-      if (curr_bcat == "") { curr_bcat <- "C1"} # "observed" stored as either "" or "C1"
+      # "observed" stored as either "" or "C1"
+      if (curr_bcat == "") { curr_bcat <- "C1"} 
 
       curr_bcat_num <- strtoi(substr(curr_bcat,2,2))
 
       # capture ntot counts
       if (!(curr_spp %in% spp_unique$spp)) {
         #found a new species!
-        spp_unique[nrow(spp_unique)+1,] <- c(curr_spp, curr_bcat, curr_bcat_num)
+        spp_unique[nrow(spp_unique)+1,] <- c(
+          curr_spp,
+          curr_bcat,
+          curr_bcat_num)
       } else {
         # spp already observed in the block, check to see if the bcat is better
-        exist_spp_row <-spp_unique[][spp_unique["spp"] == curr_spp] #get current spp row data
+        #get current spp row data
+        exist_spp_row <-spp_unique[][spp_unique["spp"] == curr_spp]
 
         #check if bcat is better than previous observation
         if (curr_bcat_num > exist_spp_row[3]) {
           #better bcat
-          spp_unique["bcat"][spp_unique["spp"] == curr_spp] <- curr_bcat
-          spp_unique["bcat_num"][spp_unique["spp"] == curr_spp] <- curr_bcat_num
+          spp_unique["bcat"][spp_unique["spp"] == curr_spp] <- 
+            curr_bcat
+          spp_unique["bcat_num"][spp_unique["spp"] == curr_spp] <- 
+            curr_bcat_num
         }
 
       } #end counting breeding codes
@@ -95,13 +108,37 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
 
   #plot the data
   plot_response <- ggplot(data=spp_acc,aes((min), all)) +
-    geom_hline(aes(yintercept=(spp_tot_half), colour = "50% total")) +
-    geom_text(aes(0,spp_tot_half), label = "50% total spp", vjust = -1) +
-    geom_smooth(method = 'loess', formula = 'y ~ x', aes(y = all, colour="all")) +
-    geom_smooth(method = 'loess', formula = 'y ~ x', aes(y = c4, colour="confirmed")) +
-    geom_smooth(method = 'loess', formula = 'y ~ x', aes(y = c3, color="probable")) +
-    geom_smooth(method = 'loess', formula = 'y ~ x', aes(y = c2, color="possible")) +
-    scale_colour_manual(name="", values = c("#444444", "#2a3b4d", "#ff1a1a", "#ffbf00", "#ccccff")) +
+    geom_hline(
+      aes(yintercept=(spp_tot_half),
+      colour = "50% total")) +
+    geom_text(
+      aes(0,spp_tot_half),
+      label = "50% total spp",
+      vjust = -1) +
+    geom_smooth(
+      method = 'loess',
+      formula = 'y ~ x',
+      aes(y = all, colour="all")) +
+    geom_smooth(
+      method = 'loess',
+      formula = 'y ~ x',
+      aes(y = c4, colour="confirmed")) +
+    geom_smooth(
+      method = 'loess',
+      formula = 'y ~ x',
+      aes(y = c3, color="probable")) +
+    geom_smooth(
+      method = 'loess',
+      formula = 'y ~ x',
+      aes(y = c2, color="possible")) +
+    scale_colour_manual(
+      name="",
+      values = c(
+        "#444444",
+        "#2a3b4d",
+        "#ff1a1a",
+        "#ffbf00",
+        "#ccccff")) +
     xlim(0,obs_min) +
     ylab("# Species") + xlab("Observation Time")
     # geom_line() +
@@ -110,9 +147,12 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
   # plot = accumulation plot output
   # spp_uniques = list of species found
   # spp_acc + Number of unique spp found
-  response <- list("plot" = plot_response, "spp_unique" = spp_unique, "spp_acc_data" = spp_acc, "hrs_total" = hrs_total)
-  # print(test_spp)
-
+  response <- list(
+    "plot" = plot_response,
+    "spp_unique" = spp_unique,
+    "spp_acc_data" = spp_acc,
+    "hrs_total" = hrs_total)
+    
   return(response)
 
 }
