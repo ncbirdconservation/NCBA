@@ -24,6 +24,39 @@ if (!require(suncalc)) install.packages(
 # library(suncalc) # nolint
 library(grid)
 
+# Savings Time Start/End Dates
+# 2021	March 14	November 7
+# 2022	March 13	November 6
+# 2023	March 12	November 5
+# 2024	March 10	November 3
+# 2025	March 9	November 2
+savings_time_cutpoints <- c(
+    "2021-01-01", #start of project
+    "2021-03-14", #start 2021 EDT
+    "2021-11-07", #end 2021 EDT, start EST
+    "2022-03-13", #start EDT
+    "2022-11-06", #end EDT, start EST
+    "2023-03-12", #start EDT
+    "2023-11-05", #end EDT, start EST
+    "2024-03-10", #start EDT
+    "2024-11-03", #end EDT, start EST
+    "2025-03-09", #start EDT
+    "2022-11-02" #end EDT, start EST
+)
+st_labels <- c(
+    "EST",
+    "EDT",
+    "EST",
+    "EDT",
+    "EST",
+    "EDT",
+    "EST",
+    "EDT",
+    "EST",
+    "EDT"
+)
+
+
 # pass a dataframe of eBird checklists
 block_hrs <- function(d){
   d.t <- d[,c(
@@ -47,10 +80,17 @@ block_hrs <- function(d){
   ## Diurnal/nocturnal
   # remove records where TIME_OBSERVATIONS_STARTED is missing
   sum(d.t$TIME_OBSERVATIONS_STARTED=="")	# missing for 979 records
-  d.t <- d.t[!(d.t$TIME_OBSERVATIONS_STARTED)=="",]
-  # Treating all times as "local" to avoid problem with daylight savings time.
+  d.t <- d.t[!(d.t$TIME_OBSERVATIONS_STARTED) == "", ]
+  # DEPRECATED - Treating all times as "local" to avoid problem with daylight savings time.
+  # get Time Zone for each date
+  tzs <- cut(as.Date(d.t$date),as.Date(savings_time_cutpoints),labels=st_labels)
+
   # Converting all local times to UTC
-  q24dyx <- data.frame(date=as.Date(d.t$date, tz="EST"), lat=d.t$LATITUDE,
+  # OLD CODE, PROBLEMS?
+  # q24dyx <- data.frame(date=as.Date(d.t$date, tz="EST"), lat=d.t$LATITUDE,
+  #   lon=d.t$LONGITUDE)
+
+  q24dyx <- data.frame(date=as.Date(d.t$date, tz=tzs), lat=d.t$LATITUDE,
     lon=d.t$LONGITUDE)
 
   # convert obs times to UTC

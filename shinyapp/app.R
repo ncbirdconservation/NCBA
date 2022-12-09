@@ -220,10 +220,10 @@ server <- function(input, output, session) {
 
   # listens for changes in the checklist filters:
   #   portal_records and season_radio
-  criteria_changes <- reactive({
-    # add other criteria here
-    list(input$portal_records, input$season_radio)
-  })
+  # criteria_changes <- reactive({
+  #   # add other criteria here
+  #   list(input$portal_records, input$season_radio)
+  # })
 
   # listens for changes in the checklist filters: 
   #   portal_records and season_radio
