@@ -220,10 +220,10 @@ server <- function(input, output, session) {
 
   # listens for changes in the checklist filters:
   #   portal_records and season_radio
-  criteria_changes <- reactive({
-    # add other criteria here
-    list(input$portal_records, input$season_radio)
-  })
+  # criteria_changes <- reactive({
+  #   # add other criteria here
+  #   list(input$portal_records, input$season_radio)
+  # })
 
   # listens for changes in the checklist filters: 
   #   portal_records and season_radio
@@ -548,7 +548,7 @@ server <- function(input, output, session) {
 
     cblock <- current_block_r()
 
-    ## Retrieves appropriate data through aggregate
+    ## Retrieves appropriate data through aggregation query
     ## _id = combination of block name and species
     ## spp = species common name
     ## maxBC = maximum Breeding Code
@@ -561,7 +561,7 @@ server <- function(input, output, session) {
       '"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]'))
 
     # pipeline <- str_interp(
-    #   c('[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
+    #   paste0('[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
     #   '{"$unwind": {"path": "$OBSERVATIONS"}},',
     #   '{"$group": {"_id": {"blockName": "$ID_NCBA_BLOCK",',
     #   '"spp": "$OBSERVATIONS.COMMON_NAME"},',
@@ -569,7 +569,7 @@ server <- function(input, output, session) {
     #   )
 
     # pipeline <- str_interp(
-    #   c(
+    #   paste0(
     #     '[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
     #     '{"$unwind": {"path": "$OBSERVATIONS"}},',
     #     '{"$group":',
@@ -587,7 +587,7 @@ server <- function(input, output, session) {
 
   output$spp_accumulation <- renderPlot({
     req(spp_accumulation_results())
-    print(spp_accumulation_results()$spp_acc_data)
+    # print(spp_accumulation_results()$spp_acc_data)
     spp_accumulation_results()$plot
 
   })

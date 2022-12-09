@@ -21,10 +21,44 @@ library(lubridate)
 library(ggplot2)
 if (!require(suncalc)) install.packages(
   "suncalc", repos = "http://cran.us.r-project.org")
-# library(suncalc)
+# library(suncalc) # nolint
 library(grid)
 
-block_hrs <- function(d){	# pass a dataframe of eBird checklists
+# Savings Time Start/End Dates
+# 2021	March 14	November 7
+# 2022	March 13	November 6
+# 2023	March 12	November 5
+# 2024	March 10	November 3
+# 2025	March 9	November 2
+savings_time_cutpoints <- c(
+    "2021-01-01", #start of project
+    "2021-03-14", #start 2021 EDT
+    "2021-11-07", #end 2021 EDT, start EST
+    "2022-03-13", #start EDT
+    "2022-11-06", #end EDT, start EST
+    "2023-03-12", #start EDT
+    "2023-11-05", #end EDT, start EST
+    "2024-03-10", #start EDT
+    "2024-11-03", #end EDT, start EST
+    "2025-03-09", #start EDT
+    "2022-11-02" #end EDT, start EST
+)
+st_labels <- c(
+    "EST",
+    "EDT",
+    "EST",
+    "EDT",
+    "EST",
+    "EDT",
+    "EST",
+    "EDT",
+    "EST",
+    "EDT"
+)
+
+
+# pass a dataframe of eBird checklists
+block_hrs <- function(d){
   d.t <- d[,c(
     "DURATION_MINUTES",
     "LATITUDE",
@@ -36,7 +70,7 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
 
   # Save only one record per checklist; filter out shared checklists
   d.t <- distinct(d.t)
-  
+
   # create new column with date and time together
   d.t$date <- paste(
     d.t$OBSERVATION_DATE,
@@ -46,17 +80,24 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
   ## Diurnal/nocturnal
   # remove records where TIME_OBSERVATIONS_STARTED is missing
   sum(d.t$TIME_OBSERVATIONS_STARTED=="")	# missing for 979 records
-  d.t <- d.t[!(d.t$TIME_OBSERVATIONS_STARTED)=="",]
-  # Treating all times as "local" to avoid problem with daylight savings time.
+  d.t <- d.t[!(d.t$TIME_OBSERVATIONS_STARTED) == "", ]
+  # DEPRECATED - Treating all times as "local" to avoid problem with daylight savings time.
+  # get Time Zone for each date
+  tzs <- cut(as.Date(d.t$date),as.Date(savings_time_cutpoints),labels=st_labels)
+
   # Converting all local times to UTC
-  q24dyx <- data.frame(date=as.Date(d.t$date, tz="EST"), lat=d.t$LATITUDE,
-				lon=d.t$LONGITUDE)
+  # OLD CODE, PROBLEMS?
+  # q24dyx <- data.frame(date=as.Date(d.t$date, tz="EST"), lat=d.t$LATITUDE,
+  #   lon=d.t$LONGITUDE)
+
+  q24dyx <- data.frame(date=as.Date(d.t$date, tz=tzs), lat=d.t$LATITUDE,
+    lon=d.t$LONGITUDE)
 
   # convert obs times to UTC
   q24dyx$date <- as.Date(with_tz(q24dyx$date, tzone="UTC"), tz="UTC")
   tm <- getSunlightTimes(data=q24dyx, keep=c("sunrise", "sunset"), tz="UTC")
 
-	# sunrise, sunset times
+  # sunrise, sunset times
   # convert observation times to UTC
   tm$obs.tm <- with_tz(d.t$date, tzone="UTC")
   tm$obs.rise <- as.numeric(
@@ -92,21 +133,21 @@ block_hrs <- function(d){	# pass a dataframe of eBird checklists
 
   # add 0 data for missing months
   if (ncol(blk.hr)<13){
-	flds <- names(blk.hr)[-1]
-	mdat <- data.frame(matrix(data=NA, ncol=12, nrow=nrow(blk.hr)))
-	names(mdat) <- as.character(1:12)
-	j <- match(flds, names(mdat))
-	mdat[,j] <- blk.hr[,flds]
-	mdat[is.na(mdat)] <- 0
-	blk.hr <- cbind(blk.hr[,1],mdat)
-	names(blk.hr)[1] <- "year"
-	rm(mdat, flds, j)
-			    }	# close if ncol(blk.hr)
+    flds <- names(blk.hr)[-1]
+    mdat <- data.frame(matrix(data=NA, ncol=12, nrow=nrow(blk.hr)))
+    names(mdat) <- as.character(1:12)
+    j <- match(flds, names(mdat))
+    mdat[,j] <- blk.hr[,flds]
+    mdat[is.na(mdat)] <- 0
+    blk.hr <- cbind(blk.hr[,1],mdat)
+    names(blk.hr)[1] <- "year"
+    rm(mdat, flds, j)
+  }	# close if ncol(blk.hr)
 
   # total cumlative hours
   total.hr <- apply(blk.hr[,2:13],1,sum)
   # total nocturnal hours
-  noc.hr <- ( sum(d.t$DURATION_MINUTES[d.t$diur.noc == "nocturnal"]) )/60
+  noc.hr <- (sum(d.t$DURATION_MINUTES[d.t$diur.noc == "nocturnal"]))/60
 
   ## Stacked bar: hours by month, years stacked
   # reconfigure blk.hr for plotting

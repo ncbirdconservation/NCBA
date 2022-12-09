@@ -3,8 +3,8 @@
   --ncba-failed-color: #DB504A;
 }
 
-max-width: 80%;
 input[type="number"] {
+  max-width: 80%;
 }
 
 div.outer {
