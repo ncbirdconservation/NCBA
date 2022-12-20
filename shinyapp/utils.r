@@ -164,7 +164,7 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
         mongodata <- unnest(mongodata, cols = (c(OBSERVATIONS)))
 
         #ADD SEASON COLUMN FROM SAFE DATES TABLE AND POPULATE
-        gen_breeding_start = yday("2021-05-01")
+        gen_breeding_start = yday("2021-04-15")
         gen_breeding_end = yday("2021-08-30")
 
         print("adding safe dates")
@@ -179,19 +179,23 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
               begin = gen_breeding_start
               end = gen_breeding_end
             } else {
-              begin = spp_s_d['B_SAFE_START_JULIAN']
-              end = spp_s_d['B_SAFE_END_JULIAN']
+              begin = gen_breeding_start
+              end =   gen_breeding_end
             }
-
+            
             if (begin <= odj & odj <= end){
               season = "Breeding"
             } else {
+              if(yday("2021-08-31") <= odj & odj <=yday("2021-10-31") | yday("2021-03-01") <= odj & odj <=yday("2021-04-14")){ 
+              season = "Migration"
+              }
+             else {
               season = "Non-Breeding"
+             }
             }
-
             return(season)
-
-          })
+          }
+          )
         print("safe dates added")
       } # Expand observations if records returned
 

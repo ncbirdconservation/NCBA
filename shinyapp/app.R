@@ -113,7 +113,13 @@ ui <- bootstrapPage(
                 "season_radio",
                 paste0("Seasons calculated from species-specific",
                 " safe dates (where available)."),
-                "right", options = list(container="body"))
+                "right", options = list(container="body")),
+           # radioButtons("month_radio",label = h4("Months"),
+           #              choices = list(
+           #                "All Records" = "All",
+           #                "Breeding (March - Aug)" = "Breeding",
+           #                "Non-Breeding (Nov - Feb" = "Non-Breeding"),
+           #              selected = "All"),
           )
         ),
         div(class="col-md-10",
@@ -263,11 +269,12 @@ server <- function(input, output, session) {
     paste(rv_block$id)
   })
 
-  # # when map block clicked, update select input drop down list - WORKS
+  # # when map block clicked, update select input drop down list 
+  # updated so clicking current block doesn't clear name from drop down list
   observeEvent(input$mymap_shape_click, {
     print("Updating drop down list to match clicked block")
     click <- input$mymap_shape_click
-    if(click$id %in% input$APBlock)
+    if(click$id %in% input$APBlock & click$id != input$APBlock)
       selected = input$APBlock[input$APBlock != click$id]
     else
       selected = c(input$APBlock, click$id)
