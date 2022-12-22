@@ -109,17 +109,15 @@ ui <- bootstrapPage(
                 "Breeding" = "Breeding",
                 "Non-Breeding" = "Non-Breeding"),
               selected = "All"),
-              bsTooltip(
-                "season_radio",
-                paste0("Seasons calculated from species-specific",
-                " safe dates (where available)."),
-                "right", options = list(container="body")),
-           # radioButtons("month_radio",label = h4("Months"),
-           #              choices = list(
-           #                "All Records" = "All",
-           #                "Breeding (March - Aug)" = "Breeding",
-           #                "Non-Breeding (Nov - Feb" = "Non-Breeding"),
-           #              selected = "All"),
+           conditionalPanel(condition = "input.season_radio == 'Breeding'",
+                            sliderInput("month_range", "Month Range", min = 3, max = 8, value = c(3,8), step = 1,
+                                        ticks = TRUE, width = "300px")
+                            ),
+              # bsTooltip(
+              #   "season_radio",
+              #   paste0("Seasons calculated from species-specific",
+              #   " safe dates (where available)."),
+              #   "right", options = list(container="body")),
           )
         ),
         div(class="col-md-10",
@@ -335,10 +333,16 @@ server <- function(input, output, session) {
           PROJECT_CODE == "EBIRD_ATL_NC"
           else TRUE) %>%
         filter(
-          if(input$season_radio != "All")
-          SEASON == input$season_radio
+          if(input$season_radio == "Breeding")
+            MONTH >= input$month_range[1] & MONTH <= input$month_range[2] 
+          else if (input$season_radio == "Non-Breeding")
+            MONTH %in% c("1","2","11","12")
+          else TRUE) %>% 
+        filter(
+          if (input$month_range[1] == input$month_range[2])
+            MONTH == input$month_range[1]
           else TRUE)
-
+      
   })
 
 
