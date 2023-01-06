@@ -313,7 +313,7 @@ server <- function(input, output, session) {
   # Applies filter WHEN CRITERIA CHANGES
   current_block_ebd_filtered <- reactive({
     req(current_block_ebd())
-
+    print(head(current_block_ebd()$EBD_NOCTURNAL))
     #make sure there are records to filter!
     validate(
       need(checklist_count()>0,"")
@@ -372,7 +372,7 @@ server <- function(input, output, session) {
         LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE, # nolint
         OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE, # nolint
         SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED, # nolint
-        TRIP_COMMENTS,USFWS_CODE,YEAR) %>% # nolint
+        TRIP_COMMENTS,USFWS_CODE,YEAR,EBD_NOCTURNAL) %>% # nolint
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
       # create a column with the html link https://ebird.org/checklist/SID
       mutate(
