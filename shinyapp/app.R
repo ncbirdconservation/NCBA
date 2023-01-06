@@ -513,10 +513,12 @@ server <- function(input, output, session) {
     #   num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss,
     #   num_breed_hours, sep='<br/>'))
     HTML(paste(
+      "<h4>Species</h4>",
       num_spp_total,
       num_breed_confirm,
       num_breed_prob,
       num_breed_poss,
+      "<h4>Hours</h4>",
       num_diurnal_hours,
       num_nocturnal_hours,
       num_total_hours,
