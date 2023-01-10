@@ -144,7 +144,7 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
           '"PROJECT_CODE":1,"PROTOCOL_CODE":1,"PROTOCOL_TYPE":1,',
           '"SAMPLING_EVENT_IDENTIFIER":1,"STATE":1,"STATE_CODE":1,',
           '"TIME_OBSERVATIONS_STARTED":1,"TRIP_COMMENTS":1,',
-          '"USFWS_CODE":1,"YEAR":1}')
+          '"USFWS_CODE":1,"YEAR":1, "EBD_NOCTURNAL":1}')
 
         # fields excluded
         # "GEOM.coordinates":1,"GEOM.type":1,"NCBA_APPROVED":1,"NCBA_BLOCK":1,

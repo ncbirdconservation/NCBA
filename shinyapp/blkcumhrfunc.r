@@ -1,9 +1,14 @@
 ### NCBA - Block Completion Assessment
 # Scott M. Pearson, 29 April 2022
+
 # This R function computes metrics from NCBA Mongo data: 
 # cumulative survey hours,
 # cumulative nocturnal hours. It creates a summary figure.
 # Cumulative hours are separated by month and season.
+
+# updated 6 Jan 2023 - Scott Anderson
+# implemented nocturnal indicator field in Atlas data (EBD_NOCTURNAL),
+# modified code to take advantage of it.
 
 ### Usage: block_hrs(input)
 #  Input is a dataframe of eBird checklists that has these required fields:
@@ -19,43 +24,7 @@
 library(tidyverse)
 library(lubridate)
 library(ggplot2)
-if (!require(suncalc)) install.packages(
-  "suncalc", repos = "http://cran.us.r-project.org")
-# library(suncalc) # nolint
 library(grid)
-
-# Savings Time Start/End Dates
-# 2021	March 14	November 7
-# 2022	March 13	November 6
-# 2023	March 12	November 5
-# 2024	March 10	November 3
-# 2025	March 9	November 2
-savings_time_cutpoints <- c(
-    "2021-01-01", #start of project
-    "2021-03-14", #start 2021 EDT
-    "2021-11-07", #end 2021 EDT, start EST
-    "2022-03-13", #start EDT
-    "2022-11-06", #end EDT, start EST
-    "2023-03-12", #start EDT
-    "2023-11-05", #end EDT, start EST
-    "2024-03-10", #start EDT
-    "2024-11-03", #end EDT, start EST
-    "2025-03-09", #start EDT
-    "2022-11-02" #end EDT, start EST
-)
-st_labels <- c(
-    "EST",
-    "EDT",
-    "EST",
-    "EDT",
-    "EST",
-    "EDT",
-    "EST",
-    "EDT",
-    "EST",
-    "EDT"
-)
-
 
 # pass a dataframe of eBird checklists
 block_hrs <- function(d){
@@ -66,11 +35,9 @@ block_hrs <- function(d){
     "MONTH",
     "OBSERVATION_DATE",
     "TIME_OBSERVATIONS_STARTED",
-    "YEAR")]	# fields of interest
-
-  # Save only one record per checklist; filter out shared checklists
-  d.t <- distinct(d.t)
-
+    "YEAR",
+    "EBD_NOCTURNAL")]	# fields of interest
+  
   # create new column with date and time together
   d.t$date <- paste(
     d.t$OBSERVATION_DATE,
@@ -78,48 +45,8 @@ block_hrs <- function(d){
     sep=" ")
 
   ## Diurnal/nocturnal
-  # remove records where TIME_OBSERVATIONS_STARTED is missing
-  sum(d.t$TIME_OBSERVATIONS_STARTED=="")	# missing for 979 records
-  d.t <- d.t[!(d.t$TIME_OBSERVATIONS_STARTED) == "", ]
-  # DEPRECATED - Treating all times as "local" to avoid problem with daylight savings time.
-  # get Time Zone for each date
-  tzs <- cut(as.Date(d.t$date),as.Date(savings_time_cutpoints),labels=st_labels)
-
-  # Converting all local times to UTC
-  # OLD CODE, PROBLEMS?
-  # q24dyx <- data.frame(date=as.Date(d.t$date, tz="EST"), lat=d.t$LATITUDE,
-  #   lon=d.t$LONGITUDE)
-
-  q24dyx <- data.frame(date=as.Date(d.t$date, tz=tzs), lat=d.t$LATITUDE,
-    lon=d.t$LONGITUDE)
-
-  # convert obs times to UTC
-  q24dyx$date <- as.Date(with_tz(q24dyx$date, tzone="UTC"), tz="UTC")
-  tm <- getSunlightTimes(data=q24dyx, keep=c("sunrise", "sunset"), tz="UTC")
-
-  # sunrise, sunset times
-  # convert observation times to UTC
-  tm$obs.tm <- with_tz(d.t$date, tzone="UTC")
-  tm$obs.rise <- as.numeric(
-    difftime(
-      tm$sunrise,
-      tm$obs.tm,
-      units="hours",
-      tz="UTC"))
-  tm$obs.set <- as.numeric(
-    difftime(
-      tm$sunset,tm$obs.tm,
-      units="hours",
-      tz="UTC"))
-  tm$diur.noc <- "diurnal"
-  tm$diur.noc[
-    tm$obs.rise>(0.666) | tm$obs.set<(-0.333)] <- "nocturnal"
-
-  # nocturnal = >half hour before sunrise or >half hour after sunset
-  # changed to ebird nocturnal = >40 minutes before sunrise or 
-  # >20 minutes after sunset
-  d.t$diur.noc <- tm$diur.noc
-  rm(tm, q24dyx)
+  d.t$diur.noc <- "diurnal"
+  d.t$diur.noc[d.t$EBD_NOCTURNAL == "1"] <- "nocturnal"
 
   ## Survey hours by month and year
   out <- by(d.t$DURATION_MINUTES, INDICES=list(d.t$YEAR,d.t$MONTH), FUN=sum)
