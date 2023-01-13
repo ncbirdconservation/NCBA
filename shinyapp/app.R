@@ -107,10 +107,14 @@ ui <- bootstrapPage(
               choices = list(
                 "All Records" = "All",
                 "Breeding" = "Breeding",
-                "Non-Breeding" = "Non-Breeding"),
+                "Non-Breeding" = "Non-Breeding",
+                "Custom" = "Custom"),
               selected = "All"),
-           conditionalPanel(condition = "input.season_radio == 'Breeding'",
-                            sliderInput("month_range", "Month Range", min = 4, max = 8, value = c(4,8), step = 1, ticks = TRUE, width = "300px"))
+           conditionalPanel(condition = "input.season_radio == 'Custom'",
+                            selectInput("month_range", "Selected Months", choices = c(1,2,3,4,5,6,7,8,9,10,11,12),
+                                        selected = c(1,2,3,4,5,6,7,8,9,10,11,12),
+                                        multiple = TRUE)
+           ),
               # bsTooltip(
               #   "season_radio",
               #   paste0("Seasons calculated from species-specific",
@@ -332,12 +336,12 @@ server <- function(input, output, session) {
           else TRUE) %>%
         filter(
           if (input$season_radio == "Breeding")
-            MONTH >= input$month_range[1] & MONTH <= input$month_range[2] 
+            MONTH %in% c("4","5","6","7","8")
            else if (input$season_radio == "Non-Breeding") 
               MONTH %in% c("1","2","11","12")
-              else TRUE
-             
-          
+              else if (input$season_radio == "Custom")
+             MONTH %in% input$month_range
+          else TRUE
         )
           # if(input$season_radio != "All")
           # SEASON == input$season_radio
