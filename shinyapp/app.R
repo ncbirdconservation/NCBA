@@ -109,11 +109,13 @@ ui <- bootstrapPage(
                 "Breeding" = "Breeding",
                 "Non-Breeding" = "Non-Breeding"),
               selected = "All"),
-              bsTooltip(
-                "season_radio",
-                paste0("Seasons calculated from species-specific",
-                " safe dates (where available)."),
-                "right", options = list(container="body"))
+           conditionalPanel(condition = "input.season_radio == 'Breeding'",
+                            sliderInput("month_range", "Month Range", min = 4, max = 8, value = c(4,8), step = 1, ticks = TRUE, width = "300px"))
+              # bsTooltip(
+              #   "season_radio",
+              #   paste0("Seasons calculated from species-specific",
+              #   " safe dates (where available)."),
+              #   "right", options = list(container="body"))
           )
         ),
         div(class="col-md-10",
@@ -263,7 +265,8 @@ server <- function(input, output, session) {
     paste(rv_block$id)
   })
 
-  # # when map block clicked, update select input drop down list - WORKS
+  # when map block clicked, update select input drop down list
+  # and when clicking current block it doesn't clear the name from the drop down list
   observeEvent(input$mymap_shape_click, {
     print("Updating drop down list to match clicked block")
     click <- input$mymap_shape_click
@@ -328,9 +331,17 @@ server <- function(input, output, session) {
           PROJECT_CODE == "EBIRD_ATL_NC"
           else TRUE) %>%
         filter(
-          if(input$season_radio != "All")
-          SEASON == input$season_radio
-          else TRUE)
+          if (input$season_radio == "Breeding")
+            MONTH >= input$month_range[1] & MONTH <= input$month_range[2] 
+           else if (input$season_radio == "Non-Breeding") 
+              MONTH %in% c("1","2","11","12")
+              else TRUE
+             
+          
+        )
+          # if(input$season_radio != "All")
+          # SEASON == input$season_radio
+          # else TRUE)
 
   })
 
