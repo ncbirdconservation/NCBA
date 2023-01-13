@@ -267,7 +267,7 @@ server <- function(input, output, session) {
   observeEvent(input$mymap_shape_click, {
     print("Updating drop down list to match clicked block")
     click <- input$mymap_shape_click
-    if(click$id %in% input$APBlock)
+    if(click$id %in% input$APBlock & click$id != input$APBlock)
       selected = input$APBlock[input$APBlock != click$id]
     else
       selected = c(input$APBlock, click$id)
