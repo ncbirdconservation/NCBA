@@ -164,35 +164,39 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
         mongodata <- unnest(mongodata, cols = (c(OBSERVATIONS)))
 
         #ADD SEASON COLUMN FROM SAFE DATES TABLE AND POPULATE
-        gen_breeding_start = yday("2021-05-01")
-        gen_breeding_end = yday("2021-08-30")
+        gen_breeding_start = yday("2021-04-01")
+        gen_breeding_end = yday("2021-08-31")
 
-        print("adding safe dates")
+        print("adding Season (Breeding = April 1 - Aug 31)")
         mongodata$SEASON <- apply(
           mongodata[c('OBSERVATION_DATE','COMMON_NAME')],1,
           function(x) {
             odj = yday(x[1]) #Convert observation_date to julian day
             #lookup spp safe dates (if any)
-            spp_s_d = sd[sd$COMMON_NAME == x[2],]
+            # spp_s_d = sd[sd$COMMON_NAME == x[2],]
+            # 
+            # if (nrow(spp_s_d) == 0 ) {
+            #   begin = gen_breeding_start
+            #   end = gen_breeding_end
+            # } else {
+            #   begin = spp_s_d['B_SAFE_START_JULIAN']
+            #   end = spp_s_d['B_SAFE_END_JULIAN']
+            # }
 
-            if (nrow(spp_s_d) == 0 ) {
-              begin = gen_breeding_start
-              end = gen_breeding_end
-            } else {
-              begin = spp_s_d['B_SAFE_START_JULIAN']
-              end = spp_s_d['B_SAFE_END_JULIAN']
-            }
-
-            if (begin <= odj & odj <= end){
+            if ( gen_breeding_start <= odj & odj <= gen_breeding_end){
               season = "Breeding"
             } else {
+              if(yday("2021-08-31") <= odj & odj <=yday("2021-10-31") | yday("2021-03-01") <= odj & odj <=yday("2021-03-31")){ 
+                      season = "Migration"
+              } else {
               season = "Non-Breeding"
+              }
             }
-
+            
             return(season)
 
           })
-        print("safe dates added")
+        print("Season (Breeding or Winter)")
       } # Expand observations if records returned
 
 

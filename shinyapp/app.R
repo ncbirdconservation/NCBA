@@ -107,13 +107,19 @@ ui <- bootstrapPage(
               choices = list(
                 "All Records" = "All",
                 "Breeding" = "Breeding",
-                "Non-Breeding" = "Non-Breeding"),
+                "Non-Breeding" = "Non-Breeding",
+                "Custom" = "Custom"),
               selected = "All"),
-              bsTooltip(
-                "season_radio",
-                paste0("Seasons calculated from species-specific",
-                " safe dates (where available)."),
-                "right", options = list(container="body"))
+           conditionalPanel(condition = "input.season_radio == 'Custom'",
+                            selectInput("month_range", "Selected Months", choices = c(1,2,3,4,5,6,7,8,9,10,11,12),
+                                        selected = c(1,2,3,4,5,6,7,8,9,10,11,12),
+                                        multiple = TRUE)
+           ),
+              # bsTooltip(
+              #   "season_radio",
+              #   paste0("Seasons calculated from species-specific",
+              #   " safe dates (where available)."),
+              #   "right", options = list(container="body"))
           )
         ),
         div(class="col-md-10",
@@ -263,11 +269,12 @@ server <- function(input, output, session) {
     paste(rv_block$id)
   })
 
-  # # when map block clicked, update select input drop down list - WORKS
+  # when map block clicked, update select input drop down list
+  # and when clicking current block it doesn't clear the name from the drop down list
   observeEvent(input$mymap_shape_click, {
     print("Updating drop down list to match clicked block")
     click <- input$mymap_shape_click
-    if(click$id %in% input$APBlock)
+    if(click$id %in% input$APBlock & click$id != input$APBlock)
       selected = input$APBlock[input$APBlock != click$id]
     else
       selected = c(input$APBlock, click$id)
@@ -328,9 +335,17 @@ server <- function(input, output, session) {
           PROJECT_CODE == "EBIRD_ATL_NC"
           else TRUE) %>%
         filter(
-          if(input$season_radio != "All")
-          SEASON == input$season_radio
-          else TRUE)
+          if (input$season_radio == "Breeding")
+            MONTH %in% c("4","5","6","7","8")
+           else if (input$season_radio == "Non-Breeding") 
+              MONTH %in% c("1","2","11","12")
+              else if (input$season_radio == "Custom")
+             MONTH %in% input$month_range
+          else TRUE
+        )
+          # if(input$season_radio != "All")
+          # SEASON == input$season_radio
+          # else TRUE)
 
   })
 
