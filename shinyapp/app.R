@@ -554,14 +554,16 @@ server <- function(input, output, session) {
     ## _id = combination of block name and species
     ## spp = species common name
     ## maxBC = maximum Breeding Code
-    pipeline <- str_interp(
-      paste0('[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
+    pipeline <- str_interp(c(
+      '[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
       '{"$unwind": {"path": "$OBSERVATIONS"}}, ',
       '{"$match": {"OBSERVATIONS.CATEGORY": "species"}},',
       '{"$group": {"_id": {"blockName": "$ID_NCBA_BLOCK",',
       '"spp": "$OBSERVATIONS.COMMON_NAME"},',
-      '"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]'))
+      '"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]'
+      ))
 
+    print(pipeline)
     # pipeline <- str_interp(
     #   paste0('[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
     #   '{"$unwind": {"path": "$OBSERVATIONS"}},',
@@ -788,7 +790,7 @@ server <- function(input, output, session) {
   ##### EXPERIMENT TO RETRIEVE VIA AGGREGATION STRING
   #faster, but still slow
   pipeline <- 
-    str_interp('[{ "$match": { "OBSERVATIONS.COMMON_NAME": "${spp}" } },',
+    str_interp(c('[{ "$match": { "OBSERVATIONS.COMMON_NAME": "${spp}" } },',
     ' { "$unwind": { "path": "$OBSERVATIONS" } }, ',
     '{ "$project": { "COMMON_NAME": "$OBSERVATIONS.COMMON_NAME", ',
     '"BREEDING_CODE": "$OBSERVATIONS.BREEDING_CODE", ',
@@ -802,7 +804,8 @@ server <- function(input, output, session) {
       '"$SPP_SAFE_DATES.B_SAFE_START_DATE" ] }, ',
       '{ "$lte": [ "$OBSERVATION_DATE", ',
       '"$SPP_SAFE_DATES.B_SAFE_END_DATE" ] } ] }, ',
-      '"then": "Breeding", "else": "Non-Breeding" } } } }]')
+      '"then": "Breeding", "else": "Non-Breeding" } } } }]'))
+  print(pipeline)
 
   ebird <- aggregate_ebd_data(pipeline)
   print("aggregate pipeline completed.")
