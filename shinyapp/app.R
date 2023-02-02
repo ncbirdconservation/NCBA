@@ -17,6 +17,8 @@ if(!require(dplyr)) install.packages(
   "dplyr", repos = "http://cran.us.r-project.org")
 if(!require(leaflet)) install.packages(
   "leaflet", repos = "http://cran.us.r-project.org")
+if(!require(leaflegend)) install.packages(
+    "leaflegend", repos = "http://cran.us.r-project.org")
 if(!require(htmltools)) install.packages(
   "htmltools", repos = "http://cran.us.r-project.org")
 if(!require(shinythemes)) install.packages(
@@ -196,9 +198,10 @@ ui <- bootstrapPage(
           height = "75px")
 
         )
-    )
+    ),
+    tabPanel("Effort Map",
+             div(leafletOutput("Effortmap",height="50vh")))
   )
-
 )
 
 # Define server logic to plot various variables against mpg
@@ -839,6 +842,146 @@ server <- function(input, output, session) {
     drop=TRUE)
 })
 
+#### EFFORT MAP TAB  ----------------------------------------------------
+  ### SETUP LEAFLET MAP, RENDER BASEMAP 
+  output$Effortmap <- renderLeaflet({
+    
+    #setup block geojson layer
+    print("starting effort map, adding blocks")
+    
+    leaflet() %>%
+      setView(
+        lng = nc_center_lng,
+        lat = nc_center_lat,
+        zoom = nc_center_zoom) %>%
+      
+      ### Base Groups (Satellite Imagery and Blocks with Diurnal Hours as Fill)
+      addProviderTiles(providers$Esri.WorldImagery,
+                       options = providerTileOptions(opacity = 1), group = "Priority Blocks") %>%
+      addRectangles(
+        data = pb_map,
+        layerId = ~ ID_NCBA_BLOCK,
+        lng1 = ~ NW_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        weight= 0,
+        color=ncba_white,
+        opacity = 0,
+        fillColor= ~binpal(nHours),
+        fillOpacity = 0.7,
+        fill = TRUE,
+        label = ~ nHours,
+        group = "Diurnal Hours") %>% 
+      
+      ### Overlay Groups (Nocturnal Hours - Currently as Circles)
+      addCircles(data = pb_map,
+                 lng = ~ NW_X, lat = ~ centr_y,
+                 radius = 400,
+                 color = ~binpalnight(nNight),
+                 stroke = FALSE,
+                 fillOpacity = 1,
+                 label = ~ nNight,
+                 group = "Nocturnal Hours") %>% 
+      addMarkers(data = pb_map,
+                 lng = ~centr_x, lat = ~centr_y,
+                 icon = ~my_icons2[confirm_colors],
+                 label = ~confirm_false,
+                 group = "Confirmed Species") %>% 
+      # Layers Control (Making Icons as Overlay Layers)
+      addLayersControl(
+        overlayGroups = c("Nocturnal Hours", "Confirmed Species"),
+        options = layersControlOptions(collapsed = FALSE)
+      ) %>%
+      # Hide Nocturnal Hours and Confirmed Species Icons upon Map Start
+      hideGroup(c("Nocturnal Hours", "Confirmed Species")) %>% 
+      
+      # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
+      addLegend("topright",pal = binpal, values = c(1,5,10,15,20,30,40,Inf), title = "Diurnal Hours", opacity = 1, group = "Diurnal Hours") %>% 
+      addLegend("bottomright", pal = binpalnight, values = c(0.1,0.5,1,1.5,2,2.5,3,Inf), title = "Nocturnal Hours", opacity = 1, group = "Nocturnal Hours") %>% 
+      addLegendImage(images = c("input_data/crow_red.png","input_data/crow_yellow.png", "input_data/crow_green.png", "input_data/crow_teal.png",
+                                "input_data/crow_blue.png", "input_data/crow_purple.png"),
+                     labels = c("0-5","5-10","10-20","20-30", "30-40","40-60"),
+                     labelStyle = "font-size: 14px; vertical-align: center;",
+                     title = htmltools::tags$div('Confirmed Species',
+                                                 style = 'font-size: 16px;
+                                             text-align: center;'),
+                     orientation = "vertical",
+                     width = 6.66,
+                     height = 8.33,
+                     position = "bottomleft",
+                     group = "Confirmed Species")
+  })
+  
+  ### Getting Map Diurnal Hours (temporary until block status tab table is made)
+  maphours <- m$aggregate(
+    '[{"$match": {"PRIORITY_BLOCK": "1"}}, 
+    {"$group": {
+        "nChecklists": {
+          "$sum": 1}, 
+        "_id": "$ID_NCBA_BLOCK", 
+        "nHours": {
+          "$sum": {
+            "$divide": [
+              "$DURATION_MINUTES", 60]}}}}]')
+  print("map hours retrieved")
+  # print(maphours)
+  
+  map_hours <- as.data.frame(maphours)
+  pb_map <- merge(priority_block_data, map_hours, by.x = "ID_NCBA_BLOCK",by.y = "_id", all = TRUE )
+  
+  ### Fake # of Confirmed Species
+  
+  confirm_false <- as.numeric(rep(c(1,5,10,20,30,40,60), times=134))
+  mutate(pb_map, confirm_false)
+  
+  ### Fake Nocturnal Hours
+  
+  nNight <- (pb_map$nHours/100)
+  mutate(pb_map, nNight)
+  
+  ### Centroids of Priority Blocks
+  centr_x <- (pb_map$NW_X + pb_map$SE_X)/2
+  centr_y <- (pb_map$NW_Y + pb_map$SE_Y)/2
+  mutate(pb_map, centr_x)
+  mutate(pb_map, centr_y)
+  
+  ### Custom Crow icon is from Font Awesome (https://fontawesome.com/icons)
+  # add "confirm_color" column as a factor variable : this will be associated to the icons' list
+  pb_map <- pb_map %>%
+    mutate(confirm_colors = case_when(
+      confirm_false <= 0.001 ~ "no_crow",
+      confirm_false <= 5 ~ "crow_red",
+      confirm_false <= 10 ~ "crow_yellow",
+      confirm_false <= 20 ~ "crow_green",
+      confirm_false <= 30 ~ "crow_teal",
+      confirm_false <= 40 ~ "crow_blue",
+      confirm_false <= 60 ~ "crow_purple"))
+  
+  pb_map$confirm_colors <- as.factor(pb_map$confirm_colors)
+  
+  # # Make a list of icons. We'll index into it based on name.
+  my_icons2 <- iconList(
+    no_crow = makeIcon(iconUrl = "input_data/no_crow.png",
+                       iconWidth = 4.16, iconHeight = 3.33, iconAnchorX = 1, iconAnchorY = 1),
+    crow_red = makeIcon(iconUrl = "input_data/crow_red.svg",
+                        iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
+    crow_yellow = makeIcon(iconUrl = "input_data/crow_yellow.svg",
+                           iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
+    crow_green = makeIcon(iconUrl = "input_data/crow_green.svg",
+                          iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
+    crow_teal = makeIcon(iconUrl = "input_data/crow_teal.svg",
+                         iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
+    crow_blue = makeIcon(iconUrl = "input_data/crow_blue.svg",
+                         iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
+    crow_purple = makeIcon(iconUrl = "input_data/crow_purple.svg",
+                           iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1))
+  
+  ### palette for diurnal hours
+  binpal <- colorBin("viridis", pb_map$nHours, bins = c(1,5,10,15,20,30,40,Inf), reverse = TRUE)
+  
+  ### palette for diurnal hours
+  binpalnight <- colorBin("viridis", pb_map$nNight, bins = c(0.1,0.5,1,1.5,2,2.5,3,Inf), reverse = TRUE)
 #
 # ## SUMMARIZE START TIMES --------------------------------------------------
 # plot(start_time_boxplot(ebird))
