@@ -855,49 +855,85 @@ server <- function(input, output, session) {
         lat = nc_center_lat,
         zoom = nc_center_zoom) %>%
       
-      ### Base Groups (Satellite Imagery and Blocks with Diurnal Hours as Fill)
+      ### Base Groups (Satellite Imagery and Blocks )
       addProviderTiles(providers$Esri.WorldImagery,
-                       options = providerTileOptions(opacity = 1), group = "Priority Blocks") %>%
+                       options = providerTileOptions(opacity = 1)) %>%
+      
+      # addRectangles(
+      #   data = pb_map,
+      #   layerId = ~ ID_NCBA_BLOCK,
+      #   lng1 = ~ NW_X,
+      #   lat1 = ~ NW_Y,
+      #   lng2 = ~ SE_X,
+      #   lat2 = ~ SE_Y,
+      #   weight= 0.5,
+      #   color=ncba_white,
+      #   opacity = 0,
+      #   fill = FALSE,
+      #   label = ~ ID_NCBA_BLOCK,
+      #   group = "Priority Blocks") %>% 
+      
       addRectangles(
         data = pb_map,
-        layerId = ~ ID_NCBA_BLOCK,
+        layerId = ~ Block_id,
         lng1 = ~ NW_X,
         lat1 = ~ NW_Y,
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
         weight= 0,
         color=ncba_white,
-        opacity = 0,
-        fillColor= ~binpal(nHours),
-        fillOpacity = 0.7,
+        fillColor= ~binpal(breeding_hrsDiurnal),
+        fillOpacity = 0.8,
         fill = TRUE,
-        label = ~ nHours,
-        group = "Diurnal Hours") %>% 
+        label = ~ breeding_hrsDiurnal,
+        group = "Breeding Diurnal Hours") %>% 
+      
+
+      # addRectangles(
+      #   data = pb_map,
+      #   layerId = ~ ID_NCBA_BLOCK,
+      #   lng1 = ~ NW_X,
+      #   lat1 = ~ NW_Y,
+      #   lng2 = ~ SE_X,
+      #   lat2 = ~ SE_Y,
+      #   weight= 1,
+      #   color = ~binpal(nonbreeding_hrsDiurnal),
+      #   opacity = 1,
+      #   fillColor = "transparent",
+      #   fill = FALSE,
+      #   label = ~ nonbreeding_hrsDiurnal,
+      #   group = "Winter Diurnal Hours") %>%
       
       ### Overlay Groups (Nocturnal Hours - Currently as Circles)
       addCircles(data = pb_map,
                  lng = ~ NW_X, lat = ~ centr_y,
                  radius = 400,
-                 color = ~binpalnight(nNight),
+                 color = ~binpalnight(breeding_hrsNocturnal),
                  stroke = FALSE,
                  fillOpacity = 1,
-                 label = ~ nNight,
-                 group = "Nocturnal Hours") %>% 
+                 label = ~ breeding_hrsNocturnal,
+                 group = "Breeding Nocturnal Hours") %>% 
       addMarkers(data = pb_map,
                  lng = ~centr_x, lat = ~centr_y,
                  icon = ~my_icons2[confirm_colors],
-                 label = ~confirm_false,
+                 label = ~breeding_sppCountConfirmed,
                  group = "Confirmed Species") %>% 
+      
+      # addAwesomeMarkers(~centr_x, ~ NW_Y, icon=icons, label=~as.character(nonbreeding_hrsDiurnal),
+      #                   group = "Winter Diurnal Hours") %>% 
+    
+      
       # Layers Control (Making Icons as Overlay Layers)
-      addLayersControl(
-        overlayGroups = c("Nocturnal Hours", "Confirmed Species"),
+      addLayersControl(data = pb_map,
+        baseGroups = c("Breeding Diurnal Hours"),
+        overlayGroups = c("Breeding Nocturnal Hours", "Confirmed Species"),
         options = layersControlOptions(collapsed = FALSE)
       ) %>%
       # Hide Nocturnal Hours and Confirmed Species Icons upon Map Start
-      hideGroup(c("Nocturnal Hours", "Confirmed Species")) %>% 
+      hideGroup(c("Breeding Nocturnal Hours", "Confirmed Species")) %>% 
       
       # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
-      addLegend("topright",pal = binpal, values = c(1,5,10,15,20,30,40,Inf), title = "Diurnal Hours", opacity = 1, group = "Diurnal Hours") %>% 
+      addLegend("bottomright",pal = binpal, values = c(1,5,10,15,20,30,40,Inf), title = "Diurnal Hours", opacity = 1, group = "Diurnal Hours") %>% 
       addLegend("bottomright", pal = binpalnight, values = c(0.1,0.5,1,1.5,2,2.5,3,Inf), title = "Nocturnal Hours", opacity = 1, group = "Nocturnal Hours") %>% 
       addLegendImage(images = c("input_data/crow_red.png","input_data/crow_yellow.png", "input_data/crow_green.png", "input_data/crow_teal.png",
                                 "input_data/crow_blue.png", "input_data/crow_purple.png"),
@@ -910,35 +946,36 @@ server <- function(input, output, session) {
                      width = 6.66,
                      height = 8.33,
                      position = "bottomleft",
-                     group = "Confirmed Species")
+                     group = "Confirmed Species") %>% 
+      # addLegend("topleft", pal = getColor, values = c("<5","<10"), title = "Winter Diurnal Hours", group = "Winter Diurnal Hours") 
   })
   
   ### Getting Map Diurnal Hours (temporary until block status tab table is made)
-  maphours <- m$aggregate(
-    '[{"$match": {"PRIORITY_BLOCK": "1"}}, 
-    {"$group": {
-        "nChecklists": {
-          "$sum": 1}, 
-        "_id": "$ID_NCBA_BLOCK", 
-        "nHours": {
-          "$sum": {
-            "$divide": [
-              "$DURATION_MINUTES", 60]}}}}]')
-  print("map hours retrieved")
+  # maphours <- m$aggregate(
+  #   '[{"$match": {"PRIORITY_BLOCK": "1"}}, 
+  #   {"$group": {
+  #       "nChecklists": {
+  #         "$sum": 1}, 
+  #       "_id": "$ID_NCBA_BLOCK", 
+  #       "nHours": {
+  #         "$sum": {
+  #           "$divide": [
+  #             "$DURATION_MINUTES", 60]}}}}]')
+  # print("map hours retrieved")
   # print(maphours)
   
-  map_hours <- as.data.frame(maphours)
-  pb_map <- merge(priority_block_data, map_hours, by.x = "ID_NCBA_BLOCK",by.y = "_id", all = TRUE )
+  map_hours <- read.csv("input_data/Mongo_BSummary.csv")
+  pb_map <- merge(priority_block_data, map_hours, all = TRUE )
   
-  ### Fake # of Confirmed Species
-  
-  confirm_false <- as.numeric(rep(c(1,5,10,20,30,40,60), times=134))
-  mutate(pb_map, confirm_false)
-  
-  ### Fake Nocturnal Hours
-  
-  nNight <- (pb_map$nHours/100)
-  mutate(pb_map, nNight)
+  # ### Fake # of Confirmed Species
+  # 
+  # confirm_false <- as.numeric(rep(c(1,5,10,20,30,40,60), times=134))
+  # mutate(pb_map, confirm_false)
+  # 
+  # ### Fake Nocturnal Hours
+  # 
+  # nNight <- (pb_map$nHours/100)
+  # mutate(pb_map, nNight)
   
   ### Centroids of Priority Blocks
   centr_x <- (pb_map$NW_X + pb_map$SE_X)/2
@@ -950,13 +987,13 @@ server <- function(input, output, session) {
   # add "confirm_color" column as a factor variable : this will be associated to the icons' list
   pb_map <- pb_map %>%
     mutate(confirm_colors = case_when(
-      confirm_false <= 0.001 ~ "no_crow",
-      confirm_false <= 5 ~ "crow_red",
-      confirm_false <= 10 ~ "crow_yellow",
-      confirm_false <= 20 ~ "crow_green",
-      confirm_false <= 30 ~ "crow_teal",
-      confirm_false <= 40 ~ "crow_blue",
-      confirm_false <= 60 ~ "crow_purple"))
+      breeding_sppCountConfirmed <= 0.001 ~ "no_crow",
+      breeding_sppCountConfirmed <= 5 ~ "crow_red",
+      breeding_sppCountConfirmed <= 10 ~ "crow_yellow",
+      breeding_sppCountConfirmed <= 20 ~ "crow_green",
+      breeding_sppCountConfirmed <= 30 ~ "crow_teal",
+      breeding_sppCountConfirmed <= 40 ~ "crow_blue",
+      breeding_sppCountConfirmed <= 60 ~ "crow_purple"))
   
   pb_map$confirm_colors <- as.factor(pb_map$confirm_colors)
   
@@ -978,10 +1015,30 @@ server <- function(input, output, session) {
                            iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1))
   
   ### palette for diurnal hours
-  binpal <- colorBin("viridis", pb_map$nHours, bins = c(1,5,10,15,20,30,40,Inf), reverse = TRUE)
+  binpal <- colorBin("viridis", pb_map$breeding_hrsDiurnal, bins = c(1,5,10,15,20,30,40,Inf), reverse = TRUE)
   
-  ### palette for diurnal hours
-  binpalnight <- colorBin("viridis", pb_map$nNight, bins = c(0.1,0.5,1,1.5,2,2.5,3,Inf), reverse = TRUE)
+  ### palette for nocturnal hours
+  binpalnight <- colorBin("viridis", pb_map$breeding_hrsNocturnal, bins = c(0.1,0.5,1,1.5,2,2.5,3,Inf), reverse = TRUE)
+  
+  ### Use Icon for Winter Diurnal Hours as well instead of rectangles?
+  # getColor <- function(pb_map) {
+  #   sapply(pb_map$nonbreeding_hrsDiurnal, function(nonbreeding_hrsDiurnal) {
+  #     if(nonbreeding_hrsDiurnal <= 5) {
+  #       "red"
+  #     } else if(nonbreeding_hrsDiurnal <= 10) {
+  #       "orange"
+  #     } else {
+  #       "white"
+  #     } })
+  # }
+  # 
+  # Winter_Diurnal_icons <- awesomeIcons(
+  #   icon = 'fa-solid fa-cloud',
+  #   iconColor = 'white',
+  #   library = 'fa',
+  #   markerColor = getColor(pb_map)
+  # )
+  # 
 #
 # ## SUMMARIZE START TIMES --------------------------------------------------
 # plot(start_time_boxplot(ebird))
