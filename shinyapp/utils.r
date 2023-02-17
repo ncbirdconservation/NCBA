@@ -38,6 +38,11 @@ m_sd <- mongo(
   url = URI,
   options = ssl_options(weak_cert_validation = T))
 
+m_blocksum <- mongo(
+  "BLOCK_SUMMARIES",
+  url = URI,
+  options = ssl_options(weak_cert_validation = T))
+
 get_safe_dates <- function(){
   sd <- m_sd$find("{}","{}")
 
@@ -282,8 +287,7 @@ get_block_gap_spp <- function(blockid){
 #   }
 #
 # )
-#############################################################################
-# Species
+#################### Species ####################
 get_spp_obs <- function(species, filter){
   # wrapper function for retrieving species records
   #
@@ -318,9 +322,7 @@ get_spp_list <- function(query="{}",filter="{}"){
 species_list = get_spp_list(filter='{"PRIMARY_COM_NAME":1}')$PRIMARY_COM_NAME
 
 
-
-###############################################################################
-# Block level summaries
+#################### Block level summaries ####################
 
 # block_data <- read.csv("input_data/blocks.csv") %>% filter(COUNTY == "WAKE")
 block_data <- get_block_data()
@@ -367,3 +369,17 @@ get_block_hours <- function(id_ncba_block) {
 
   }
 }
+
+#################### Block Effort Map ####################
+
+blocksum <- m_blocksum$find(
+  fields = '{ "_id": true, "ID_NCBA_BLOCK": true, "county": true, "region": true, "breeding.hrsDiurnal": true, "breeding.hrsNocturnal": true,
+              "wintering.hrsDiurnal": true, "wintering.hrsNocturnal": true}',
+  
+# fields = '{ "_id": true, "ID_NCBA_BLOCK": true, "updateDate": false, "county": true, "region": true, "breeding.sppCountConfired": 
+#             "breeding.sppList": false, "breeding.sppGapMissing": false, "breeding.obsList": false, "breeding.checkList": false, 
+#             "nonbreeding.sppList" : false, "nonbreeding.sppGapMissing": false, "nonbreeding.obsList": false, "nonbreeding.checkList": false}',
+)
+
+names(blocksum) <- gsub(".", "_", names(blocksum))
+
