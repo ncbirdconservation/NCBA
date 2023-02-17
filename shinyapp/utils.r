@@ -38,6 +38,11 @@ m_sd <- mongo(
   url = URI,
   options = ssl_options(weak_cert_validation = T))
 
+m_blocksum <- mongo(
+  "BLOCK_SUMMARIES",
+  url = URI,
+  options = ssl_options(weak_cert_validation = T))
+
 get_safe_dates <- function(){
   sd <- m_sd$find("{}","{}")
 
@@ -367,3 +372,17 @@ get_block_hours <- function(id_ncba_block) {
 
   }
 }
+
+blocksum <- m_blocksum$find(
+  fields = '{ "_id": true, "ID_NCBA_BLOCK": true, "county": true, "region": true, "breeding.hrsDiurnal": true, "breeding.hrsNocturnal": true,
+              "wintering.hrsDiurnal": true, "wintering.hrsNocturnal": true, 
+            "breeding.sppCountConfirmed": true, "breeding.sppCountProbable": true, "breeding.sppCountPossible": true, "breeding.sppCountDetected": true }',)
+
+blocksum <-  tibble(blocksum)
+
+blocksum <- blocksum %>% 
+  unnest_wider("breeding", names_sep = "_") %>% 
+  unnest_wider("wintering", names_sep = "_") 
+
+
+blocksum <- as.data.frame(blocksum)
