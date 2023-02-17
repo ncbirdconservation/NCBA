@@ -372,14 +372,9 @@ get_block_hours <- function(id_ncba_block) {
 
 #################### Block Effort Map ####################
 
-blocksum <- m_blocksum$find(
+blockhours <- m_blocksum$find(
   fields = '{ "_id": true, "ID_NCBA_BLOCK": true, "county": true, "region": true, "breeding.hrsDiurnal": true, "breeding.hrsNocturnal": true,
               "wintering.hrsDiurnal": true, "wintering.hrsNocturnal": true}',
-  
-# fields = '{ "_id": true, "ID_NCBA_BLOCK": true, "updateDate": false, "county": true, "region": true, "breeding.sppCountConfired": 
-#             "breeding.sppList": false, "breeding.sppGapMissing": false, "breeding.obsList": false, "breeding.checkList": false, 
-#             "nonbreeding.sppList" : false, "nonbreeding.sppGapMissing": false, "nonbreeding.obsList": false, "nonbreeding.checkList": false}',
 )
 
-names(blocksum) <- gsub(".", "_", names(blocksum))
 
