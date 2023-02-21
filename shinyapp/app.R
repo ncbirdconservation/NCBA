@@ -857,7 +857,7 @@ server <- function(input, output, session) {
       
       ### Base Groups (Satellite Imagery and Blocks )
       addProviderTiles(providers$Esri.WorldImagery,
-                       options = providerTileOptions(opacity = 1)) %>%
+                       options = providerTileOptions(opacity = 0.6)) %>%
       
       addRectangles(
         data = pb_map,
@@ -866,14 +866,14 @@ server <- function(input, output, session) {
         lat1 = ~ NW_Y,
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
-        weight= 0,
-        color=ncba_white,
+        weight = 2,
+        color=~binpal(breeding_hrsDiurnal),
         fillColor= ~binpal(breeding_hrsDiurnal),
         fillOpacity = 0.8,
-        fill = TRUE,
-        label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>,<br>Breeding Diurnal Hours:",breeding_hrsDiurnal) %>% lapply(htmltools::HTML),
+        fill = FALSE,
+        label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>, <br>Breeding Diurnal Hours:", signif(breeding_hrsDiurnal,2)) %>% lapply(htmltools::HTML),
         group = "Breeding Diurnal Hours") %>% 
-      
+    
       
       ### Overlay Groups (Nocturnal Hours - Currently as Circles)
       addCircles(data = pb_map,
@@ -882,14 +882,19 @@ server <- function(input, output, session) {
                  color = ~binpalnight(breeding_hrsNocturnal),
                  stroke = FALSE,
                  fillOpacity = 1,
-                 label = ~ breeding_hrsNocturnal,
+                 label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>, <br>Nocturnal Breeding Hours:", signif(breeding_hrsNocturnal,2)) %>% lapply(htmltools::HTML),
                  group = "Breeding Nocturnal Hours") %>% 
       addMarkers(data = pb_map,
                  lng = ~centr_x, lat = ~centr_y,
                  icon = ~confirm_icons[confirm_colors],
-                 label = ~breeding_sppCountConfirmed,
+                 label = ~paste ("<strong>",ID_NCBA_BLOCK, "</strong>, <br>Confirmed Species:", breeding_sppCountConfirmed) %>% lapply(htmltools::HTML),
                  group = "Confirmed Species") %>% 
-      
+      ### Why are some of these huge?
+      addMarkers(data = pb_map,
+                 lng = ~centr_x, lat = ~NW_Y,
+                 icon = ~winter_icons[winter_colors],
+                 label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>,<br> Wintering Diurnal Hours:", signif(wintering_hrsDiurnal,2)) %>%  lapply(htmltools:HTML),
+                 group = "Wintering Diurnal Hours") %>% 
       # addMarkers(data = pb_map,
       #            lng = ~SE_x, lat = ~ centr_y,
       #            icon = winter_icons[winter_colors],
@@ -902,11 +907,11 @@ server <- function(input, output, session) {
       # Layers Control (Making Icons as Overlay Layers)
       addLayersControl(data = pb_map,
         baseGroups = c("Breeding Diurnal Hours"),
-        overlayGroups = c("Breeding Nocturnal Hours", "Confirmed Species"),
+        overlayGroups = c("Breeding Nocturnal Hours", "Confirmed Species", "Wintering Diurnal Hours"),
         options = layersControlOptions(collapsed = FALSE)
       ) %>%
       # Hide Nocturnal Hours and Confirmed Species Icons upon Map Start
-      hideGroup(c("Breeding Nocturnal Hours", "Confirmed Species")) %>% 
+      hideGroup(c("Breeding Nocturnal Hours", "Confirmed Species", "Wintering Diurnal Hours")) %>% 
       
       # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
       addLegend("bottomright",pal = binpal, values = c(5,10,15,20), title = "Diurnal Hours", opacity = 1, group = "Diurnal Hours") %>% 
@@ -922,7 +927,19 @@ server <- function(input, output, session) {
                      width = 6.66,
                      height = 8.33,
                      position = "bottomleft",
-                     group = "Confirmed Species")})
+                     group = "Confirmed Species") %>% 
+      addLegendImage(images = c("input_data/winter_yellow.png", "input_data/winter_green.png", "input_data/winter_teal.png"),
+                     labels = c("≤3","3-6","6-10"),
+                     labelStyle = "font-size: 14px; vertical-align: center;",
+                     title = htmltools::tags$div('Wintering Diurnal Hours',
+                                                 style = 'font-size: 16px;
+                                             text-align: center;'),
+                     orientation = "vertical",
+                     width = 6.66,
+                     height = 8.33,
+                     position = "topleft",
+                     group = "Wintering Diurnal Hours")
+    }) 
   
   pb_map <- merge(priority_block_data, blocksum, all = TRUE)
   
@@ -933,10 +950,11 @@ server <- function(input, output, session) {
   mutate(pb_map, centr_y)
   
   ### Custom Crow icon is from Font Awesome (https://fontawesome.com/icons)
+  ### "fa-solid fa-crow"
 
   ## Make a list of icons. We'll index into it based on name.
   confirm_icons <- iconList(
-    no_crow = makeIcon(iconUrl = "input_data/no_crow.png",
+    no_crow = makeIcon(iconUrl = "input_data/crow_grey.svg",
                        iconWidth = 4.16, iconHeight = 3.33, iconAnchorX = 1, iconAnchorY = 1),
     crow_red = makeIcon(iconUrl = "input_data/crow_red.svg",
                         iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
@@ -954,7 +972,7 @@ server <- function(input, output, session) {
   # add "confirm_color" column as a variable : this will be associated to the icons' list
   pb_map <- pb_map %>%
     mutate(confirm_colors = case_when(
-      breeding_sppCountConfirmed <= 0.001 ~ "no_crow",
+      breeding_sppCountConfirmed == 0 ~ "crow_grey",
       breeding_sppCountConfirmed <= 5 ~ "crow_red",
       breeding_sppCountConfirmed <= 10 ~ "crow_yellow",
       breeding_sppCountConfirmed <= 20 ~ "crow_green",
@@ -963,6 +981,8 @@ server <- function(input, output, session) {
       breeding_sppCountConfirmed <= 60 ~ "crow_purple"))
   
   ### palette for Diurnal Hours
+  ### Yellow = #FDE725FF, Teal = #238A8DFF, Green = #74D055FF, Purple = #482677FF
+           
   binpal <- colorBin("viridis", pb_map$breeding_hrsDiurnal, bins = c(0.1,5,10,15,20,Inf), reverse = TRUE)
   
   ### palette for Nocturnal Hours
@@ -971,24 +991,24 @@ server <- function(input, output, session) {
   ### Use Icon for Winter Diurnal Hours as well instead of rectangles can't seem to plot two sets of filled rectangles at the same time?
   ### 
   # ## Make a list of icons. We'll index into it based on name.
-  # winter_icons <- iconList(
-  #   no_hours = makeIcon(iconUrl = "input_data/no_crow.png",
-  #                      iconWidth = 4.16, iconHeight = 3.33, iconAnchorX = 1, iconAnchorY = 1),
-  #   winter_yellow = makeIcon(iconUrl = "input_data/winter_yellow.svg",
-  #                       iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
-  #   winter_green = makeIcon(iconUrl = "input_data/winter_green.svg",
-  #                          iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
-  #   winter_teal = makeIcon(iconUrl = "input_data/winter_teal.svg",
-  #                         iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1))
-  # 
-  # # add "winter_colors" column as a variable : this will be associated to the icons' list
-  # # 
-  # pb_map <- pb_map %>%
-  #   mutate(winter_colors = case_when(
-  #     wintering_hrsDiurnal <= 0.01 ~ "no_hours",
-  #     wintering_hrsDiurnal <= 3 ~ "winter_yellow",
-  #     wintering_hrsDiurnal <= 6 ~ "winter_green",
-  #     wintering_hrsDiurnal <= 10 ~ "winter_teal"))
+  winter_icons <- iconList(
+    no_hours = makeIcon(iconUrl = "input_data/winter_gray.svg",
+                       iconWidth = 4.16, iconHeight = 3.33, iconAnchorX = 0, iconAnchorY = 0),
+    winter_yellow = makeIcon(iconUrl = "input_data/winter_yellow.svg",
+                        iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 0, iconAnchorY = 0),
+    winter_green = makeIcon(iconUrl = "input_data/winter_green.svg",
+                           iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 0, iconAnchorY = 0),
+    winter_teal = makeIcon(iconUrl = "input_data/winter_teal.svg",
+                          iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 0, iconAnchorY = 0))
+
+  # add "winter_colors" column as a variable : this will be associated to the icons' list
+  #
+  pb_map <- pb_map %>%
+    mutate(winter_colors = case_when(
+      wintering_hrsDiurnal <= 0.01 ~ "no_hours",
+      wintering_hrsDiurnal <= 3 ~ "winter_yellow",
+      wintering_hrsDiurnal <= 6 ~ "winter_green",
+      wintering_hrsDiurnal <= 10 ~ "winter_teal"))
   
 #
 # ## SUMMARIZE START TIMES --------------------------------------------------
