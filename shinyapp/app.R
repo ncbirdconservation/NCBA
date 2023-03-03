@@ -142,8 +142,9 @@ ui <- bootstrapPage(
           plotOutput("blockhours")
         ),
         div(class="col-md-3 panel",
-          h4("Species Accumulation"),
-          plotOutput("spp_accumulation")
+          conditionalPanel(condition = "input.season_radio == 'Breeding'",
+                           h4("Species Accumulation"),
+                           plotOutput("spp_accumulation"))
         ),
         div(class="col-md-6 panel",
           h4("Species"),
@@ -479,7 +480,7 @@ server <- function(input, output, session) {
     }
 
     # add conditional formatting if criteria met
-    num_spp_total <- paste("Species: ", nrow(sa_list["spp"]) )
+    num_spp_total <- paste("Coded Species: ", nrow(filter(sa_list, bcat != "C1")))
     num_breed_confirm <- paste(
       "Confirmed (C4):<span class='", confirmed_class, "'>",
       confirmed_total, "</span>")
@@ -508,15 +509,15 @@ server <- function(input, output, session) {
 
     num_diurnal_hours <- paste(
       "Diurnal:<span class='",diurnal_hours_class, "'>",
-      format(diurnal_hours, trim=TRUE, digits=1),
-      " hrs</span>")
+      format(diurnal_hours, trim=TRUE, digits=2),
+      "</span>")
     num_nocturnal_hours <- paste(
       "Nocturnal:<span class='", nocturnal_hours_class, "'>",
-      format(block_hrs_results()$noc_hr, trim=TRUE, digits=1),
-      " hrs</span>")
+      format(block_hrs_results()$noc_hr, trim=TRUE, digits=2),
+      "</span>")
     num_total_hours <- paste(
       "Total:<span class=''>",
-      format(block_hrs_results()$total_hr, trim=TRUE, digits=1),
+      format(block_hrs_results()$total_hr, trim=TRUE, digits=2),
       " hrs</span>")
 
     print("troubleshooting duplicate block stats:")

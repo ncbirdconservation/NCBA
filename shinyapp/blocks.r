@@ -5,7 +5,7 @@
 #
 plot_spp_accumulation <- function(block_recs, spp_bcs) {
   # TODO - list highest behavior code by spp
-  # TODO - collecct data for categories
+  # TODO - collect data for categories
   #  C1 – Observed; C2 – Possible; C3 – Probable; C4 – Confirmed
   #  observed can be "" or "C1"
   # print(head(block_recs))
@@ -142,7 +142,7 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
         "#ffbf00",
         "#ccccff")) +
     xlim(0,obs_min) +
-    ylab("# Species") + xlab("Observation Time")
+    ylab("# Species") + xlab("Observation Time (Minutes)")
     # geom_line() +
 
   #figure out how to provide multiple return data
