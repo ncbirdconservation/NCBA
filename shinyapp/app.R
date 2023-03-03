@@ -142,8 +142,8 @@ ui <- bootstrapPage(
           plotOutput("blockhours")
         ),
         div(class="col-md-3 panel",
-          conditionalPanel(condition = "input.season_radio == 'Breeding'",
-                           h4("Species Accumulation"),
+           h4("Breeding Species Accumulation"),
+           conditionalPanel(condition = "input.season_radio == 'Breeding'",
                            plotOutput("spp_accumulation"))
         ),
         div(class="col-md-6 panel",
