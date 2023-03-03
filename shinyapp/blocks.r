@@ -103,7 +103,7 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
   spp_acc[nrow(spp_acc)+1,]<-c(obs_min,length(spp_unique$spp),c1,c2, c3, c4)
 
 
-  spp_tot <- nrow(spp_unique)
+  spp_tot <- nrow(spp_unique) 
   spp_coded <- nrow(spp_unique[!"bcat" == "C1"])
   spp_coded_half <- spp_coded * 0.5
   spp_tot_half <- spp_tot * 0.5
