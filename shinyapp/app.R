@@ -86,7 +86,7 @@ ui <- bootstrapPage(
     tags$head(includeCSS("styles.css")),
     tags$head(tags$link(rel="icon", href="/input_data/ncba_blue_wbnu.ico")),
     tabPanel("Blocks",
-             id = "blockstab",
+             id = "BlocksTab",
       div(class="col-md-2 panel sidebar", id = "block_controls",
 
           # span(
@@ -208,10 +208,7 @@ ui <- bootstrapPage(
     #     )
     # ),
     tabPanel("Effort Map",
-             tabsetPanel(
-               tabPanel(actionButton("switch_tab", "Go to the Block tab")
-               ),
-             div(leafletOutput("Effortmap",height="50vh"))))
+             div(leafletOutput("Effortmap",height="50vh")))
   )
 )
 
@@ -1009,58 +1006,38 @@ server <- function(input, output, session) {
   
   ### Linking Effort Map tab and Block Tab
   
-  shinyLink <- function(to, label) {
-    tags$a(
-      class = "shiny__link",
-      href = to,
-      label
-    )
-  }
+  # shinyLink <- function(to, label) {
+  #   tags$a(
+  #     class = "shiny__link",
+  #     href = to,
+  #     label
+  #   )
+  # }
   
   
   ### Change to Block Tab when Clicking a Block in Effort Map
   ### 
-  # when map block clicked, update select input drop down list
-  # and when clicking current block it doesn't clear the name from the drop down list
-  observeEvent(input$mymap_shape_click, {
-    print("Updating drop down list to match clicked block")
-    click <- input$mymap_shape_click
-    if(click$id %in% input$APBlock & click$id != input$APBlock)
-      selected = input$APBlock[input$APBlock != click$id]
-    else
-      selected = c(input$APBlock, click$id)
-    updateSelectInput(session, "APBlock",
-                      selected = selected)
-  })
+  shinyInput = function(FUN, id, labels) {
+      input = as.character(FUN(paste0(id), label = labels, 
+                                   onclick = paste0('$("#block_controls li a")[1].click();$("#APBlock")[0].selectize.setValue("',labels,'")')))
+    }
+    return(input)
   
-  #### React to Change of Selected Block in Drop down list instead of click,
-  ## a bit redundant with the one above but I am not sure how to combine them?
-  observeEvent(input$APBlock, {
-    print("Block selected from drop down list")
-    blockmap_list_id <- input$APBlock
-    if(input$APBlock == "NONE")
-      rv_block$id = NULL
-    else
-      rv_block$id = blockmap_list_id
-  })
-  ### ZOOM MAP TO SELECTED BLOCK ------
-  observeEvent(current_block_r(), {
-    req(current_block_r())
-    block_info <- filter(block_data, ID_NCBA_BLOCK==current_block_r())
+  
+  output$APBlock <- output$rv_effortblock <- rv_block
+
+  rv_effortblock <- reactiveValues(chosen=NULL, id =NULL)
+  
+  # grab id from map click
+  observeEvent (input$Effortmap_shape_click, {
+    blockmap_info <- input$Effortmap_shape_click
+    blockmap_info_id <- input$Effortmap_shape_click$id
     
-    #calculate the center of the block
-    block_center_lat <- block_info$SE_Y +
-      ((block_info$NW_Y - block_info$SE_Y)/2)
-    block_center_lng <- block_info$SE_X - 
-      ((block_info$SE_X - block_info$NW_X)/2)
-    
-    leafletProxy("mymap", session) %>%
-      setView(
-        lat = block_center_lat,
-        lng = block_center_lng,
-        zoom = nc_block_zoom
-      )
+    rv_effortblock$chosen <- blockmap_info
+    rv_effortblock$id <-  blockmap_info_id
   })
+    
+}  
 #
 # ## SUMMARIZE START TIMES --------------------------------------------------
 # plot(start_time_boxplot(ebird))
@@ -1080,6 +1057,6 @@ server <- function(input, output, session) {
 
 
 
-}
+
 
 shinyApp(ui, server)
