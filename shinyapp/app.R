@@ -24,6 +24,7 @@ if(!require(htmltools)) install.packages(
 if(!require(shinythemes)) install.packages(
   "shinythemes", repos = "http://cran.us.r-project.org")
 
+
 #adds functions for tooltips
 if(!require(shinyBS)) install.packages(
   "shinyBS", repos = "http://cran.us.r-project.org")
@@ -77,9 +78,15 @@ ui <- bootstrapPage(
       ),
     id="nav",
     windowTitle = "NCBA Block Explorer",
+    header = fluidRow(tags$h5(tags$p(
+                              paste0("This site is a work in progress, designed to provide access",
+                                     " to data collected through the North Carolina Bird Atlas. ",
+                                     "Data submitted to eBird is updated on a monthly basis."))),
+                      align = "center"),
     tags$head(includeCSS("styles.css")),
     tags$head(tags$link(rel="icon", href="/input_data/ncba_blue_wbnu.ico")),
     tabPanel("Blocks",
+             id = "blockstab",
       div(class="col-md-2 panel sidebar", id = "block_controls",
 
           # span(
@@ -93,14 +100,15 @@ ui <- bootstrapPage(
             class="desc-text"
             ),
           div(class="tab-control-group",
-            selectInput(inputId = "APBlock", #name of input
-            label = "Selected Priority Block", #label displayed in ui
-            choices = c(
-              as.character(unique(priority_block_data$ID_NCBA_BLOCK)),
-              "NONE"),
-            # calls unique values from the ID_NCBA_BLOCK column
-            # in the previously created table
-            selected = "NONE"),
+              uiOutput("APBlock"),
+            # selectInput(inputId = "APBlock", #name of input
+            # label = "Selected Priority Block", #label displayed in ui
+            # choices = c(
+            #   as.character(unique(priority_block_data$ID_NCBA_BLOCK)),
+            #   "NONE"),
+            # # calls unique values from the ID_NCBA_BLOCK column
+            # # in the previously created table
+            # selected = "NONE"),
             htmlOutput("checklist_counter")
           ),
           div(class="tab-control-group",
@@ -184,23 +192,26 @@ ui <- bootstrapPage(
       )
     )
     ),
-    tabPanel("About",
-      tags$div(
-        tags$h4("NC Bird Atlas Data Explorer"),
-        tags$p(
-          paste0("This site is a work in progress, designed to provide access",
-          " to data collected through the North Carolina Bird Atlas. ",
-          "Data submitted to eBird is updated on a monthly basis.")),
-        tags$br(),
-        tags$img(
-          src = "ncba_logo_blue_halo_final.png",
-          width = "150px",
-          height = "75px")
-
-        )
-    ),
+    # tabPanel("About",
+    #   tags$div(
+    #     tags$h4("NC Bird Atlas Data Explorer"),
+    #     tags$p(
+    #       paste0("This site is a work in progress, designed to provide access",
+    #       " to data collected through the North Carolina Bird Atlas. ",
+    #       "Data submitted to eBird is updated on a monthly basis.")),
+    #     tags$br(),
+    #     tags$img(
+    #       src = "ncba_logo_blue_halo_final.png",
+    #       width = "150px",
+    #       height = "75px")
+    # 
+    #     )
+    # ),
     tabPanel("Effort Map",
-             div(leafletOutput("Effortmap",height="50vh")))
+             tabsetPanel(
+               tabPanel(actionButton("switch_tab", "Go to the Block tab")
+               ),
+             div(leafletOutput("Effortmap",height="50vh"))))
   )
 )
 
@@ -272,6 +283,18 @@ server <- function(input, output, session) {
     paste(rv_block$id)
   })
 
+  ### Object for drop down list for block selection
+  output$APBlock <- renderUI({
+    selectInput(inputId = "APBlock", #name of input
+                label = "Selected Priority Block", #label displayed in ui
+                choices = c(
+                  as.character(unique(priority_block_data$ID_NCBA_BLOCK)),
+                  "NONE"),
+                # calls unique values from the ID_NCBA_BLOCK column
+                # in the previously created table
+                selected = "NONE")
+  })
+  
   # when map block clicked, update select input drop down list
   # and when clicking current block it doesn't clear the name from the drop down list
   observeEvent(input$mymap_shape_click, {
@@ -984,6 +1007,60 @@ server <- function(input, output, session) {
   ### palette for Nocturnal Hours
   binpalnight <- colorBin("viridis", pb_map$breeding_hrsNocturnal, bins = c(0.1,0.5,1,1.5,2,Inf), reverse = TRUE)
   
+  ### Linking Effort Map tab and Block Tab
+  
+  shinyLink <- function(to, label) {
+    tags$a(
+      class = "shiny__link",
+      href = to,
+      label
+    )
+  }
+  
+  
+  ### Change to Block Tab when Clicking a Block in Effort Map
+  ### 
+  # when map block clicked, update select input drop down list
+  # and when clicking current block it doesn't clear the name from the drop down list
+  observeEvent(input$mymap_shape_click, {
+    print("Updating drop down list to match clicked block")
+    click <- input$mymap_shape_click
+    if(click$id %in% input$APBlock & click$id != input$APBlock)
+      selected = input$APBlock[input$APBlock != click$id]
+    else
+      selected = c(input$APBlock, click$id)
+    updateSelectInput(session, "APBlock",
+                      selected = selected)
+  })
+  
+  #### React to Change of Selected Block in Drop down list instead of click,
+  ## a bit redundant with the one above but I am not sure how to combine them?
+  observeEvent(input$APBlock, {
+    print("Block selected from drop down list")
+    blockmap_list_id <- input$APBlock
+    if(input$APBlock == "NONE")
+      rv_block$id = NULL
+    else
+      rv_block$id = blockmap_list_id
+  })
+  ### ZOOM MAP TO SELECTED BLOCK ------
+  observeEvent(current_block_r(), {
+    req(current_block_r())
+    block_info <- filter(block_data, ID_NCBA_BLOCK==current_block_r())
+    
+    #calculate the center of the block
+    block_center_lat <- block_info$SE_Y +
+      ((block_info$NW_Y - block_info$SE_Y)/2)
+    block_center_lng <- block_info$SE_X - 
+      ((block_info$SE_X - block_info$NW_X)/2)
+    
+    leafletProxy("mymap", session) %>%
+      setView(
+        lat = block_center_lat,
+        lng = block_center_lng,
+        zoom = nc_block_zoom
+      )
+  })
 #
 # ## SUMMARIZE START TIMES --------------------------------------------------
 # plot(start_time_boxplot(ebird))
