@@ -15,6 +15,8 @@ if(!require(mongolite)) install.packages(
   "mongolite", repos = "http://cran.us.r-project.org")
 if(!require(dplyr)) install.packages(
   "dplyr", repos = "http://cran.us.r-project.org")
+if(!require(janitor)) install.packages(
+  "janitor", repos = "http://cran.us.r-project.org")
 if(!require(leaflet)) install.packages(
   "leaflet", repos = "http://cran.us.r-project.org")
 if(!require(leaflegend)) install.packages(
@@ -888,11 +890,11 @@ server <- function(input, output, session) {
         lat2 = ~ SE_Y,
         stroke = TRUE,
         weight = 2.5,
-        color=~binpal(breeding_hrsDiurnal),
+        color=~binpal(portal_breeding_hrsDiurnal),
         # fillColor= ~binpal(breeding_hrsDiurnal),
         # fillOpacity = 0.8,
         fill = FALSE,
-        label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>,<br>Breeding Diurnal Hours:", signif(breeding_hrsDiurnal,2)) %>% lapply(htmltools::HTML),
+        label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>,<br>Breeding Diurnal Hours:", signif(portal_breeding_hrsDiurnal,2)) %>% lapply(htmltools::HTML),
         group = "Breeding Diurnal Hours") %>% 
       
       ### Overlay Groups 
@@ -900,17 +902,17 @@ server <- function(input, output, session) {
       addCircles(data = pb_map,
                  lng = ~ NW_X, lat = ~ centr_y,
                  radius = 400,
-                 color = ~binpalnight(breeding_hrsNocturnal),
+                 color = ~binpalnight(portal_breeding_hrsNocturnal),
                  stroke = TRUE,
                  weight = 2,
                  fill = FALSE,
-                 label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>,<br>Nocturnal Breeding Hours:", signif(breeding_hrsNocturnal,2)) %>% lapply(htmltools::HTML),
+                 label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>,<br>Nocturnal Breeding Hours:", signif(portal_breeding_hrsNocturnal,2)) %>% lapply(htmltools::HTML),
                  group = "Breeding Nocturnal Hours") %>% 
       ## Number of Confirmed Species, Custom Crow Icon from Font Awesome
       addMarkers(data = pb_map,
                  lng = ~centr_x, lat = ~centr_y,
                  icon = ~confirm_icons[confirm_colors],
-                 label = ~paste ("<strong>",ID_NCBA_BLOCK, "</strong>,<br>Confirmed Species:", breeding_sppCountConfirmed) %>% lapply(htmltools::HTML),
+                 label = ~paste ("<strong>",ID_NCBA_BLOCK, "</strong>,<br>Confirmed Species:", portal_breeding_sppCountConfirmed) %>% lapply(htmltools::HTML),
                  group = "Confirmed Species") %>% 
       
       ## Wintering Diurnal Hours - Filled Circles
@@ -921,8 +923,8 @@ server <- function(input, output, session) {
         stroke = FALSE,
         fill = TRUE,
         fillOpacity = 1,
-        fillColor= ~winterbinpal(wintering_hrsDiurnal),
-        label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>,<br>Wintering Diurnal Hours:", signif(wintering_hrsDiurnal,2)) %>% lapply(htmltools::HTML),
+        fillColor= ~winterbinpal(portal_wintering_hrsDiurnal),
+        label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>,<br>Wintering Diurnal Hours:", signif(portal_wintering_hrsDiurnal,2)) %>% lapply(htmltools::HTML),
         group = "Wintering Diurnal Hours") %>% 
       
       # Layers Control (Making Icons as Overlay Layers)
@@ -942,7 +944,7 @@ server <- function(input, output, session) {
                                 "input_data/crow_blue.png", "input_data/crow_purple.png"),
                      labels = c("1-5","5-10","10-20","20-30", "30-40","40-60"),
                      labelStyle = "font-size: 14px; vertical-align: center;",
-                     title = htmltools::tags$div('Confirmed Species',
+                     title = htmltools::tags$div('Confirmed',
                                                  style = 'font-size: 16px;
                                              text-align: center;'),
                      orientation = "vertical",
@@ -985,58 +987,30 @@ server <- function(input, output, session) {
   # add "confirm_color" column as a variable : this will be associated to the icons' list
   pb_map <- pb_map %>%
     mutate(confirm_colors = case_when(
-      breeding_sppCountConfirmed == 0 ~ "crow_grey",
-      breeding_sppCountConfirmed <= 5 ~ "crow_red",
-      breeding_sppCountConfirmed <= 10 ~ "crow_yellow",
-      breeding_sppCountConfirmed <= 20 ~ "crow_green",
-      breeding_sppCountConfirmed <= 30 ~ "crow_teal",
-      breeding_sppCountConfirmed <= 40 ~ "crow_blue",
-      breeding_sppCountConfirmed <= 60 ~ "crow_purple"))
+      portal_breeding_sppCountConfirmed == 0 ~ "crow_grey",
+      portal_breeding_sppCountConfirmed <= 5 ~ "crow_red",
+      portal_breeding_sppCountConfirmed <= 10 ~ "crow_yellow",
+      portal_breeding_sppCountConfirmed <= 20 ~ "crow_green",
+      portal_breeding_sppCountConfirmed <= 30 ~ "crow_teal",
+      portal_breeding_sppCountConfirmed <= 40 ~ "crow_blue",
+      portal_breeding_sppCountConfirmed <= 60 ~ "crow_purple"))
   
   ### palette for Diurnal Hours
   ### Grey = #808080FF, Yellow = #FDE725FF, Green = #5DC863FF, Teal = #21908DFF,  Blue = #3B528BFF, Purple = #440154FF
            
-  binpal <- colorBin("viridis", pb_map$breeding_hrsDiurnal, bins = c(0.1,5,10,15,20,Inf), reverse = TRUE)
+  binpal <- colorBin("viridis", pb_map$portal_breeding_hrsDiurnal, bins = c(0.1,5,10,15,20,Inf), reverse = TRUE)
   
-  winterbinpal <- colorBin("viridis", pb_map$wintering_hrsDiurnal, bins = c(0.1,2.5,5,7.5,10,Inf), reverse = TRUE)
+  winterbinpal <- colorBin("viridis", pb_map$portal_wintering_hrsDiurnal, bins = c(0.1,2.5,5,7.5,10,Inf), reverse = TRUE)
   
   
   ### palette for Nocturnal Hours
-  binpalnight <- colorBin("viridis", pb_map$breeding_hrsNocturnal, bins = c(0.1,0.5,1,1.5,2,Inf), reverse = TRUE)
+  binpalnight <- colorBin("viridis", pb_map$portal_breeding_hrsNocturnal, bins = c(0.1,0.5,1,1.5,2,Inf), reverse = TRUE)
   
   ### Linking Effort Map tab and Block Tab
   
-  # shinyLink <- function(to, label) {
-  #   tags$a(
-  #     class = "shiny__link",
-  #     href = to,
-  #     label
-  #   )
-  # }
-  
-  
   ### Change to Block Tab when Clicking a Block in Effort Map
   ### 
-  shinyInput = function(FUN, id, labels) {
-      input = as.character(FUN(paste0(id), label = labels, 
-                                   onclick = paste0('$("#block_controls li a")[1].click();$("#APBlock")[0].selectize.setValue("',labels,'")')))
-    }
-    return(input)
-  
-  
-  output$APBlock <- output$rv_effortblock <- rv_block
 
-  rv_effortblock <- reactiveValues(chosen=NULL, id =NULL)
-  
-  # grab id from map click
-  observeEvent (input$Effortmap_shape_click, {
-    blockmap_info <- input$Effortmap_shape_click
-    blockmap_info_id <- input$Effortmap_shape_click$id
-    
-    rv_effortblock$chosen <- blockmap_info
-    rv_effortblock$id <-  blockmap_info_id
-  })
-    
 }  
 #
 # ## SUMMARIZE START TIMES --------------------------------------------------
