@@ -376,7 +376,7 @@ get_block_hours <- function(id_ncba_block) {
 blocksum <- m_blocksum$find(
   fields = '{ "ID_NCBA_BLOCK": true, "county": true, "region": true, "portal.breeding.hrsDiurnal": true, "portal.breeding.hrsNocturnal": true,
               "portal.wintering.hrsDiurnal": true, "portal.wintering.hrsNocturnal": true, "portal.breeding.sppCountConfirmed": true, "portal.breeding.sppPctConfirmed":true,
-              "portal.breeding.sppCountProbable": true, "portal.breeding.sppCountPossible": true, "portal.breeding.sppCountDetected": true }',)
+              "portal.breeding.sppCountProbable": true, "portal.breeding.sppCountPossible": true, "portal.breeding.sppCountCoded": true, "portal.breeding.sppCountDetected": true }',)
 
 blocksum <-  tibble(blocksum)
 

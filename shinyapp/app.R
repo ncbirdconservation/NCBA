@@ -15,8 +15,6 @@ if(!require(mongolite)) install.packages(
   "mongolite", repos = "http://cran.us.r-project.org")
 if(!require(dplyr)) install.packages(
   "dplyr", repos = "http://cran.us.r-project.org")
-if(!require(janitor)) install.packages(
-  "janitor", repos = "http://cran.us.r-project.org")
 if(!require(leaflet)) install.packages(
   "leaflet", repos = "http://cran.us.r-project.org")
 if(!require(leaflegend)) install.packages(
@@ -25,6 +23,8 @@ if(!require(htmltools)) install.packages(
   "htmltools", repos = "http://cran.us.r-project.org")
 if(!require(shinythemes)) install.packages(
   "shinythemes", repos = "http://cran.us.r-project.org")
+if(!require(shinydashboard)) install.packages(
+  "shinydashboard", repos = "http://cran.us.r-project.org")
 
 
 #adds functions for tooltips
@@ -210,6 +210,7 @@ ui <- bootstrapPage(
     #     )
     # ),
     tabPanel("Effort Map",
+             # actionButton("link_to_BlocksTab", "Go  to Blocks Tab"),
              div(leafletOutput("Effortmap",height="50vh")))
   )
 )
@@ -775,7 +776,7 @@ server <- function(input, output, session) {
             checklists$SAMPLING_EVENT_IDENTIFIER,
             checklists$LOCALITY,
             checklists$OBSERVATION_DATE) %>%
-          sapply(htmltools::HTML),
+          lapply(htmltools::HTML),
           popup = ~ebird_link)
         # addMarkers(data=checklists,
         # layerId = paste("checklist",~ SAMPLING_EVENT_IDENTIFIER),
@@ -894,7 +895,7 @@ server <- function(input, output, session) {
         # fillColor= ~binpal(breeding_hrsDiurnal),
         # fillOpacity = 0.8,
         fill = FALSE,
-        label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>,<br>Breeding Diurnal Hours:", signif(portal_breeding_hrsDiurnal,2)) %>% lapply(htmltools::HTML),
+        label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong><br>Breeding Diurnal Hours:", signif(portal_breeding_hrsDiurnal,2)) %>% lapply(htmltools::HTML),
         group = "Breeding Diurnal Hours") %>% 
       
       ### Overlay Groups 
@@ -906,13 +907,16 @@ server <- function(input, output, session) {
                  stroke = TRUE,
                  weight = 2,
                  fill = FALSE,
-                 label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>,<br>Nocturnal Breeding Hours:", signif(portal_breeding_hrsNocturnal,2)) %>% lapply(htmltools::HTML),
+                 label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong><br>Nocturnal Breeding Hours:", signif(portal_breeding_hrsNocturnal,2)) %>% lapply(htmltools::HTML),
                  group = "Breeding Nocturnal Hours") %>% 
       ## Number of Confirmed Species, Custom Crow Icon from Font Awesome
       addMarkers(data = pb_map,
                  lng = ~centr_x, lat = ~centr_y,
                  icon = ~confirm_icons[confirm_colors],
-                 label = ~paste ("<strong>",ID_NCBA_BLOCK, "</strong>,<br>Confirmed Species:", portal_breeding_sppCountConfirmed) %>% lapply(htmltools::HTML),
+                 label = ~paste ("<strong>",ID_NCBA_BLOCK, "</strong><br>% Confirmed:", signif(portal_breeding_sppPctConfirmed,2),
+                                 "<br> # Confirmed:", portal_breeding_sppCountConfirmed,
+                                 "<br> # Probable:", portal_breeding_sppCountProbable,
+                                 "<br> # Possible:", portal_breeding_sppCountPossible) %>% lapply(htmltools::HTML),
                  group = "Confirmed Species") %>% 
       
       ## Wintering Diurnal Hours - Filled Circles
@@ -924,7 +928,7 @@ server <- function(input, output, session) {
         fill = TRUE,
         fillOpacity = 1,
         fillColor= ~winterbinpal(portal_wintering_hrsDiurnal),
-        label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong>,<br>Wintering Diurnal Hours:", signif(portal_wintering_hrsDiurnal,2)) %>% lapply(htmltools::HTML),
+        label = ~paste ("<strong>", ID_NCBA_BLOCK, "</strong><br>Wintering Diurnal Hours:", signif(portal_wintering_hrsDiurnal,2)) %>% lapply(htmltools::HTML),
         group = "Wintering Diurnal Hours") %>% 
       
       # Layers Control (Making Icons as Overlay Layers)
@@ -1006,7 +1010,11 @@ server <- function(input, output, session) {
   ### palette for Nocturnal Hours
   binpalnight <- colorBin("viridis", pb_map$portal_breeding_hrsNocturnal, bins = c(0.1,0.5,1,1.5,2,Inf), reverse = TRUE)
   
-  ### Linking Effort Map tab and Block Tab
+  ### Linking Effort Map tab and Block Tab 
+  ### https://stackoverflow.com/questions/43985205/change-shiny-navbarpage-tabpanel-programmatically?
+  # observeEvent(input$link_to_BlocksTab, {
+  #   updateNavbarPage(session, 'navbar', selected = 'BlocksTab')
+  # })
   
   ### Change to Block Tab when Clicking a Block in Effort Map
   ### 
