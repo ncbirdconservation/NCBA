@@ -376,15 +376,17 @@ get_block_hours <- function(id_ncba_block) {
 ### Retrieving Mongo Block Summary Table
 
 blocksum <- m_blocksum$find(
-  fields = '{ "ID_NCBA_BLOCK": true, "county": true, "region": true, "breeding.hrsDiurnal": true, "breeding.hrsNocturnal": true,
-              "wintering.hrsDiurnal": true, "wintering.hrsNocturnal": true, 
-            "breeding.sppCountConfirmed": true, "breeding.sppCountProbable": true, "breeding.sppCountPossible": true, "breeding.sppCountDetected": true }',)
+  fields = '{ "ID_NCBA_BLOCK": true, "county": true, "region": true, "portal.breeding.hrsDiurnal": true, "portal.breeding.hrsNocturnal": true,
+              "portal.wintering.hrsDiurnal": true, "portal.wintering.hrsNocturnal": true, "portal.breeding.sppCountConfirmed": true, "portal.breeding.sppPctConfirmed":true,
+              "portal.breeding.sppCountProbable": true, "portal.breeding.sppCountPossible": true, "portal.breeding.sppCountCoded": true, "portal.breeding.sppCountDetected": true }',)
 
 blocksum <-  tibble(blocksum)
 
-blocksum <- blocksum %>% 
-  unnest_wider("breeding", names_sep = "_") %>% 
-  unnest_wider("wintering", names_sep = "_") 
+names(blocksum)
 
+blocksum <- blocksum %>%
+  unnest_wider("portal", names_sep = "_") %>% 
+  unnest_wider("portal_breeding", names_sep = "_") %>% 
+  unnest_wider("portal_wintering", names_sep = "_")
 
 blocksum <- as.data.frame(blocksum)

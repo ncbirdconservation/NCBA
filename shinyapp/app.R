@@ -472,22 +472,38 @@ server <- function(input, output, session) {
     sa_list <- spp_accumulation_results()$spp_unique
 
     spp_total <- nrow(sa_list["spp"])
+    coded_total <- nrow(filter(sa_list, bcat != "C1"))
     confirmed_total <- nrow(filter(sa_list, bcat == "C4" ))
-    if ((spp_total*0.5)<confirmed_total) {
+    probable_total <- nrow(filter(sa_list, bcat == "C3"))
+    possible_total <- nrow(filter(sa_list, bcat == "C2"))
+    
+    # conditional formatting for # confirmed species
+    if ((coded_total*0.5)<confirmed_total) {
       confirmed_class = "success"
     } else {
       confirmed_class = "failed"
     }
+    
+    # conditional formatting for # possible species
+    if ((coded_total*0.25)<possible_total) {
+      possible_class = "failed"
+    } else {
+      possible_class = "success"
+    }
 
-    # add conditional formatting if criteria met
-    num_spp_total <- paste("Coded Species: ", nrow(filter(sa_list, bcat != "C1")))
+    # add conditional formatting if confirmed criteria met
+    num_spp_total <- paste("<u> Total Coded: </u>", coded_total)
     num_breed_confirm <- paste(
-      "Confirmed (C4):<span class='", confirmed_class, "'>",
-      confirmed_total, "</span>")
+      "<u> Confirmed (C4, 50% Minimum): </u> <br> <span class='", confirmed_class, "'>",
+      signif((confirmed_total/coded_total)*100,3),"%</span>,", confirmed_total, "Species")
+    
     num_breed_prob <- paste(
-      "Probable (C3):", nrow(filter(sa_list, bcat == "C3" )))
+      "<u> Probable (C3): </u> <br> ", signif((probable_total/coded_total)*100,3),"%,",probable_total, "Species")
+    
+    # add conditional formatting if possible criteria met
     num_breed_poss <- paste(
-      "Possible (C2):", nrow(filter(sa_list, bcat == "C2" )))
+      "<u> Possible (C2, 25% Maximum): </u> <br> <span class='", possible_class, "'>",
+      signif((possible_total/coded_total)*100,3), "%</span>,", possible_total, "Species")
 
     ### Block Hours ----------------------------------------------------
     diurnal_hours <- block_hrs_results()$total_hr - block_hrs_results()$noc_hr
