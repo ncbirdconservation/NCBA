@@ -5,7 +5,7 @@
 #
 plot_spp_accumulation <- function(block_recs, spp_bcs) {
   # TODO - list highest behavior code by spp
-  # TODO - collecct data for categories
+  # TODO - collect data for categories
   #  C1 – Observed; C2 – Possible; C3 – Probable; C4 – Confirmed
   #  observed can be "" or "C1"
   # print(head(block_recs))
@@ -103,7 +103,9 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
   spp_acc[nrow(spp_acc)+1,]<-c(obs_min,length(spp_unique$spp),c1,c2, c3, c4)
 
 
-  spp_tot <- nrow(spp_unique)
+  spp_tot <- nrow(spp_unique) 
+  spp_coded <- nrow(spp_unique[!"bcat" == "C1"])
+  spp_coded_half <- spp_coded * 0.5
   spp_tot_half <- spp_tot * 0.5
   hrs_convert <- 60.0
   hrs_total = obs_min/hrs_convert
@@ -111,28 +113,29 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
   #plot the data
   plot_response <- ggplot(data=spp_acc,aes((min), all)) +
     geom_hline(
-      aes(yintercept=(spp_tot_half),
-      colour = "50% total")) +
+      aes(yintercept=(spp_coded_half),
+      colour = "50% Total Coded")) +
     geom_text(
-      aes(0,spp_tot_half),
-      label = "50% total spp",
-      vjust = -1) +
+      aes(0,spp_coded_half),
+      label = "50% Total Coded",
+      vjust = 0,
+      hjust = -2) +
     geom_smooth(
       method = 'loess',
       formula = 'y ~ x',
-      aes(y = all, colour="all")) +
+      aes(y = all, colour="All Observed")) +
     geom_smooth(
       method = 'loess',
       formula = 'y ~ x',
-      aes(y = c4, colour="confirmed")) +
+      aes(y = c4, colour="Confirmed")) +
     geom_smooth(
       method = 'loess',
       formula = 'y ~ x',
-      aes(y = c3, color="probable")) +
+      aes(y = c3, color="Probable")) +
     geom_smooth(
       method = 'loess',
       formula = 'y ~ x',
-      aes(y = c2, color="possible")) +
+      aes(y = c2, color="Possible")) +
     scale_colour_manual(
       name="",
       values = c(
@@ -142,7 +145,7 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
         "#ffbf00",
         "#ccccff")) +
     xlim(0,obs_min) +
-    ylab("# Species") + xlab("Observation Time")
+    ylab("# Species") + xlab("Observation Time (Minutes)")
     # geom_line() +
 
   #figure out how to provide multiple return data
