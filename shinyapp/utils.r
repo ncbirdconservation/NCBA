@@ -38,6 +38,14 @@ m_sd <- mongo(
   url = URI,
   options = ssl_options(weak_cert_validation = T))
 
+m_blocksum <- mongo(
+  "BLOCK_SUMMARIES",
+  url = URI,
+  options = ssl_options(weak_cert_validation = T))
+
+
+### Functions to get safe dates, etc.
+
 get_safe_dates <- function(){
   sd <- m_sd$find("{}","{}")
 
@@ -317,7 +325,16 @@ get_spp_list <- function(query="{}",filter="{}"){
 
 species_list = get_spp_list(filter='{"PRIMARY_COM_NAME":1}')$PRIMARY_COM_NAME
 
+# ### Get Species List for a Block ###
+# ebird_spp <- m_blocks$find(
+#   fields = '{"ID_NCBA_BLOCK": 1, "EBD_SPP": 1}',)
 
+# ebird_spp <- tibble(ebird_spp)
+
+# ebird_spp <- ebird_spp %>% 
+#   unnest_wider("breeding", names_sep = "_")
+
+# ebird_spp <- as.data.frame(ebird_spp)
 
 ###############################################################################
 # Block level summaries
@@ -367,3 +384,65 @@ get_block_hours <- function(id_ncba_block) {
 
   }
 }
+
+### Block Summary Table ###
+### Retrieving Mongo Block Summary Table
+### 
+
+# ### List of Species ###
+# get_block_ebd_spp <- function(blockid){
+# # Retrieves list of species for the passed block id
+# filter <- '{"EB_SPP":1}'
+# query <- '{"_id":"${blockid}"}'
+# blockdata <- m_blocks$find("{}",filter)
+# 
+# # add code here to unnest data (like observations above)
+# 
+# return(blockdata)
+# 
+# }
+library(tibblify)
+library(fuzzySim)
+library(reshape2)
+library(purrr)
+
+### Extracting list of species Detected but missing
+blockspp <- m_blocksum$find(
+  fields = '{"_id": false, "ID_NCBA_BLOCK":true, "portal.breeding.sppMissing":true}',)
+
+### Unneesting
+blockspp <- blockspp %>%
+  unnest_wider("portal", names_sep = "_" ) %>% 
+  unnest_wider("portal_breeding", names_sep = "_")
+
+### How to get list into a mappable format?
+# blockspp$missing <- do.call(paste, c(blockspp$portal_breeding_sppMissing))
+
+# blockspp$portal <- replace (blockspp$portal,blockspp$portal=='', paste("Spotted Owl"))
+# blockspp$portal <- gsub(blockspp$portal,blockspp$portal=='', "Spotted Owl")
+
+# blockspp <-  tibblify(blockspp)
+# guess_tspec(blockspp)
+
+# remove blocks with no species listed
+# blockspp <- blockspp[!(!is.na(blockspp$portal) & blockspp$portal=="character(0)"), ]
+
+# blockspp <-  as.data.frame(blockspp)
+
+# blockspp <- blockspp %>% {
+#   tibble(
+#     ID_NCBA_BLOCK = map_chr(., "ID_NCBA_BLOCK"),
+#     predicted_species = map_cr(., "portal_breeding_sppMissing")
+#   )
+# }
+
+# this needs a string and not a vectors_list_of/vectors_vector/list
+# blockspp$breeding_spp <- blockspp$portal_breeding_sppMissing %>% 
+#   str_split_1(pattern = "")
+
+str(blockspp)
+
+# Species Presence Matrix 
+# arguments do not have same length, even though I removed blocks with no species, which I thought might be the issue
+# blockspp_map <- splist2presabs(blockspp, sites.col = "ID_NCBA_BLOCK",sp.col =  "portal", keep.n = FALSE)
+

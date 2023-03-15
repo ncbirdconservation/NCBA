@@ -1,0 +1,1804 @@
+[{
+  "_id": "SHALLOTTE-SE",
+  "ID_NCBA_BLOCK": "SHALLOTTE-SE",
+  "updateDate": "2023-02-16",
+  "county": "BRUNSWICK",
+  "region": "4",
+  "breeding": {
+    "sppCountConfirmed": 31,
+    "sppCountProbable": 10,
+    "sppCountPossible": 14,
+    "sppCountDetected": 143,
+    "sppList": [
+      {
+        "COMMON_NAME": "American Crow",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Blue Jay",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Carolina Chickadee",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Eastern Bluebird",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "American Goldfinch",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Bald Eagle",
+        "BREEDING_CATEGORY": "C1",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Barn Swallow",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Brown-headed Cowbird",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Brown Thrasher",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Blue-gray Gnatcatcher",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Canada Goose",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Common Grackle",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Double-crested Cormorant",
+        "BREEDING_CATEGORY": "C1",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Eastern Kingbird",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Great Blue Heron",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Great Crested Flycatcher",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Laughing Gull",
+        "BREEDING_CATEGORY": "C3",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Little Blue Heron",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Mourning Dove",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Northern Cardinal",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Northern Mockingbird",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Orchard Oriole",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Pileated Woodpecker",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Red-bellied Woodpecker",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Red-eyed Vireo",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Red-headed Woodpecker",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Red-winged Blackbird",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Turkey Vulture",
+        "BREEDING_CATEGORY": "C1",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "American Oystercatcher",
+        "BREEDING_CATEGORY": "C3",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Black-bellied Plover",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Boat-tailed Grackle",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Clapper Rail",
+        "BREEDING_CATEGORY": "C3",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Dunlin",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Eurasian Collared-Dove",
+        "BREEDING_CATEGORY": "C3",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Fish Crow",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Forsters Tern",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Great Egret",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "House Finch",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "House Sparrow",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Osprey",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Snowy Egret",
+        "BREEDING_CATEGORY": "C3",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Willet",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Black Skimmer",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Brown Pelican",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Greater Yellowlegs",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Herring Gull",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Least Tern",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Ring-billed Gull",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Royal Tern",
+        "BREEDING_CATEGORY": "C3",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Savannah Sparrow",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Seaside Sparrow",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Whimbrel",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Wilsons Plover",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Bonapartes Gull",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Bufflehead",
+        "BREEDING_CATEGORY": "C3",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Carolina Wren",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Common Loon",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Common Tern",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Great Black-backed Gull",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Killdeer",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Lesser Yellowlegs",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Northern Gannet",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Red-breasted Merganser",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Red-throated Loon",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Sanderling",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "European Starling",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Prairie Warbler",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Great Horned Owl",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Gray Catbird",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Loggerhead Shrike",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Tufted Titmouse",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Semipalmated Plover",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Sandwich Tern",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Painted Bunting",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Purple Martin",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Summer Tanager",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Tree Swallow",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Tricolored Heron",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Long-billed Dowitcher",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Short-billed Dowitcher",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Eastern Phoebe",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "White-throated Sparrow",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Glossy Ibis",
+        "BREEDING_CATEGORY": "C1",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Lesser Black-backed Gull",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Green Heron",
+        "BREEDING_CATEGORY": "C3",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Ruddy Turnstone",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Semipalmated Sandpiper",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Least Sandpiper",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Nelsons Sparrow",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Western Sandpiper",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Caspian Tern",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Red Knot",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Black Vulture",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Pine Warbler",
+        "BREEDING_CATEGORY": "C3",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Common Nighthawk",
+        "BREEDING_CATEGORY": "C3",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Bobolink",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Spotted Sandpiper",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Gray Kingbird",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Blue Grosbeak",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Brown-headed Nuthatch",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Chimney Swift",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Downy Woodpecker",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Yellow-billed Cuckoo",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Horned Grebe",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Yellow-crowned Night-Heron",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Gull-billed Tern",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Mississippi Kite",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Piping Plover",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "White Ibis",
+        "BREEDING_CATEGORY": "C1",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Wood Stork",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Coopers Hawk",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Anhinga",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Roseate Spoonbill",
+        "BREEDING_CATEGORY": "C1",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Belted Kingfisher",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Eastern Towhee",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Northern Rough-winged Swallow",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Red-tailed Hawk",
+        "BREEDING_CATEGORY": "C4",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Sedge Wren",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Cedar Waxwing",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Scarlet Tanager",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Black Scoter",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Parasitic Jaeger",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "House Wren",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Virginia Rail",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Northern Parula",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Yellow-rumped Warbler",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Yellow-throated Warbler",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Ruby-crowned Kinglet",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Broad-winged Hawk",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Ruby-throated Hummingbird",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Common Yellowthroat",
+        "BREEDING_CATEGORY": "C2",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Chuck-wills-widow",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Mallard",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "White-eyed Vireo",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Sooty Shearwater",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Marsh Wren",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Cattle Egret",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "American Avocet",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Pectoral Sandpiper",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Black-bellied Whistling-Duck",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "American Redstart",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "White-rumped Sandpiper",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Wild Turkey",
+        "BREEDING_CATEGORY": "",
+        "GAP_SPP": 1
+      }
+    ],
+    "minDiurnal": 11091,
+    "hrsDiurnal": 184.85,
+    "minNocturnal": 228,
+    "hrsNocturnal": 3.8,
+    "sppPctConfirmed": 0.21678321678321677,
+    "sppCountGapPredicted": 83,
+    "sppGapMissing": [
+      "American Kestrel",
+      "American Robin",
+      "American Woodcock",
+      "Bachman's Sparrow",
+      "Barn Owl",
+      "Black-crowned Night-Heron",
+      "Black Rail",
+      "Black-necked Stilt",
+      "Chipping Sparrow",
+      "Chuck-will's-widow",
+      "Eastern Meadowlark",
+      "Eastern Screech-Owl",
+      "Eastern Wood-Pewee",
+      "Field Sparrow",
+      "Hairy Woodpecker",
+      "Henslow's Sparrow",
+      "Hooded Warbler",
+      "Indigo Bunting",
+      "Kentucky Warbler",
+      "King Rail",
+      "Least Bittern",
+      "Northern Bobwhite",
+      "Northern Flicker",
+      "Pied-billed Grebe",
+      "Red-cockaded Woodpecker",
+      "Rock Pigeon",
+      "Red-shouldered Hawk",
+      "White-breasted Nuthatch",
+      "Worm-eating Warbler",
+      "Wilson's Plover",
+      "Wood Duck",
+      "Wood Thrush",
+      "Yellow-breasted Chat",
+      "Yellow-throated Vireo"
+    ],
+    "sppCountGapMissing": 34,
+    "obsCount": 65,
+    "obsList": [
+      "obsr531080",
+      "obsr8061",
+      "obsr447758",
+      "obsr807457",
+      "obsr588915",
+      "obsr459875",
+      "obsr980127",
+      "obsr191798",
+      "obsr1282142",
+      "obsr1286319",
+      "obsr198276",
+      "obsr857382",
+      "obsr1330533",
+      "obsr632892",
+      "obsr312208",
+      "obsr1008099",
+      "obsr517884",
+      "obsr1527764",
+      "obsr1545763",
+      "obsr328896",
+      "obsr506179",
+      "obsr1161192",
+      "obsr1365750",
+      "obsr2259421",
+      "obsr1228608",
+      "obsr577318",
+      "obsr538231",
+      "obsr1245875",
+      "obsr1005508",
+      "obsr1740855",
+      "obsr1240561",
+      "obsr1900900",
+      "obsr847563",
+      "obsr125223",
+      "obsr374851",
+      "obsr1288912",
+      "obsr1757189",
+      "obsr633156",
+      "obsr119493",
+      "obsr2085437",
+      "obsr515497",
+      "obsr1036376",
+      "obsr1481165",
+      "obsr590733",
+      "obsr2850781",
+      "obsr3012084",
+      "obsr1351178",
+      "obsr334865",
+      "obsr2076522",
+      "obsr3182813",
+      "obsr444528",
+      "obsr1468492",
+      "obsr907193",
+      "obsr2453178",
+      "obsr2242467",
+      "obsr2769270",
+      "obsr2161062",
+      "obsr2720331",
+      "obsr427979",
+      "obsr368219",
+      "obsr706876",
+      "obsr312088",
+      "obsr1284683",
+      "obsr3087438",
+      "obsr3483346"
+    ],
+    "checkCount": 268,
+    "checkCountNocturnal": 4,
+    "checkCountDiurnal": 264,
+    "checkList": [
+      "S86279110",
+      "S85778329",
+      "S85954731",
+      "S85800818",
+      "S84682072",
+      "S84989836",
+      "S85153815",
+      "S85641913",
+      "S86339436",
+      "S86408520",
+      "S85243463",
+      "S85295447",
+      "S86567160",
+      "S84719100",
+      "S86474928",
+      "S85963468",
+      "S85119023",
+      "S85630617",
+      "S84960734",
+      "S85243467",
+      "S84904287",
+      "S86278385",
+      "S84729630",
+      "S85295446",
+      "S85245563",
+      "S85956539",
+      "S85630538",
+      "S84633511",
+      "S87358908",
+      "S88903775",
+      "S88950114",
+      "S89200909",
+      "S88767720",
+      "S87591924",
+      "S87732466",
+      "S87839182",
+      "S88519781",
+      "S88373013",
+      "S87372833",
+      "S87718751",
+      "S87809572",
+      "S88924665",
+      "S87908936",
+      "S89199590",
+      "S88863172",
+      "S87680411",
+      "S87935691",
+      "S88765379",
+      "S87494521",
+      "S87589984",
+      "S88975768",
+      "S87594660",
+      "S89166562",
+      "S87641876",
+      "S87791787",
+      "S88903806",
+      "S87891043",
+      "S88239887",
+      "S87898301",
+      "S88979998",
+      "S88504419",
+      "S88950890",
+      "S88796033",
+      "S88601384",
+      "S88951088",
+      "S89038538",
+      "S87595522",
+      "S88975644",
+      "S89200271",
+      "S88863238",
+      "S90191122",
+      "S91038124",
+      "S89850877",
+      "S90888561",
+      "S89850632",
+      "S89935942",
+      "S89851822",
+      "S89850226",
+      "S89830084",
+      "S90730883",
+      "S90750495",
+      "S89780979",
+      "S89787525",
+      "S89776283",
+      "S89781707",
+      "S90102677",
+      "S89785065",
+      "S90131717",
+      "S89850281",
+      "S90015144",
+      "S89551278",
+      "S90277951",
+      "S89783158",
+      "S92143332",
+      "S92096671",
+      "S91873537",
+      "S92001080",
+      "S92043785",
+      "S91110085",
+      "S91063343",
+      "S91059023",
+      "S91978880",
+      "S92465877",
+      "S92412386",
+      "S92465881",
+      "S92094070",
+      "S91341866",
+      "S91981448",
+      "S92770423",
+      "S93005501",
+      "S94275731",
+      "S92719725",
+      "S93037969",
+      "S93130742",
+      "S92991488",
+      "S93034088",
+      "S93075456",
+      "S93031500",
+      "S93376915",
+      "S92988407",
+      "S92932629",
+      "S106255295",
+      "S107718604",
+      "S106514398",
+      "S108444119",
+      "S108361159",
+      "S106413061",
+      "S108268489",
+      "S107532668",
+      "S106451605",
+      "S107680978",
+      "S108194256",
+      "S106781998",
+      "S108369192",
+      "S106725498",
+      "S108272551",
+      "S107367614",
+      "S107255262",
+      "S107237018",
+      "S107525486",
+      "S107718605",
+      "S108274831",
+      "S107224763",
+      "S107384621",
+      "S108195325",
+      "S108377004",
+      "S108105295",
+      "S106604512",
+      "S106525521",
+      "S107891146",
+      "S107095562",
+      "S107921224",
+      "S106592290",
+      "S108119824",
+      "S107618813",
+      "S108276895",
+      "S106446193",
+      "S107176814",
+      "S108256089",
+      "S106277528",
+      "S110306829",
+      "S111473360",
+      "S111585875",
+      "S111351739",
+      "S108896231",
+      "S111284551",
+      "S111826246",
+      "S111612739",
+      "S111721445",
+      "S111430784",
+      "S111263590",
+      "S111637687",
+      "S108711184",
+      "S110469632",
+      "S111538950",
+      "S111535592",
+      "S108987252",
+      "S111699459",
+      "S111208984",
+      "S108751305",
+      "S108731522",
+      "S111401832",
+      "S111330197",
+      "S110211871",
+      "S111346451",
+      "S111377274",
+      "S111199712",
+      "S111356193",
+      "S111759221",
+      "S111263523",
+      "S111539425",
+      "S110956143",
+      "S111818011",
+      "S111206109",
+      "S111585990",
+      "S111574819",
+      "S111804405",
+      "S110974971",
+      "S111557935",
+      "S113344932",
+      "S112733007",
+      "S112734307",
+      "S112962530",
+      "S112785600",
+      "S113486948",
+      "S112966054",
+      "S112513653",
+      "S112778927",
+      "S112976420",
+      "S113266055",
+      "S113307722",
+      "S113959507",
+      "S112889606",
+      "S112917955",
+      "S113395662",
+      "S112824775",
+      "S112778585",
+      "S113549028",
+      "S111907564",
+      "S112785407",
+      "S113891442",
+      "S114021867",
+      "S112763359",
+      "S112490375",
+      "S112515319",
+      "S113136793",
+      "S112751864",
+      "S113701446",
+      "S113573416",
+      "S112675320",
+      "S112723718",
+      "S113730092",
+      "S113810916",
+      "S112652120",
+      "S113911807",
+      "S113483892",
+      "S113913530",
+      "S112648778",
+      "S115074116",
+      "S115168750",
+      "S115037915",
+      "S114388929",
+      "S115472895",
+      "S115525104",
+      "S115095395",
+      "S115968158",
+      "S114669368",
+      "S115591305",
+      "S114863343",
+      "S116869536",
+      "S116631854",
+      "S116869572",
+      "S117421787",
+      "S117049061",
+      "S117200729",
+      "S116924352",
+      "S117203567",
+      "S116977961",
+      "S117635653",
+      "S117708034",
+      "S116832608",
+      "S117038141",
+      "S116868098",
+      "S117004853",
+      "S117237660",
+      "S116869548",
+      "S122827613",
+      "S123262052"
+    ],
+    "maxBlockDiurnalHrs": 20,
+    "maxBlockNocturnalHrs": 2,
+    "maxBlockPctConfirmedSpp": 0.21678321678321677,
+    "bConfirmedSpp": 0,
+    "bDiurnalHrs": 1,
+    "bNocturnalHrs": 1
+  },
+  "nonbreeding": {
+    "sppCountDetected": 119,
+    "sppList": [
+      {
+        "COMMON_NAME": "American Kestrel",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "American Oystercatcher",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "American Robin",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Black-bellied Plover",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Black Scoter",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Bufflehead",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Common Loon",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Double-crested Cormorant",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Dunlin",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "European Starling",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Forsters Tern",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Great Black-backed Gull",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Loggerhead Shrike",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Mourning Dove",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Northern Mockingbird",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Palm Warbler",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Red Knot",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Ring-billed Gull",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Ruddy Turnstone",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Sanderling",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Short-billed Dowitcher",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Surf Scoter",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "White Ibis",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Willet",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Black Skimmer",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Brown Pelican",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Fish Crow",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Laughing Gull",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Turkey Vulture",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Yellow-rumped Warbler",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Cedar Waxwing",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Eastern Phoebe",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Osprey",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Bonapartes Gull",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Horned Grebe",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "American Goldfinch",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Belted Kingfisher",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Brown-headed Cowbird",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Carolina Chickadee",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Carolina Wren",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Downy Woodpecker",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Eastern Bluebird",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Great Blue Heron",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Hooded Merganser",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "House Finch",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "House Sparrow",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Little Blue Heron",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Northern Cardinal",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Northern Flicker",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Red-bellied Woodpecker",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Red-winged Blackbird",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Tufted Titmouse",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "White-breasted Nuthatch",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Coopers Hawk",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Field Sparrow",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Herring Gull",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "House Wren",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Savannah Sparrow",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Song Sparrow",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Brown Thrasher",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Eurasian Collared-Dove",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Greater Yellowlegs",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Lesser Black-backed Gull",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Northern Gannet",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Royal Tern",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Brown-headed Nuthatch",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Great Egret",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Purple Finch",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Snowy Egret",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Yellow-bellied Sapsucker",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Baltimore Oriole",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Pine Siskin",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Ruby-throated Hummingbird",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "White-throated Sparrow",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Blue Jay",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Pine Warbler",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Painted Bunting",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Killdeer",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Least Sandpiper",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Red-throated Loon",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Clapper Rail",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Eastern Towhee",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Gray Catbird",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Ruby-crowned Kinglet",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Tree Swallow",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Winter Wren",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Swamp Sparrow",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Semipalmated Plover",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Boat-tailed Grackle",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Peregrine Falcon",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Reddish Egret",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "American Pipit",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Nelsons Sparrow",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Saltmarsh Sparrow",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Common Yellowthroat",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Western Sandpiper",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Great Horned Owl",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "American Crow",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Golden-crowned Kinglet",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Red-tailed Hawk",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Black Vulture",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Common Grackle",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Mallard",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Orange-crowned Warbler",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Northern Harrier",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Tricolored Heron",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Chipping Sparrow",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Bald Eagle",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Great Cormorant",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Seaside Sparrow",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Hermit Thrush",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Dark-eyed Junco",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Merlin",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Caspian Tern",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Sandwich Tern",
+        "GAP_SPP": 1
+      },
+      {
+        "COMMON_NAME": "Black-and-white Warbler",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Greater Scaup",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "Red-breasted Merganser",
+        "GAP_SPP": 0
+      },
+      {
+        "COMMON_NAME": "White-winged Scoter",
+        "GAP_SPP": 0
+      }
+    ],
+    "sppCountGapPredicted": 57,
+    "sppGapMissing": [
+      "American Woodcock",
+      "Anhinga",
+      "Bachman's Sparrow",
+      "Barn Owl",
+      "Barn Swallow",
+      "Black-crowned Night-Heron",
+      "Blue-gray Gnatcatcher",
+      "Blue Grosbeak",
+      "Black Rail",
+      "Black-necked Stilt",
+      "Cattle Egret",
+      "Canada Goose",
+      "Chimney Swift",
+      "Common Nighthawk",
+      "Common Tern",
+      "Chuck-will's-widow",
+      "Eastern Kingbird",
+      "Eastern Meadowlark",
+      "Eastern Screech-Owl",
+      "Eastern Wood-Pewee",
+      "Gull-billed Tern",
+      "Great Crested Flycatcher",
+      "Glossy Ibis",
+      "Green Heron",
+      "Hairy Woodpecker",
+      "Henslow's Sparrow",
+      "Hooded Warbler",
+      "Indigo Bunting",
+      "Kentucky Warbler",
+      "King Rail",
+      "Least Bittern",
+      "Least Tern",
+      "Marsh Wren",
+      "Northern Bobwhite",
+      "Northern Parula",
+      "Northern Rough-winged Swallow",
+      "Orchard Oriole",
+      "Pied-billed Grebe",
+      "Piping Plover",
+      "Pileated Woodpecker",
+      "Prairie Warbler",
+      "Purple Martin",
+      "Red-cockaded Woodpecker",
+      "Red-eyed Vireo",
+      "Red-headed Woodpecker",
+      "Rock Pigeon",
+      "Red-shouldered Hawk",
+      "Summer Tanager",
+      "Virginia Rail",
+      "White-eyed Vireo",
+      "Worm-eating Warbler",
+      "Wilson's Plover",
+      "Wild Turkey",
+      "Wood Duck",
+      "Wood Thrush",
+      "Yellow-breasted Chat",
+      "Yellow-billed Cuckoo",
+      "Yellow-crowned Night-Heron",
+      "Yellow-throated Vireo",
+      "Yellow-throated Warbler"
+    ],
+    "sppCountGapMissing": 60,
+    "minDiurnal": 5316,
+    "hrsDiurnal": 88.6,
+    "minNocturnal": 0,
+    "hrsNocturnal": 0,
+    "obsCount": 27,
+    "obsList": [
+      "obsr980127",
+      "obsr1365750",
+      "obsr335571",
+      "obsr2174766",
+      "obsr8061",
+      "obsr506179",
+      "obsr857382",
+      "obsr459875",
+      "obsr557240",
+      "obsr154104",
+      "obsr561187",
+      "obsr953252",
+      "obsr119493",
+      "obsr382423",
+      "obsr1603575",
+      "obsr1008099",
+      "obsr2259421",
+      "obsr590733",
+      "obsr588915",
+      "obsr1282142",
+      "obsr391017",
+      "obsr923728",
+      "obsr1900900",
+      "obsr633156",
+      "obsr216041",
+      "obsr3474055",
+      "obsr2250137"
+    ],
+    "checkCount": 96,
+    "checkCountNocturnal": 0,
+    "checkCountDiurnal": 96,
+    "checkList": [
+      "S78853551",
+      "S78885129",
+      "S79014454",
+      "S79790780",
+      "S80210570",
+      "S79910206",
+      "S79803003",
+      "S79475664",
+      "S79020021",
+      "S79099263",
+      "S80197492",
+      "S80970751",
+      "S82146618",
+      "S80627568",
+      "S80627575",
+      "S81565592",
+      "S81821674",
+      "S82032802",
+      "S81593475",
+      "S82152264",
+      "S82033636",
+      "S81820790",
+      "S97938455",
+      "S98100030",
+      "S97155747",
+      "S98171758",
+      "S97960226",
+      "S97171849",
+      "S97274426",
+      "S97196242",
+      "S97929080",
+      "S97926087",
+      "S97740527",
+      "S98060870",
+      "S97171850",
+      "S97455797",
+      "S97152172",
+      "S97481729",
+      "S97539078",
+      "S98032131",
+      "S97024807",
+      "S99513196",
+      "S99460885",
+      "S99633490",
+      "S99365636",
+      "S99914730",
+      "S99282064",
+      "S98485391",
+      "S99634286",
+      "S99532421",
+      "S99423026",
+      "S99535635",
+      "S99340253",
+      "S100289912",
+      "S100429186",
+      "S100769717",
+      "S101562635",
+      "S100732006",
+      "S100298037",
+      "S101542967",
+      "S100420902",
+      "S100660623",
+      "S101607380",
+      "S100142062",
+      "S100814021",
+      "S100844077",
+      "S100770061",
+      "S101551851",
+      "S101993856",
+      "S101941514",
+      "S103014625",
+      "S102932349",
+      "S101946923",
+      "S103619295",
+      "S103388343",
+      "S103386423",
+      "S103069670",
+      "S102930836",
+      "S102125456",
+      "S103615330",
+      "S115197045",
+      "S123159981",
+      "S123079873",
+      "S121712151",
+      "S122768943",
+      "S122329071",
+      "S122928283",
+      "S122884191",
+      "S123100134",
+      "S123045165",
+      "S122199719",
+      "S122329002",
+      "S122855895",
+      "S122426536",
+      "S123245415",
+      "S121673974"
+    ],
+    "maxBlockDiurnalHrs": 10,
+    "maxBlockNocturnalHrs": 0,
+    "bDiurnalHrs": 1,
+    "bNocturnalHrs": 0
+  }
+}]

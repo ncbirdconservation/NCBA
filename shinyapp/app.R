@@ -196,9 +196,13 @@ ui <- bootstrapPage(
           height = "75px")
 
         )
+    ),
+    tabPanel("Species Map",
+             div(class="col-md-10",
+                 leafletOutput("SpeciesMap")
     )
   )
-
+  )
 )
 
 # Define server logic to plot various variables against mpg
@@ -839,6 +843,53 @@ server <- function(input, output, session) {
     drop=TRUE)
 })
 
+#### Species Map ####
+library(tmap)
+library(USAboundaries)
+library(here)
+
+  print_map <- FALSE
+  
+  # name of output shapefile without extension
+  # out_shp <- "evidence_by_block"
+  
+  # load data 
+  # birdpop alpha codes; - we have these in Mongo
+
+  output$SpeciesMap <- renderLeaflet({
+    
+    #setup block geojson layer
+    print("starting effort map, adding blocks")
+    
+    leaflet() %>%
+      setView(
+        lng = nc_center_lng,
+        lat = nc_center_lat,
+        zoom = nc_center_zoom) %>%
+      
+      ### Base Groups (Satellite Imagery and Blocks )
+      addProviderTiles("CartoDB.DarkMatterNoLabels",
+                       options = providerTileOptions(opacity = 1)) %>%
+      
+      addRectangles(
+        data = sp_map,
+        layerId = ~ ID_NCBA_BLOCK,
+        lng1 = ~ NW_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        stroke = TRUE,
+        weight = 2.5,
+        color=ncba_white,
+        # fillColor= ~binpal(breeding_hrsDiurnal),
+        # fillOpacity = 0.8,
+        fill = FALSE,
+        label = ~paste("<strong>", ID_NCBA_BLOCK, "</strong><br> Predicted Breeding Species:",breeding_spp) %>% lapply(htmltools::HTML),
+        popup = ~breeding_spp
+      )
+    
+  })
+sp_map <- merge(blockspp, priority_block_data)
 #
 # ## SUMMARIZE START TIMES --------------------------------------------------
 # plot(start_time_boxplot(ebird))
