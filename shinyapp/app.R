@@ -211,7 +211,24 @@ ui <- bootstrapPage(
     # ),
     tabPanel("Effort Map",
              # actionButton("link_to_BlocksTab", "Go  to Blocks Tab"),
-             div(leafletOutput("Effortmap",height="50vh")))
+             div(leafletOutput("Effortmap",height="50vh"))
+#              div(id="linkToBlocks",tags$a("This is a link to Blocks Tab")),
+#              HTML("<script>$('#linktoBlocks').click(function() {
+# 						 tabs = $('.tabbable .nav.nav-tabs li')
+# 					 	 tabs.each(function() {
+# 							$(this).removeClass('active')
+# 					 	 })
+# 						 $(tabs[1]).addClass('active')
+# 						
+# 						 tabsContents = $('.tabbable .tab-content .tab-pane')
+# 					 	 tabsContents.each(function() {
+# 							$(this).removeClass('active')
+# 					 	 })
+# 						 $(tabsContents[1]).addClass('active')
+# 						$('#summary').trigger('change').trigger('shown');
+# 						 
+# 					 })</script>")
+             )
   )
 )
 
@@ -973,7 +990,7 @@ server <- function(input, output, session) {
 
   ## Make a list of icons. We'll index into it based on name.
   confirm_icons <- iconList(
-    no_crow = makeIcon(iconUrl = "input_data/crow_grey.svg",
+    crow_grey = makeIcon(iconUrl = "input_data/crow_grey.svg",
                        iconWidth = 4.16, iconHeight = 3.33, iconAnchorX = 1, iconAnchorY = 1),
     crow_red = makeIcon(iconUrl = "input_data/crow_red.svg",
                         iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
