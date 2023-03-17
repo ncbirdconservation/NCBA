@@ -87,10 +87,20 @@ ui <- bootstrapPage(
                       align = "center"),
     tags$head(includeCSS("styles.css")),
     tags$head(tags$link(rel="icon", href="/input_data/ncba_blue_wbnu.ico")),
+    tags$head(tags$script(HTML('
+        var fakeClick = function(tabName) {
+          var dropdownList = document.getElementsByTagName("a");
+          for (var i = 0; i < dropdownList.length; i++) {
+            var link = dropdownList[i];
+            if(link.getAttribute("data-value") == tabName) {
+              link.click();
+            };
+          }
+        };
+      '))),
     tabPanel("Blocks",
              id = "BlocksTab",
-      div(class="col-md-2 panel sidebar", id = "block_controls",
-
+      div(class="col-md-2 panel sidebar", id = "blockcontrols",
           # span(
           #   tags$i(h6("Checklists submitted to the NC Bird Atlas.")),
           #   style="color:#045a8d"
@@ -211,22 +221,23 @@ ui <- bootstrapPage(
     # ),
     tabPanel("Effort Map",
              # actionButton("link_to_BlocksTab", "Go  to Blocks Tab"),
-             div(leafletOutput("Effortmap",height="50vh"))
-#              div(id="linkToBlocks",tags$a("This is a link to Blocks Tab")),
-#              HTML("<script>$('#linktoBlocks').click(function() {
+             div(leafletOutput("Effortmap",height="50vh")),
+            actionLink("link_to_blockcontrols", "Link to Blocks Tab")
+             # div(id="linkToBlocks",tags$a("This is a link to Blocks Tab")),
+#              htmlOutput("<script>$('#linktoBlocks').click(function() {
 # 						 tabs = $('.tabbable .nav.nav-tabs li')
 # 					 	 tabs.each(function() {
 # 							$(this).removeClass('active')
 # 					 	 })
 # 						 $(tabs[1]).addClass('active')
-# 						
+# 
 # 						 tabsContents = $('.tabbable .tab-content .tab-pane')
 # 					 	 tabsContents.each(function() {
 # 							$(this).removeClass('active')
 # 					 	 })
 # 						 $(tabsContents[1]).addClass('active')
 # 						$('#summary').trigger('change').trigger('shown');
-# 						 
+# 
 # 					 })</script>")
              )
   )
@@ -908,7 +919,7 @@ server <- function(input, output, session) {
         lat2 = ~ SE_Y,
         stroke = TRUE,
         weight = 2.5,
-        color=~binpal(portal_breeding_hrsDiurnal),
+        color=~breedingpal(portal_breeding_hrsDiurnal),
         # fillColor= ~binpal(breeding_hrsDiurnal),
         # fillOpacity = 0.8,
         fill = FALSE,
@@ -958,8 +969,9 @@ server <- function(input, output, session) {
       hideGroup(c("Breeding Nocturnal Hours", "Confirmed Species", "Wintering Diurnal Hours")) %>% 
       
       # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
-      addLegend("topleft", colors = c("#808080FF", "#FDE725FF"," #5DC863FF", "#21908DFF","#3B528BFF", "#440154FF"), 
-      labels = c("0","≤5","5-10","10-15", "15-20", "≥20"), title = "Breeding Diurnal Hours", opacity = 1, group = "Diurnal Hours Legend") %>% 
+      # addLegend("topleft", colors = c("#808080FF", "#FDE725FF"," #5DC863FF", "#21908DFF","#3B528BFF", "#440154FF"), 
+      # labels = c("0","≤5","5-10","10-15", "15-20", "≥20"), title = "Breeding Diurnal Hours", opacity = 1, group = "Diurnal Hours Legend") %>% 
+      addLegendBin(pal = breedingpal, title = 'Breeding Diurnal Hours', shape = 'rect', fillOpacity = 0, position = 'topleft') %>% 
       addLegend("topleft", pal = winterbinpal, values = c(2.5,5,7.5,10), title = "Wintering Diurnal Hours", opacity = 1, group = "Wintering Diurnal Hours Legend") %>% 
       addLegendImage(images = c("input_data/crow_red.png","input_data/crow_yellow.png", "input_data/crow_green.png", "input_data/crow_teal.png",
                                 "input_data/crow_blue.png", "input_data/crow_purple.png"),
@@ -1019,13 +1031,20 @@ server <- function(input, output, session) {
   ### palette for Diurnal Hours
   ### Grey = #808080FF, Yellow = #FDE725FF, Green = #5DC863FF, Teal = #21908DFF,  Blue = #3B528BFF, Purple = #440154FF
            
-  binpal <- colorBin("viridis", pb_map$portal_breeding_hrsDiurnal, bins = c(0.1,5,10,15,20,Inf), reverse = TRUE)
+  breedingpal <- colorBin("viridis", pb_map$portal_breeding_hrsDiurnal, bins = c(0.1,5,10,15,20,Inf), reverse = TRUE)
+  breedingpalnum <- colorNumeric("viridis", pb_map$portal_breeding_hrsDiurnal, reverse = TRUE)
+
   
   winterbinpal <- colorBin("viridis", pb_map$portal_wintering_hrsDiurnal, bins = c(0.1,2.5,5,7.5,10,Inf), reverse = TRUE)
   
   
   ### palette for Nocturnal Hours
   binpalnight <- colorBin("viridis", pb_map$portal_breeding_hrsNocturnal, bins = c(0.1,0.5,1,1.5,2,Inf), reverse = TRUE)
+  
+  observeEvent(input$link_to_blockcontrols, {
+    newvalue <- "BlocksTab"
+    updateTabItems(session, "panels", newvalue)
+  })
   
   ### Linking Effort Map tab and Block Tab 
   ### https://stackoverflow.com/questions/43985205/change-shiny-navbarpage-tabpanel-programmatically?
