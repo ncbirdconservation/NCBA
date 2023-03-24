@@ -970,27 +970,28 @@ server <- function(input, output, session) {
       hideGroup(c("Wintering Diurnal Hours", "# Species Confirmed", "Breeding Nocturnal Hours")) %>% 
       
       # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
-      # addLegend("topleft", colors = c("#808080FF", "#FDE725FF"," #5DC863FF", "#21908DFF","#3B528BFF", "#440154FF"), 
-      # labels = c("0","≤5","5-10","10-15", "15-20", "≥20"), title = "Breeding Diurnal Hours", opacity = 1, group = "Diurnal Hours Legend") %>% 
-      addLegendBin(pal = breedingpal, title = 'Breeding Diurnal Hours', shape = 'rect', fillOpacity = 0, position = 'topleft') %>% 
-      addLegendBin(pal = winterbinpal, title = 'Wintering Diurnal Hours', shape = 'circle', fillOpacity = 1, position = 'topleft') %>% 
-      addLegendBin(pal = binpalnight, title = 'Breeding Nocturnal Hours', shape = 'circle', fillOpacity = 0, position = 'topleft') %>% 
+      addLegendImage(images = diurnal_symbols, labels = c('0', '≤5', '5-10', '10-15', '15-20', '≥20'), 
+      orientation = 'vertical', title = 'Breeding Diurnal Hours', position = 'topleft', width = 16.44, height = 16.44,
+      labelStyle = "font-size: 14px; vertical-align: center;") %>% 
+      addLegendImage(images = winter_diurnal_symbols, labels = c('0', '≤2.5', '2.5-5.0', '5.0-7.5', '7.5-10', '≥10'), 
+                     orientation = 'vertical', title = 'Wintering Diurnal Hours', position = 'topleft', width = 16.44, height = 16.44,
+                     labelStyle = "font-size: 14px; vertical-align: center;") %>% 
+      addLegendImage(images = breeding_nocturnal_symbols, labels = c('0', '≤0.5', '0.5-1.0', '1.0-1.5', '1.5-2.0', '≥2.0'), 
+                     orientation = 'vertical', title = 'Breeding Nocturnal Hours', position = 'topright', width = 16.44, height = 16.44,
+                     labelStyle = "font-size: 14px; vertical-align: center;") %>% 
       addLegendImage(images = c("input_data/crow_red.png","input_data/crow_yellow.png", "input_data/crow_green.png", "input_data/crow_teal.png",
                                 "input_data/crow_blue.png", "input_data/crow_purple.png"),
                      labels = c("1-5","5-10","10-20","20-30", "30-40","40-60"),
                      labelStyle = "font-size: 14px; vertical-align: center;",
-                     title = htmltools::tags$div('# Species Confirmed',
-                                                 style = 'font-size: 16px;
-                                             text-align: center;'),
+                     title = '# Species Confirmed',
                      orientation = "vertical",
-                     width = 6.66,
-                     height = 8.33,
+                     width = 13.32,
+                     height = 16.44,
                      position = "bottomright",
                      group = "Confirmed Species Legend")
-    # addLegend("bottomright", colors = c("#808080FF", "#FDE725FF"," #5DC863FF", "#21908DFF","#3B528BFF", "#440154FF"), 
-    #           labels = c("0","≤0.5","0.5-1","1-1.5", "1.5-2", "≥2"), title = "Nocturnal Hours", opacity = 1, group = "Nocturnal Hours Legend")
     }) 
   
+  ### Merging Block Shapes for mapping and Summary Table
   pb_map <- merge(priority_block_data, blocksum, all = TRUE)
 
   ### Centroids of Priority Blocks
@@ -1039,21 +1040,51 @@ server <- function(input, output, session) {
   
   winterbinpal <- colorBin("viridis", pb_map$portal_wintering_hrsDiurnal, bins = c(0.1,2.5,5,7.5,10,Inf), reverse = TRUE)
   
-  
   ### palette for Nocturnal Hours
   binpalnight <- colorBin("viridis", pb_map$portal_breeding_hrsNocturnal, bins = c(0.1,0.5,1,1.5,2,Inf), reverse = TRUE)
   
-  observeEvent(input$link_to_blockcontrols, {
-    newvalue <- "BlocksTab"
-    updateTabItems(session, "panels", newvalue)
-  })
   
+  ### legend components for breeding diurnal hours
+  diurnal_shapes <- c('rect','rect','rect','rect','rect','rect')
+  diurnal_colors <- c("#808080FF", "#FDE725FF", "#5DC863FF", "#21908DFF", "#3B528BFF", " #440154FF")
+  diurnal_symbols <- Map(f = makeSymbol, shape = diurnal_shapes, fillColor = diurnal_colors, 
+                                        color = diurnal_colors, opacity = 1, fillOpacity = 0, width = 20,
+                                        `stroke-width` = 2)
+  
+  ### legend for winter diurnal hours
+  winter_shapes <- c('circle','circle','circle','circle','circle','circle')
+  winter_diurnal_symbols <- Map(f = makeSymbol, shape = winter_shapes, fillColor = diurnal_colors, 
+                         color = diurnal_colors, opacity = 1, fillOpacity = 1, width = 20,
+                         `stroke-width` = 2)
+  
+  ### legend for breeding nocturnal symbols
+  winter_shapes <- c('circle','circle','circle','circle','circle','circle')
+  breeding_nocturnal_symbols <- Map(f = makeSymbol, shape = winter_shapes, fillColor = diurnal_colors, 
+                                color = diurnal_colors, opacity = 1, fillOpacity = 0, width = 20,
+                                `stroke-width` = 2)
+  
+  # addLegendImage(images = diurnal_symbols, labels = c('0', '<5', '5-10', '10-15', '15-20', '>20'),
+  #                orientation = 'vertical')
+  # ### Generate Map Symbols
+  # shapes <- c('rect', 'circle', 'triangle', 'plus', 'cross', 'star')
+  # colors <- c('blue', 'red', 'yellow', 'green', 'orange', 'purple')
+  # symbols <- Map(f = makeSymbol, shape = shapes, fillColor = colors, 
+  #                color = 'black', opacity = 1, fillOpacity = .5, width = 20, 
+  #                `stroke-width` = 2)
+  # lgd <- 
+  #   map |> addLegendImage(images = symbols, labels = shapes, 
+  #                         orientation = 'horizontal')
+  # lgd
+  # 
   ### Linking Effort Map tab and Block Tab 
   ### https://stackoverflow.com/questions/43985205/change-shiny-navbarpage-tabpanel-programmatically?
   # observeEvent(input$link_to_BlocksTab, {
   #   updateNavbarPage(session, 'navbar', selected = 'BlocksTab')
   # })
-  
+    # observeEvent(input$link_to_blockcontrols, {
+  #   newvalue <- "BlocksTab"
+  #   updateTabItems(session, "panels", newvalue)
+  # })
   ### Change to Block Tab when Clicking a Block in Effort Map
   ### 
 
