@@ -81,7 +81,7 @@ ui <- bootstrapPage(
     id="nav",
     windowTitle = "NCBA Block Explorer",
     header = fluidRow(tags$h5(tags$p(
-                              paste0("This site is a work in progress, designed to provide access",
+paste0("This site is a work in progress, designed to provide access",
                                      " to data collected through the North Carolina Bird Atlas. ",
                                      "Data submitted to eBird is updated on a monthly basis."))),
                       align = "center"),
@@ -221,8 +221,8 @@ ui <- bootstrapPage(
     # ),
     tabPanel("Effort Map",
              # actionButton("link_to_BlocksTab", "Go  to Blocks Tab"),
-             div(leafletOutput("Effortmap",height="50vh")),
-             h4("Grey = 0 Hours")
+             div(leafletOutput("Effortmap",height="70vh")),
+             fluidRow(h4("Grey = 0 Hours", align = "center"))
             # actionLink("link_to_blockcontrols", "Link to Blocks Tab")
              # div(id="linkToBlocks",tags$a("This is a link to Blocks Tab")),
 #              htmlOutput("<script>$('#linktoBlocks').click(function() {
@@ -946,7 +946,7 @@ server <- function(input, output, session) {
                                  "<br> # Confirmed:", portal_breeding_sppCountConfirmed,
                                  "<br> # Probable:", portal_breeding_sppCountProbable,
                                  "<br> # Possible:", portal_breeding_sppCountPossible) %>% lapply(htmltools::HTML),
-                 group = "Confirmed Species") %>% 
+                 group = "# Species Confirmed") %>% 
       
       ## Wintering Diurnal Hours - Filled Circles
       addCircles(data = pb_map,
@@ -963,32 +963,32 @@ server <- function(input, output, session) {
       # Layers Control (Making Icons as Overlay Layers)
       addLayersControl(data = pb_map,
         baseGroups = c("Breeding Diurnal Hours"),
-        overlayGroups = c("Breeding Nocturnal Hours", "Confirmed Species", "Wintering Diurnal Hours"),
+        overlayGroups = c("Wintering Diurnal Hours", "# Species Confirmed", "Breeding Nocturnal Hours"),
         options = layersControlOptions(collapsed = FALSE)
       ) %>%
       # Hide Nocturnal Hours and Confirmed Species Icons upon Map Start
-      hideGroup(c("Breeding Nocturnal Hours", "Confirmed Species", "Wintering Diurnal Hours")) %>% 
+      hideGroup(c("Wintering Diurnal Hours", "# Species Confirmed", "Breeding Nocturnal Hours")) %>% 
       
       # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
       # addLegend("topleft", colors = c("#808080FF", "#FDE725FF"," #5DC863FF", "#21908DFF","#3B528BFF", "#440154FF"), 
       # labels = c("0","≤5","5-10","10-15", "15-20", "≥20"), title = "Breeding Diurnal Hours", opacity = 1, group = "Diurnal Hours Legend") %>% 
       addLegendBin(pal = breedingpal, title = 'Breeding Diurnal Hours', shape = 'rect', fillOpacity = 0, position = 'topleft') %>% 
       addLegendBin(pal = winterbinpal, title = 'Wintering Diurnal Hours', shape = 'circle', fillOpacity = 1, position = 'topleft') %>% 
-      # addLegend("topleft", pal = winterbinpal, values = c(2.5,5,7.5,10), title = "Wintering Diurnal Hours", opacity = 1, group = "Wintering Diurnal Hours Legend") %>% 
+      addLegendBin(pal = binpalnight, title = 'Breeding Nocturnal Hours', shape = 'circle', fillOpacity = 0, position = 'topleft') %>% 
       addLegendImage(images = c("input_data/crow_red.png","input_data/crow_yellow.png", "input_data/crow_green.png", "input_data/crow_teal.png",
                                 "input_data/crow_blue.png", "input_data/crow_purple.png"),
                      labels = c("1-5","5-10","10-20","20-30", "30-40","40-60"),
                      labelStyle = "font-size: 14px; vertical-align: center;",
-                     title = htmltools::tags$div('# Confirmed',
+                     title = htmltools::tags$div('# Species Confirmed',
                                                  style = 'font-size: 16px;
                                              text-align: center;'),
                      orientation = "vertical",
                      width = 6.66,
                      height = 8.33,
                      position = "bottomright",
-                     group = "Confirmed Species Legend") %>% 
-    addLegend("bottomright", colors = c("#808080FF", "#FDE725FF"," #5DC863FF", "#21908DFF","#3B528BFF", "#440154FF"), 
-              labels = c("0","≤0.5","0.5-1","1-1.5", "1.5-2", "≥2"), title = "Nocturnal Hours", opacity = 1, group = "Nocturnal Hours Legend")
+                     group = "Confirmed Species Legend")
+    # addLegend("bottomright", colors = c("#808080FF", "#FDE725FF"," #5DC863FF", "#21908DFF","#3B528BFF", "#440154FF"), 
+    #           labels = c("0","≤0.5","0.5-1","1-1.5", "1.5-2", "≥2"), title = "Nocturnal Hours", opacity = 1, group = "Nocturnal Hours Legend")
     }) 
   
   pb_map <- merge(priority_block_data, blocksum, all = TRUE)
