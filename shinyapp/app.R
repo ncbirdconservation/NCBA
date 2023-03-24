@@ -222,7 +222,8 @@ ui <- bootstrapPage(
     tabPanel("Effort Map",
              # actionButton("link_to_BlocksTab", "Go  to Blocks Tab"),
              div(leafletOutput("Effortmap",height="50vh")),
-            actionLink("link_to_blockcontrols", "Link to Blocks Tab")
+             h4("Grey = 0 Hours")
+            # actionLink("link_to_blockcontrols", "Link to Blocks Tab")
              # div(id="linkToBlocks",tags$a("This is a link to Blocks Tab")),
 #              htmlOutput("<script>$('#linktoBlocks').click(function() {
 # 						 tabs = $('.tabbable .nav.nav-tabs li')
@@ -972,12 +973,13 @@ server <- function(input, output, session) {
       # addLegend("topleft", colors = c("#808080FF", "#FDE725FF"," #5DC863FF", "#21908DFF","#3B528BFF", "#440154FF"), 
       # labels = c("0","≤5","5-10","10-15", "15-20", "≥20"), title = "Breeding Diurnal Hours", opacity = 1, group = "Diurnal Hours Legend") %>% 
       addLegendBin(pal = breedingpal, title = 'Breeding Diurnal Hours', shape = 'rect', fillOpacity = 0, position = 'topleft') %>% 
-      addLegend("topleft", pal = winterbinpal, values = c(2.5,5,7.5,10), title = "Wintering Diurnal Hours", opacity = 1, group = "Wintering Diurnal Hours Legend") %>% 
+      addLegendBin(pal = winterbinpal, title = 'Wintering Diurnal Hours', shape = 'circle', fillOpacity = 1, position = 'topleft') %>% 
+      # addLegend("topleft", pal = winterbinpal, values = c(2.5,5,7.5,10), title = "Wintering Diurnal Hours", opacity = 1, group = "Wintering Diurnal Hours Legend") %>% 
       addLegendImage(images = c("input_data/crow_red.png","input_data/crow_yellow.png", "input_data/crow_green.png", "input_data/crow_teal.png",
                                 "input_data/crow_blue.png", "input_data/crow_purple.png"),
                      labels = c("1-5","5-10","10-20","20-30", "30-40","40-60"),
                      labelStyle = "font-size: 14px; vertical-align: center;",
-                     title = htmltools::tags$div('Confirmed',
+                     title = htmltools::tags$div('# Confirmed',
                                                  style = 'font-size: 16px;
                                              text-align: center;'),
                      orientation = "vertical",
