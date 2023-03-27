@@ -99,7 +99,7 @@ paste0("This site is a work in progress, designed to provide access",
         };
       '))),
     tabPanel("Blocks",
-             id = "BlocksTab",
+             id = "BlocksTab", value = "BlocksTab",
       div(class="col-md-2 panel sidebar", id = "blockcontrols",
           # span(
           #   tags$i(h6("Checklists submitted to the NC Bird Atlas.")),
@@ -222,24 +222,6 @@ paste0("This site is a work in progress, designed to provide access",
     tabPanel("Effort Map",
              # actionButton("link_to_BlocksTab", "Go  to Blocks Tab"),
              div(leafletOutput("Effortmap",height="70vh")),
-             fluidRow(h4("Grey = 0 Hours", align = "center"))
-            # actionLink("link_to_blockcontrols", "Link to Blocks Tab")
-             # div(id="linkToBlocks",tags$a("This is a link to Blocks Tab")),
-#              htmlOutput("<script>$('#linktoBlocks').click(function() {
-# 						 tabs = $('.tabbable .nav.nav-tabs li')
-# 					 	 tabs.each(function() {
-# 							$(this).removeClass('active')
-# 					 	 })
-# 						 $(tabs[1]).addClass('active')
-# 
-# 						 tabsContents = $('.tabbable .tab-content .tab-pane')
-# 					 	 tabsContents.each(function() {
-# 							$(this).removeClass('active')
-# 					 	 })
-# 						 $(tabsContents[1]).addClass('active')
-# 						$('#summary').trigger('change').trigger('shown');
-# 
-# 					 })</script>")
              )
   )
 )
@@ -942,11 +924,11 @@ server <- function(input, output, session) {
       addMarkers(data = pb_map,
                  lng = ~centr_x, lat = ~centr_y,
                  icon = ~confirm_icons[confirm_colors],
-                 label = ~paste ("<strong>",ID_NCBA_BLOCK, "</strong><br>% Confirmed:", signif(portal_breeding_sppPctConfirmed,2),
-                                 "<br> # Confirmed:", portal_breeding_sppCountConfirmed,
+                 label = ~paste ("<strong>",ID_NCBA_BLOCK, "<br>% Confirmed:", PctConfirm,
+                                 "</strong><br> # Confirmed:", portal_breeding_sppCountConfirmed,
                                  "<br> # Probable:", portal_breeding_sppCountProbable,
                                  "<br> # Possible:", portal_breeding_sppCountPossible) %>% lapply(htmltools::HTML),
-                 group = "# Species Confirmed") %>% 
+                 group = "% Species Confirmed") %>% 
       
       ## Wintering Diurnal Hours - Filled Circles
       addCircles(data = pb_map,
@@ -963,11 +945,11 @@ server <- function(input, output, session) {
       # Layers Control (Making Icons as Overlay Layers)
       addLayersControl(data = pb_map,
         baseGroups = c("Breeding Diurnal Hours"),
-        overlayGroups = c("Wintering Diurnal Hours", "# Species Confirmed", "Breeding Nocturnal Hours"),
+        overlayGroups = c("Wintering Diurnal Hours", "% Species Confirmed", "Breeding Nocturnal Hours"),
         options = layersControlOptions(collapsed = FALSE)
       ) %>%
       # Hide Nocturnal Hours and Confirmed Species Icons upon Map Start
-      hideGroup(c("Wintering Diurnal Hours", "# Species Confirmed", "Breeding Nocturnal Hours")) %>% 
+      hideGroup(c("Wintering Diurnal Hours", "% Species Confirmed", "Breeding Nocturnal Hours")) %>% 
       
       # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
       addLegendImage(images = diurnal_symbols, labels = c('0', '≤5', '5-10', '10-15', '15-20', '≥20'), 
@@ -981,9 +963,9 @@ server <- function(input, output, session) {
                      labelStyle = "font-size: 14px; vertical-align: center;") %>% 
       addLegendImage(images = c("input_data/crow_red.png","input_data/crow_yellow.png", "input_data/crow_green.png", "input_data/crow_teal.png",
                                 "input_data/crow_blue.png", "input_data/crow_purple.png"),
-                     labels = c("1-5","5-10","10-20","20-30", "30-40","40-60"),
+                     labels = c("1-5","5-10","10-15","15-20", "20-25",">25"),
                      labelStyle = "font-size: 14px; vertical-align: center;",
-                     title = '# Species Confirmed',
+                     title = '% Species Confirmed',
                      orientation = "vertical",
                      width = 13.32,
                      height = 16.44,
@@ -993,6 +975,10 @@ server <- function(input, output, session) {
   
   ### Merging Block Shapes for mapping and Summary Table
   pb_map <- merge(priority_block_data, blocksum, all = TRUE)
+  
+  ## Convert percentages to numbers instead of decimals
+  pb_map <- pb_map %>% 
+    mutate(PctConfirm = signif(portal_breeding_sppPctConfirmed*100,4))
 
   ### Centroids of Priority Blocks
   centr_x <- (pb_map$NW_X + pb_map$SE_X)/2
@@ -1006,30 +992,30 @@ server <- function(input, output, session) {
   ## Make a list of icons. We'll index into it based on name.
   confirm_icons <- iconList(
     crow_grey = makeIcon(iconUrl = "input_data/crow_grey.svg",
-                       iconWidth = 4.16, iconHeight = 3.33, iconAnchorX = 1, iconAnchorY = 1),
+                       iconWidth = 4.16, iconHeight = 3.33, iconAnchorX = 6, iconAnchorY = 1),
     crow_red = makeIcon(iconUrl = "input_data/crow_red.svg",
-                        iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
+                        iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
     crow_yellow = makeIcon(iconUrl = "input_data/crow_yellow.svg",
-                           iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
+                           iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
     crow_green = makeIcon(iconUrl = "input_data/crow_green.svg",
-                          iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
+                          iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
     crow_teal = makeIcon(iconUrl = "input_data/crow_teal.svg",
-                         iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
+                         iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
     crow_blue = makeIcon(iconUrl = "input_data/crow_blue.svg",
-                         iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1),
+                         iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
     crow_purple = makeIcon(iconUrl = "input_data/crow_purple.svg",
-                           iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 1, iconAnchorY = 1))
+                           iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1))
   
   # add "confirm_color" column as a variable : this will be associated to the icons' list
   pb_map <- pb_map %>%
     mutate(confirm_colors = case_when(
-      portal_breeding_sppCountConfirmed == 0 ~ "crow_grey",
-      portal_breeding_sppCountConfirmed <= 5 ~ "crow_red",
-      portal_breeding_sppCountConfirmed <= 10 ~ "crow_yellow",
-      portal_breeding_sppCountConfirmed <= 20 ~ "crow_green",
-      portal_breeding_sppCountConfirmed <= 30 ~ "crow_teal",
-      portal_breeding_sppCountConfirmed <= 40 ~ "crow_blue",
-      portal_breeding_sppCountConfirmed <= 60 ~ "crow_purple"))
+      PctConfirm == 0 ~ "crow_grey",
+      PctConfirm <= 5 ~ "crow_red",
+      PctConfirm <= 10 ~ "crow_yellow",
+      PctConfirm <= 15 ~ "crow_green",
+      PctConfirm <= 20 ~ "crow_teal",
+      PctConfirm <= 25 ~ "crow_blue",
+      PctConfirm > 25 ~ "crow_purple"))
   
   ### palette for Diurnal Hours
   ### Grey = #808080FF, Yellow = #FDE725FF, Green = #5DC863FF, Teal = #21908DFF,  Blue = #3B528BFF, Purple = #440154FF
@@ -1063,28 +1049,8 @@ server <- function(input, output, session) {
                                 color = diurnal_colors, opacity = 1, fillOpacity = 0, width = 20,
                                 `stroke-width` = 2)
   
-  # addLegendImage(images = diurnal_symbols, labels = c('0', '<5', '5-10', '10-15', '15-20', '>20'),
-  #                orientation = 'vertical')
-  # ### Generate Map Symbols
-  # shapes <- c('rect', 'circle', 'triangle', 'plus', 'cross', 'star')
-  # colors <- c('blue', 'red', 'yellow', 'green', 'orange', 'purple')
-  # symbols <- Map(f = makeSymbol, shape = shapes, fillColor = colors, 
-  #                color = 'black', opacity = 1, fillOpacity = .5, width = 20, 
-  #                `stroke-width` = 2)
-  # lgd <- 
-  #   map |> addLegendImage(images = symbols, labels = shapes, 
-  #                         orientation = 'horizontal')
-  # lgd
-  # 
-  ### Linking Effort Map tab and Block Tab 
-  ### https://stackoverflow.com/questions/43985205/change-shiny-navbarpage-tabpanel-programmatically?
-  # observeEvent(input$link_to_BlocksTab, {
-  #   updateNavbarPage(session, 'navbar', selected = 'BlocksTab')
-  # })
-    # observeEvent(input$link_to_blockcontrols, {
-  #   newvalue <- "BlocksTab"
-  #   updateTabItems(session, "panels", newvalue)
-  # })
+ 
+
   ### Change to Block Tab when Clicking a Block in Effort Map
   ### 
 
