@@ -930,7 +930,7 @@ server <- function(input, output, session) {
       ### Overlay Groups 
       ## Nocturnal Hours - Circle Outlines
       addCircles(data = pb_map,
-                 lng = ~ NW_X, lat = ~ centr_y,
+                 lng = ~ SE_X, lat = ~ centr_y,
                  radius = 400,
                  color = ~binpalnight(portal_breeding_hrsNocturnal),
                  stroke = TRUE,
