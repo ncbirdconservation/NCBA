@@ -111,9 +111,12 @@ ui <- bootstrapPage(
                 "Custom" = "Custom"),
               selected = "All"),
            conditionalPanel(condition = "input.season_radio == 'Custom'",
-                            selectInput("month_range", "Selected Months", choices = c(1,2,3,4,5,6,7,8,9,10,11,12),
-                                        selected = c(1,2,3,4,5,6,7,8,9,10,11,12),
-                                        multiple = TRUE)
+                            selectInput(
+                              "month_range",
+                              "Selected Months",
+                              choices = c(1,2,3,4,5,6,7,8,9,10,11,12),
+                              selected = c(1,2,3,4,5,6,7,8,9,10,11,12),
+                              multiple = TRUE)
            ),
               # bsTooltip(
               #   "season_radio",
@@ -122,7 +125,7 @@ ui <- bootstrapPage(
               #   "right", options = list(container="body"))
           )
         ),
-        div(class="col-md-10",
+        div(class="col-md-10 panel",
           leafletOutput("mymap")
         ),
         div(class="col-md-3 panel",
@@ -181,6 +184,19 @@ ui <- bootstrapPage(
           # plotOutput("spp_localitytype_plot")
       )
     )
+    ),
+    tabPanel("Species Map",
+        div(class="col-md-2",
+          # selectInput("spp_select", h3("Species"),
+          selectizeInput("sppmap_select", h3("Species"),
+          choices = species_list, options=list(
+            placeholder = 'Select species',
+            onInitialize = I('function() {this.setValue(""); }')
+          ))
+        ),
+      div(class="col-md-10",
+          leafletOutput("mysppmap")
+        )
     ),
     tabPanel("About",
       tags$div(
@@ -713,7 +729,128 @@ server <- function(input, output, session) {
           )
   })
 
-  # popup menu on hover over checklist
+   ## SPECIES MAP  ----------------------------------------------------
+  ### SETUP LEAFLET MAP, RENDER BASEMAP ------
+  output$mysppmap <- renderLeaflet({
+
+    #setup block geojson layer
+    print("starting map, adding blocks")
+
+    leaflet(height = '80vh') %>%
+      setView(
+        lng = -79.0,
+        lat = 35.7,
+        zoom = 7) %>%
+      # addTiles() %>%
+      addProviderTiles(providers$Esri.WorldTopoMap)
+      # addProviderTiles(providers$Esri.NatGeoWorldMap) %>%
+
+      # addRectangles(
+      #   data = priority_block_data,
+      #   layerId = ~ ID_NCBA_BLOCK,
+      #   lng1 = ~ NW_X,
+      #   lat1 = ~ NW_Y,
+      #   lng2 = ~ SE_X,
+      #   lat2 = ~ SE_Y,
+      #   weight= 2,
+      #   color=ncba_blue,
+      #   opacity = 0.9,
+      #   fillColor='#777777',
+      #   fillOpacity = 0.05,
+      #   fill = TRUE,
+      #   label = ~ ID_NCBA_BLOCK
+      #   )
+
+  })
+  ### ADD SYMBOLOGY FOR SELECTED SPECIES ------
+  sppblock_data <- reactive({
+      get_spp_by_block(input$sppmap_select)
+  })
+
+  observeEvent(
+    sppblock_data(),
+    {
+      print("retrieving spp block data")
+      sppblockmap_data <- sppblock_data()
+      print("spp block data retrieved")
+      # colnames(sppblockmap_data)[1] = "ID_NCBA_BLOCK"
+      # print(head(sppblockmap_data))
+
+      if (nrow(sppblockmap_data) > 0){
+      # print(head(priority_block_data))
+      print (paste0("spp by block len = ",nrow(sppblockmap_data)))
+      spp_blocks <- merge(
+        priority_block_data,
+        sppblockmap_data,
+        by = "ID_NCBA_BLOCK"
+        )
+      # print(head(spp_blocks))
+      print(paste0("spp block len = ",nrow(spp_blocks)))
+
+
+      spp_blocks <- mutate(
+        spp_blocks,
+        breedcat = case_when(
+          bc == "C4" ~ "C4 Confirmed",
+          bc == "C3" ~ "C3 Probable",
+          bc == "C2" ~ "C2 Possible",
+          TRUE ~ "C1 Observed"
+        )
+      )
+      print(table(spp_blocks$breedcat))
+
+      # breedcat_order <- factor(
+      #   spp_blocks$breedcat,
+      #   labels = c('Confirmed', 'Probable', 'Possible','Observed')
+      #   )
+      # print(breedcat_order)
+      
+      block_colors <- colorFactor(
+        palette = brewer.pal(4, 'Purples'),
+        # palette = 'Blues',
+        # levels = c('Confirmed', 'Probable', 'Possible','Observed'),
+        # levels = breedcat_order,
+        # ordered = FALSE
+        domain = spp_blocks$breedcat
+        )
+
+      print("adding blocks to map")
+      leafletProxy("mysppmap") %>%
+      clearShapes() %>%
+      clearControls() %>%
+      addRectangles(
+        data = spp_blocks,
+        layerId = ~ ID_NCBA_BLOCK,
+        lng1 = ~ NW_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        weight= 0,
+        # color=ncba_white,
+        # opacity = 0,
+        fillColor= ~block_colors(breedcat),
+        fillOpacity = 0.8,
+        fill = TRUE,
+        label = ~ breedcat
+        ) %>%
+      addLegend(
+        "bottomright",
+        pal = block_colors,
+        values = spp_blocks$breedcat,
+        labFormat = labelFormat(
+          transform = function(x) sort(x, decreasing = FALSE)
+        ),
+        title = "Breeding Category",
+        opacity = 1
+        )
+        }
+    }
+  )
+
+
+### DISPLAY BLOCKS
+
+ # popup menu on hover over checklist
 
 
   ### DISPLAY CHECKLISTS ON THE MAP ------

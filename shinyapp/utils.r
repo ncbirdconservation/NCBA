@@ -92,6 +92,53 @@ aggregate_ebd_data <- function (pipeline) {
   return(mongodata)
 }
 
+get_spp_by_block <- function(species){
+# Retrieves data from MongoDB Atlas with max behavior category for each 
+# spp/block combination for the passed species common name
+
+  pipeline <- sprintf(
+    '[
+    {
+        "$match": {
+            "PRIORITY_BLOCK": "1", 
+            "OBSERVATIONS.COMMON_NAME": "%s"
+        }
+    }, {
+        "$unwind": {
+            "path": "$OBSERVATIONS"
+        }
+    }, {
+        "$match": {
+            "OBSERVATIONS.COMMON_NAME": "%s"
+        }
+    }, {
+        "$project": {
+            "species": "$OBSERVATIONS.COMMON_NAME", 
+            "breedcat": "$OBSERVATIONS.BREEDING_CATEGORY", 
+            "ID_NCBA_BLOCK": 1
+        }
+    }, {
+        "$group": {
+            "_id": "$ID_NCBA_BLOCK", 
+            "ID_NCBA_BLOCK" : {
+              "$first":"$ID_NCBA_BLOCK"
+            },
+            "bc": {
+                "$max": "$breedcat"
+            }
+        }
+    }
+]',
+species,
+species
+  )
+
+  mongodata <- m$aggregate(pipeline)
+
+  return(mongodata)
+
+}
+
 get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
 # Retrieves data from MongoDB Atlas implementation
 #
@@ -186,7 +233,8 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
             if ( gen_breeding_start <= odj & odj <= gen_breeding_end){
               season = "Breeding"
             } else {
-              if(yday("2021-08-31") <= odj & odj <=yday("2021-10-31") | yday("2021-03-01") <= odj & odj <=yday("2021-03-31")){ 
+              if(
+                yday("2021-08-31") <= odj & odj <=yday("2021-10-31") | yday("2021-03-01") <= odj & odj <=yday("2021-03-31")){ 
                       season = "Migration"
               } else {
               season = "Non-Breeding"
