@@ -57,6 +57,9 @@ h1, h2, h3, h4 { font-weight: 400; color:#2a3b4d;}
   list-style:none;
 }
 
+.spp-block-map {
+  height: 500px;
+}
 #controls {
   /* Appearance */
   /* Fade out while not hovering */

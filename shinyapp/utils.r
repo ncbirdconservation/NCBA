@@ -356,16 +356,20 @@ get_spp_obs <- function(species, filter){
 }
 
 # Get Species List
-get_spp_list <- function(query="{}",filter="{}"){
+get_spp_list <- function( query = "{}", filter = "{}" ) {
 
   mongodata <- m_spp$find(query, filter)
 
   return(mongodata)
 }
 
-species_list = get_spp_list(filter='{"PRIMARY_COM_NAME":1}')$PRIMARY_COM_NAME
+species_list = sort(get_spp_list(
+  query = '{"NC_STATUS":"definitive"}',
+  filter = '{"PRIMARY_COM_NAME":1}'
+  )$PRIMARY_COM_NAME, decreasing=FALSE)
 
-
+# sort(species_list)
+print(head(species_list))
 
 ###############################################################################
 # Block level summaries

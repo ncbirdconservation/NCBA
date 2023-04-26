@@ -186,17 +186,18 @@ ui <- bootstrapPage(
     )
     ),
     tabPanel("Species Map",
-        div(class="col-md-2",
-          # selectInput("spp_select", h3("Species"),
+
+        div(class = "col-md-2",
           selectizeInput("sppmap_select", h3("Species"),
-          choices = species_list, options=list(
+          choices = species_list, options = list(
             placeholder = 'Select species',
             onInitialize = I('function() {this.setValue(""); }')
           ))
         ),
-      div(class="col-md-10",
-          leafletOutput("mysppmap")
-        )
+        div(class = "col-md-10",
+            id = "spp-block-map",
+            leafletOutput("mysppmap")
+          )
     ),
     tabPanel("About",
       tags$div(
@@ -736,7 +737,7 @@ server <- function(input, output, session) {
     #setup block geojson layer
     print("starting map, adding blocks")
 
-    leaflet(height = '80vh') %>%
+    leaflet() %>%
       setView(
         lng = -79.0,
         lat = 35.7,
@@ -797,6 +798,11 @@ server <- function(input, output, session) {
           TRUE ~ "C1 Observed"
         )
       )
+
+      spp_blocks <- mutate(
+        spp_blocks,
+        blocklink = sprintf('https://ebird.org/atlasnc/block/%s', spp_blocks$ID_BLOCK_CODE)
+      )
       print(table(spp_blocks$breedcat))
 
       # breedcat_order <- factor(
@@ -825,13 +831,19 @@ server <- function(input, output, session) {
         lat1 = ~ NW_Y,
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
-        weight= 0,
-        # color=ncba_white,
+        weight = 0.5,
+        color = '#000000',
         # opacity = 0,
         fillColor= ~block_colors(breedcat),
         fillOpacity = 0.8,
         fill = TRUE,
-        label = ~ breedcat
+        label = sprintf(
+          "<strong><a href = '%s'>%s</a></strong><br/>%s",
+          spp_blocks$blocklink,
+          spp_blocks$ID_NCBA_BLOCK,
+          spp_blocks$breedcat
+          ) %>%
+          lapply(htmltools::HTML)
         ) %>%
       addLegend(
         "bottomright",
