@@ -188,11 +188,12 @@ ui <- bootstrapPage(
     tabPanel("Species Map",
 
         div(class = "col-md-2",
-          selectizeInput("sppmap_select", h3("Species"),
+          div(selectizeInput("sppmap_select", h3("Species"),
           choices = species_list, options = list(
             placeholder = 'Select species',
             onInitialize = I('function() {this.setValue(""); }')
-          ))
+          ))),
+          div(tableOutput("block_breedcode_table"))
         ),
         div(class = "col-md-10",
             id = "spp-block-map",
@@ -803,7 +804,8 @@ server <- function(input, output, session) {
         spp_blocks,
         blocklink = sprintf('https://ebird.org/atlasnc/block/%s', spp_blocks$ID_BLOCK_CODE)
       )
-      print(table(spp_blocks$breedcat))
+      print(table(t(spp_blocks$breedcat)))
+      output$block_breedcode_table <- renderTable(table(spp_blocks$breedcat))
 
       # breedcat_order <- factor(
       #   spp_blocks$breedcat,
@@ -824,6 +826,19 @@ server <- function(input, output, session) {
       leafletProxy("mysppmap") %>%
       clearShapes() %>%
       clearControls() %>%
+      addRectangles(
+        data = priority_block_data,
+        layerId = ~ ID_BLOCK_CODE,
+        lng1 = ~ NW_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        weight= 0.5,
+        color=ncba_blue,
+        opacity = 0.25,
+        fill = FALSE,
+        label = priority_block_data$ID_NCBA_BLOCK
+        ) %>%
       addRectangles(
         data = spp_blocks,
         layerId = ~ ID_NCBA_BLOCK,
@@ -854,7 +869,7 @@ server <- function(input, output, session) {
         ),
         title = "Breeding Category",
         opacity = 1
-        )
+        ) 
         }
     }
   )
@@ -901,11 +916,6 @@ server <- function(input, output, session) {
             checklists$OBSERVATION_DATE) %>%
           lapply(htmltools::HTML),
           popup = ~ebird_link)
-        # addMarkers(data=checklists,
-        # layerId = paste("checklist",~ SAMPLING_EVENT_IDENTIFIER),
-        #   lat = ~ LATITUDE,
-        #   lng = ~ LONGITUDE,
-        #   color=ncba_blue
       }
     }
   )
