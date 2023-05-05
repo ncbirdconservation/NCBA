@@ -33,6 +33,11 @@ m_blocks <- mongo(
   url = URI,
   options = ssl_options(weak_cert_validation = T))
 
+m_block_summaries <- mongo(
+  "BLOCK_SUMMARIES",
+  url = URI,
+  options = ssl_options(weak_cert_validation = T))
+
 m_sd <- mongo(
   "safe_dates",
   url = URI,
@@ -96,44 +101,68 @@ get_spp_by_block <- function(species){
 # Retrieves data from MongoDB Atlas with max behavior category for each 
 # spp/block combination for the passed species common name
 
+#   pipeline <- sprintf(
+#     '[
+#     {
+#         "$match": {
+#             "PRIORITY_BLOCK": "1", 
+#             "OBSERVATIONS.COMMON_NAME": "%s"
+#         }
+#     }, {
+#         "$unwind": {
+#             "path": "$OBSERVATIONS"
+#         }
+#     }, {
+#         "$match": {
+#             "OBSERVATIONS.COMMON_NAME": "%s"
+#         }
+#     }, {
+#         "$project": {
+#             "species": "$OBSERVATIONS.COMMON_NAME", 
+#             "breedcat": "$OBSERVATIONS.BREEDING_CATEGORY", 
+#             "ID_NCBA_BLOCK": 1
+#         }
+#     }, {
+#         "$group": {
+#             "_id": "$ID_NCBA_BLOCK", 
+#             "ID_NCBA_BLOCK" : {
+#               "$first":"$ID_NCBA_BLOCK"
+#             },
+#             "bc": {
+#                 "$max": "$breedcat"
+#             }
+#         }
+#     }
+# ]',
+# species,
+# species
+#   )
+  # mongodata <- m$aggregate(pipeline)
+
   pipeline <- sprintf(
     '[
-    {
+      {
+        "$unwind":
+          {
+            "path": "$sppList"
+          }
+      },
+      {
         "$match": {
-            "PRIORITY_BLOCK": "1", 
-            "OBSERVATIONS.COMMON_NAME": "%s"
-        }
-    }, {
-        "$unwind": {
-            "path": "$OBSERVATIONS"
-        }
-    }, {
-        "$match": {
-            "OBSERVATIONS.COMMON_NAME": "%s"
-        }
-    }, {
-        "$project": {
-            "species": "$OBSERVATIONS.COMMON_NAME", 
-            "breedcat": "$OBSERVATIONS.BREEDING_CATEGORY", 
-            "ID_NCBA_BLOCK": 1
-        }
-    }, {
-        "$group": {
-            "_id": "$ID_NCBA_BLOCK", 
-            "ID_NCBA_BLOCK" : {
-              "$first":"$ID_NCBA_BLOCK"
-            },
-            "bc": {
-                "$max": "$breedcat"
-            }
-        }
-    }
-]',
-species,
-species
-  )
-
-  mongodata <- m$aggregate(pipeline)
+            "sppList.COMMON_NAME": "%s"
+          }
+      },
+      {
+        "$project":
+          {
+            "ID_NCBA_BLOCK": 1,
+            "bc": "$sppList.breedMaxCategory"
+          }
+      }
+    ]',
+    species
+    )
+  mongodata <- m_block_summaries$aggregate(pipeline)
 
   return(mongodata)
 
