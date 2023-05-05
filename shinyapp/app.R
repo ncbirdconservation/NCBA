@@ -963,25 +963,38 @@ server <- function(input, output, session) {
 
   ##### EXPERIMENT TO RETRIEVE VIA AGGREGATION STRING
   #faster, but still slow
-  pipeline <- 
-    str_interp(c('[{ "$match": { "OBSERVATIONS.COMMON_NAME": "${spp}" } },',
-    ' { "$unwind": { "path": "$OBSERVATIONS" } }, ',
-    '{ "$project": { "COMMON_NAME": "$OBSERVATIONS.COMMON_NAME", ',
-    '"BREEDING_CODE": "$OBSERVATIONS.BREEDING_CODE", ',
-    '"OBSERVATION_DATE": 1 } }, { "$match" : { "COMMON_NAME": "${spp}"}}, ',
-    '{ "$lookup": { "from": "safe_dates", "localField": "COMMON_NAME", ',
-    '"foreignField": "COMMON_NAME", "as": "SPP_SAFE_DATES" } }, ',
-    '{ "$unwind": { "path": "$SPP_SAFE_DATES" } }, ',
-    '{ "$project": { "COMMON_NAME": 1, "BREEDING_CODE": 1, ',
-      '"OBSERVATION_DATE": 1, "SEASON": { "$cond": { "if": ',
-      '{ "$and": [ { "$gte": [ "$OBSERVATION_DATE", ',
-      '"$SPP_SAFE_DATES.B_SAFE_START_DATE" ] }, ',
-      '{ "$lte": [ "$OBSERVATION_DATE", ',
-      '"$SPP_SAFE_DATES.B_SAFE_END_DATE" ] } ] }, ',
-      '"then": "Breeding", "else": "Non-Breeding" } } } }]'))
-  print(pipeline)
+  # pipeline <- 
+  #   str_interp(c('[{ "$match": { "OBSERVATIONS.COMMON_NAME": "${spp}" } },',
+  #   ' { "$unwind": { "path": "$OBSERVATIONS" } }, ',
+  #   '{ "$project": { "COMMON_NAME": "$OBSERVATIONS.COMMON_NAME", ',
+  #   '"BREEDING_CODE": "$OBSERVATIONS.BREEDING_CODE", ',
+  #   '"OBSERVATION_DATE": 1 } }, { "$match" : { "COMMON_NAME": "${spp}"}}, ',
+  #   '{ "$lookup": { "from": "safe_dates", "localField": "COMMON_NAME", ',
+  #   '"foreignField": "COMMON_NAME", "as": "SPP_SAFE_DATES" } }, ',
+  #   '{ "$unwind": { "path": "$SPP_SAFE_DATES" } }, ',
+  #   '{ "$project": { "COMMON_NAME": 1, "BREEDING_CODE": 1, ',
+  #     '"OBSERVATION_DATE": 1, "SEASON": { "$cond": { "if": ',
+  #     '{ "$and": [ { "$gte": [ "$OBSERVATION_DATE", ',
+  #     '"$SPP_SAFE_DATES.B_SAFE_START_DATE" ] }, ',
+  #     '{ "$lte": [ "$OBSERVATION_DATE", ',
+  #     '"$SPP_SAFE_DATES.B_SAFE_END_DATE" ] } ] }, ',
+  #     '"then": "Breeding", "else": "Non-Breeding" } } } }]'))
+  # print(pipeline)
+  # ebird <- aggregate_ebd_data(pipeline)
 
-  ebird <- aggregate_ebd_data(pipeline)
+  pipeline  <- sprintf(
+    '[{"$match":{"COMMON_NAME": "%s"}},
+      {"$unwind":{"path": "$bcList"}},
+      {"$project":{"COMMON_NAME": 1,
+                  "OBSERVATION_DATE":"$bcList.OBSERVATION_DATE",
+                  "BREEDING_CODE": "$bcList.BREEDING_CODE"
+                }
+      }]',
+      spp)
+
+
+  ebird <- aggregate_spp_data(pipeline)
+
   print("aggregate pipeline completed.")
   print(ebird)
   ##### END EXPERIMENT

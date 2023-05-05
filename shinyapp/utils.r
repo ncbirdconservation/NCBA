@@ -38,6 +38,11 @@ m_block_summaries <- mongo(
   url = URI,
   options = ssl_options(weak_cert_validation = T))
 
+m_spp_summaries <- mongo(
+  "SPECIES_SUMMARIES",
+  url = URI,
+  options = ssl_options(weak_cert_validation = T))
+
 m_sd <- mongo(
   "safe_dates",
   url = URI,
@@ -94,6 +99,10 @@ aggregate_ebd_data <- function (pipeline) {
   # pipeline -- valid JSON formatted aggregation pipeline
 
   mongodata <- m$aggregate(pipeline)
+  return(mongodata)
+}
+aggregate_spp_data <- function (pipeline) {
+  mongodata <- m_spp_summaries$aggregate(pipeline)
   return(mongodata)
 }
 
