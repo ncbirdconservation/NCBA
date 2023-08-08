@@ -25,6 +25,10 @@ __effort_summaries__ -- summaries of eBird sampling data (eBird checklists) and 
 
 __help__ -- documents and code for reference and learning.
 
+__resources__ -- contains an R script with the core functions/modules, demos, and reports.
+
+__shinyapp__ -- code that supports the online data explorer (https://ncbirdconservation.shinyapps.io/shinyapp/).
+
 __single-use_scripts__ -- scripts that complete one-time tasks, such as downloading or processing something.
 
 __species_summaries__ -- summaries of species data; individual species or species groups.
