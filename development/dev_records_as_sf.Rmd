@@ -15,22 +15,22 @@ knitr::opts_chunk$set(
 ```
 
 # Purpose
-This document details a function that creates a spatial representation of checklists or observations.
+This document details a function that creates a spatial representation of checklists or observations.  SHOULD A MAX EFFORT DISTANCE PARAMETER BE ADDED?
 ```{r}
-records_as_sf_dev <- function(records_df, kind, method) {
-  # Create new simple features (spatial data frame) of checklists.  Output can
-  #   be plotted, but the primary use will be as input for other functions.
+records_as_sf_dev <- function(records_df, kind, method, fill_na_km = 0.1) {
+  # Create new simple features (spatial data frame) of records (checklists or 
+  #   observations)  Output can be plotted or used as input for other functions.
   # 
   #   Description: 
   #   Checklist records often need to be assigned geometries for visualization
   #   and spatial analyses, and different methods could be used.  Checklists
-  #   can be represented as points or polygons and polygons could be drawn as 
+  #   can be represented as points or polygons, and polygons could be drawn as 
   #   buffers around the checklist coordinates (circles) or buffers drawn around
   #   checklist tracks.  Buffer length is meant to represent locational
-  #   uncertainty and can be approximated in different ways that are currently
-  #   supported.  Stationary or short lists should likely be buffered 100 m or
-  #   more to account for area surveyed.  Null effort_distance_km
-  #   values are filled with zero, which assumes those records are stationary
+  #   uncertainty (spatial precision) and can be approximated in different ways.
+  #   Stationary or short lists should likely be buffered 100 m or more to 
+  #   at least partially account for area surveyed.  Null effort_distance_km 
+  #   values are filled with zero, which assumes those records are stationary 
   #   counts.
   #
   #   Parameters:
@@ -41,11 +41,15 @@ records_as_sf_dev <- function(records_df, kind, method) {
   #     in the data frame.  Individual species data will be observations.
   #   method -- how to represent each record spatially.  Options are "points",
   #     "point-radius", and "buffered-tracks".
+  #   fill_na_km -- NA values may exist in some records, which precludes creating
+  #     a point-radius polygon for them. Enter a km distance to use as a 
+  #     replacement.  This argument is inconsequential for the point method.
   #   
   #   Results:
   #   A spatial (simple features) data frame with columns for checklist_id or 
   #     sampling_event_identifier, atlas_block, protocol_type, 
-  #     effort_distance_km, latitude, longitude.
+  #     effort_distance_km, latitude, longitude and observation_count and
+  #     breeding_code if the kind is observations.
   library(sf)
   
   if (kind == "checklists"){
@@ -55,7 +59,8 @@ records_as_sf_dev <- function(records_df, kind, method) {
   } else {
     records_df <- records_df %>%
       select(sampling_event_identifier, atlas_block, protocol_type, 
-             effort_distance_km, latitude, longitude, observation_count)
+             effort_distance_km, latitude, longitude, observation_count, 
+             breeding_code)
   }
   
   # Make spatial frame
@@ -65,15 +70,14 @@ records_as_sf_dev <- function(records_df, kind, method) {
   
   # Apply method
   if (method == "points") {
-    checklists_sf <- checklists_sf %>% select(geometry)
+    checklists_sf <- checklists_sf
   }
     
   if (method == "point-radius") {
     checklists_sf <- checklists_sf %>%
       # Buffer coordinates
-      replace_na(list(effort_distance_km=0)) %>%
-      #ilter(effort_distance_km <= 5) %>%
-      mutate(buffer_length = (effort_distance_km + 0.1)*1000) %>%
+      replace_na(list(effort_distance_km=fill_na_km)) %>%
+      mutate(buffer_length = (effort_distance_km)*1000) %>%
       mutate(footprint = st_buffer(geometry, buffer_length)) %>%
       select(-c(geometry)) %>%
       mutate(geometry = footprint) %>%
@@ -114,10 +118,10 @@ connection <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt",
                               collection = "ebd")
 ```
 
-## Species-level records
+## Observations (species-level records)
 Identify a species to investigate.
 ```{r}
-species <- "Willow Flycatcher"
+species <- "Kentucky Warbler"
 ```
 
 Retrieve the records for the species from the Atlas Cache
@@ -145,8 +149,19 @@ print(head(records))
 
 Plot the coordinates
 ```{r}
-coords.map <- records_as_sf_dev(records, kind = "observations", 
-                                method = "points")
-plot(coords.map)
+coords <- records_as_sf_dev(records, kind="observations", method="points")
+plot(coords$geometry)
+```
+
+Plot the footprint
+```{r}
+footprints <- records_as_sf_dev(records, kind="observations", 
+                              method="point-radius")
+plot(footprints$geometry)
+```
+
+Preview the result as a data frame
+```{r}
+print(head(footprints))
 ```
 
