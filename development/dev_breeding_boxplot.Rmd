@@ -354,6 +354,13 @@ breeding_boxplot_dev(species, records, interactive=FALSE, lump=lump)
 breeding_boxplot_dev(species, records, interactive=TRUE, lump=lump)
 
 ```
+
+A standard lumping list is available for the primary categories.
+```{r}
+lumped_codes <- breeding_codes()
+breeding_boxplot_dev(species, records, interactive=TRUE, lump=lumped_codes)
+```
+
 2. Omit all but three codes as an extreme example to make sure things work.  
 ```{r}
 omit <- c("S", "M", "H", "NULL", "P", "A", "N", "CN", "T", "NB","FS", "CF", "C")

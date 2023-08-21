@@ -135,9 +135,6 @@ nc_data <- connection$find(query) %>%
   unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
   filter(COMMON_NAME == species)
 
-# format columns to the standard analysis format (ebd format)
-records <- to_ebd_format(nc_data, drop=FALSE)
-
 # Calculate processing time
 mongotime <- proc.time() - time1
 
@@ -163,5 +160,19 @@ plot(footprints$geometry)
 Preview the result as a data frame
 ```{r}
 print(head(footprints))
+```
+
+## Checklists
+Retrieve a dataframe of checklists.  Note that this use depends on connection code from above.
+```{r}
+some_checklists <- head(get_all_checklists(ncba_config=config, 
+                                           drop_ncba_col=TRUE), 200)
+```
+
+Plot the checklists
+```{r}
+footprints <- records_as_sf_dev(some_checklists, kind="checklists", 
+                                method="point-radius")
+plot(footprints$geometry)
 ```
 
