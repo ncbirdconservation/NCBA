@@ -1,0 +1,172 @@
+---
+title: "Single Species NCBA Data Summary"
+author: "N.M. Tarr"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: 
+  rmdformats::downcute:
+  html_document:
+    df_print: paged
+    code_folding: hide
+---
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+# Setup
+Load packages, functions, and variables
+```{r packages and setup}
+# Load packages
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(tidyverse)
+library(ggplot2)
+theme_set(theme_bw())
+library(sf)
+library(RColorBrewer)
+library(maps)
+library(hms)
+library(lubridate)
+library(tmap)
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+setwd("~/Documents/NCBA/species/")
+```
+
+Identify a species to investigate
+```{r species}
+species <- "Willow Flycatcher"
+print(species)
+```
+
+# Get data
+```{r block_data}
+# Read in NCBA block spatial data frame
+blocks_path <- "/Volumes/nmtarr1/Datasets/ncba_blocks.shp"
+blocks_sf <- st_read(blocks_path) %>% st_transform(6542)
+st_crs(blocks_sf)
+```
+
+Get data from the ncba mongo database
+```{r get_records}
+time1 <- proc.time()
+# connect to a specific collection (table)
+connection <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt", 
+                              collection = "ebd")
+
+# execute a query
+query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
+
+nc_data <- connection$find(query) %>%
+  unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
+  filter(COMMON_NAME == species)
+
+# format columns
+records <- to_ebd_format(nc_data, drop=FALSE)
+
+# Calculate processing time
+mongotime <- proc.time() - time1
+
+# Print number of records returned
+print(paste("Records returned:", nrow(records)))
+print(paste("Runtime: ", mongotime[["elapsed"]]))
+```
+
+# Observations
+```{r method_A}
+method_A <- records %>%
+  # Make checklists data frame spatial with right projection
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
+  st_transform(6542) %>%
+  # Find which blocks each coordinate is within
+  st_join(blocks_sf, join = st_within, left=TRUE) %>%
+  #################################select(-c(NAME, STATUS, COUNTY, FORM_LINK)) %>%
+  # Summarize by number checklists within each block
+  group_by(name) %>%
+  summarize(records=n()) %>%
+  select(name, records) %>%
+  # Join back with blocks spatial frame to fill in zeros (as a data frame)
+  data.frame() %>%
+  select(-c(geometry)) %>%
+  right_join(blocks_sf, by=("name" = "name")) %>%
+  ##########################################select(name, checklists, geometry) %>%
+  replace_na(list(records=0)) %>%
+  # Make spatial again
+  st_as_sf()
+```
+
+```{r buffered_coordinates}
+# Create new sf of buffered checklist coordinates.  Some lists have no distance
+#   so replace those with 0.  Stationary or short lists should be buffered 100
+#   m to account for area surveyed.  This is imperfect, but more defensible than
+#   nothing. Lists traveling > 5 km are just problematic and not informative so 
+#   removed here.
+buffered_coordinates <- records %>%
+  # Make spatial frame
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
+  st_transform(6542) %>%
+  select(sampling_event_identifier, atlas_block, protocol_type, effort_distance_km,
+         geometry) %>%
+  # Buffer coordinates
+  replace_na(list(effort_distance_km=0)) %>%
+  filter(effort_distance_km <= 5) %>%
+  mutate(buffer_length = (effort_distance_km + 0.1)*1000) %>%
+  mutate(footprint = st_buffer(geometry, buffer_length)) %>%
+  st_set_geometry("footprint") %>%
+  select(-c(geometry)) 
+```
+
+```{r method_B}
+# Intersect lists with blocks, tally records per block, drop footprint,
+#   join with blocks sf to get block geometry
+method_B <- buffered_coordinates %>%
+  # Intersect footprints with blocks, NOTE this keeps "withins" and fragments
+  st_intersection(blocks_sf) %>%
+  # Find count by block
+  group_by(name) %>%
+  summarise(records = n()) %>%
+  st_drop_geometry() %>%
+  # Add zero blocks via a join
+  right_join(blocks_sf, by="name") %>%
+  select(name, records, geometry) %>%
+  replace_na(list(records=0)) %>%
+  st_as_sf()  
+```
+
+```{r checklist_by_block_map}
+# Get priority block centroids for plotting
+priority_centroids <- st_centroid(filter(blocks_sf, priority==1)$geometry)
+
+# Plot the map
+tmap_mode("view")
+tm_shape(method_A) +
+  tm_fill(col = "records", palette = "Blues", style="fixed", alpha = .6,
+          breaks = c(0, 1, 2, 5, 10, 15, 20, 1000), as.count = TRUE) +
+tm_shape(method_B) +
+  tm_fill(col = "records", palette = "Reds", style="fixed", alpha = .6,
+          breaks = c(0, 1, 2, 5, 10, 15, 20, 1000), as.count = TRUE) +
+tm_shape(priority_centroids) + tm_symbols(col="purple", size=0.01, shape=5) + 
+tm_shape(buffered_coordinates) + tm_borders()
+```
+
+# Breeding records
+```{r plot breeding}
+lump <- list(S = c("S", "S7", "M"), O = c("", "F", "O", "NC"))
+no_plot_codes <- NULL
+out_pdf <- "~/Documents/NCBA/test.pdf"
+
+breeding_boxplot(species, records, pallet="Paired", out_pdf=NULL, 
+                 no_plot_codes=no_plot_codes, lump=lump, drop=TRUE)
+```
+
+Summarize by breeding codes
+```{r mongo_breeding}
+records2 <- records %>%
+            group_by(breeding_code) %>%
+            summarize(reports=n())
+print(records2)
+```

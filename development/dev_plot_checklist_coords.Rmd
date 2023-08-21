@@ -1,0 +1,123 @@
+---
+title: "dev_plot_record_coordinates"
+author: "N.M. Tarr"
+output: html_document
+  html_document:
+    df_print: paged
+    code_folding: hide
+  rmdformats::downcute:
+---
+```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+# Purpose
+This document details a function that plots the geographic coordinates of records.
+
+```{r}
+plot_recordss_coords <- function(records, codes = NULL){
+  # Return a map of record locations, based on their reported coordinates
+  #   
+  # Note: points will be mapped in the CRS of the records data frame,
+  #   which is likely EPSG:4326.
+  # 
+  # Parameters:
+  # records -- data frame of records, with columns named "latitude" and 
+  #   "longitude".
+  # codes -- breeding codes to map.  They are all lumped into one category
+  #
+  # Example:
+  # coords.map <- plot_records_coords(get_all_records(config, 
+  #                                      drop_ncba_col=TRUE),
+  #.                                     codes = c("ON", "NB", "FY"))
+  # plot(coords.map)
+  library(tidyverse)
+  
+  # Select only records for the provided codes
+  if (is.null(codes) == FALSE) {
+    records <- records %>% filter(breeding_code %in% codes)  
+    print(unique(records$breeding_code))
+  }
+  
+  # Build a caption for the map
+  if (is.null(codes) == FALSE) {
+    caption <- paste("Included Breeding Codes: ", paste(codes, collapse=' '))
+  } else {
+    caption <- ""
+  }
+  
+  # Make a plotable object
+  ggplot(data=records) +
+    geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
+               shape=3) + 
+    labs(title="",
+         caption= caption) +
+    ylab("latitude") + 
+    xlab("longitude")
+}
+```
+
+
+# Usage
+This demo requires the tidyverse packages.
+```{r}
+library(tidyverse)
+```
+
+Load the NCBA functions because this function relies upon the output from some of them.
+```{r}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+```
+
+Set the working directory to somewhere outside of the NCBA repository so that results are not saved in the repository.
+```{r}
+setwd("~/Documents/NCBA/species/")
+```
+
+Use the NCBA connection function to connect to the Atlas Cache (the mongodb).
+```{r}
+# connect to a specific collection (table)
+connection <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt", 
+                              collection = "ebd")
+```
+
+Identify a species to investigate.
+```{r}
+species <- "Willow Flycatcher"
+print(species)
+```
+
+Retrieve the records for the species from the Atlas Cache
+```{r}
+time1 <- proc.time()
+
+# execute a query
+query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
+
+nc_data <- connection$find(query) %>%
+  unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
+  filter(COMMON_NAME == species)
+
+# format columns to the standard analysis format (ebd format)
+records <- to_ebd_format(nc_data, drop=FALSE)
+
+# Calculate processing time
+mongotime <- proc.time() - time1
+
+# Print number of records returned
+print(paste("Records returned:", nrow(records)))
+print(paste("Runtime: ", mongotime[["elapsed"]]))
+print(head(records))
+```
+
+Plot the coordinates
+```{r}
+coords.map <- plot_records_coords(records)
+plot(coords.map)
+```
+
