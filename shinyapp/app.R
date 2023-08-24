@@ -21,6 +21,8 @@ if(!require(htmltools)) install.packages(
   "htmltools", repos = "http://cran.us.r-project.org")
 if(!require(shinythemes)) install.packages(
   "shinythemes", repos = "http://cran.us.r-project.org")
+# if(!require(waffle)) install.packages(
+#   "waffle", repos = "https://cinc.rud.is")
 
 #adds functions for tooltips
 if(!require(shinyBS)) install.packages(
@@ -102,7 +104,7 @@ ui <- bootstrapPage(
             htmlOutput("checklist_counter")
           ),
           div(class="tab-control-group",
-           prettySwitch("portal_records","Portal Records Only", FALSE ),
+           prettySwitch("portal_records","Portal Records Only", TRUE ),
             radioButtons("season_radio",label = h4("Season"),
               choices = list(
                 "All Records" = "All",
@@ -489,22 +491,50 @@ server <- function(input, output, session) {
     sa_list <- spp_accumulation_results()$spp_unique
 
     spp_total <- nrow(sa_list["spp"])
-    confirmed_total <- nrow(filter(sa_list, bcat == "C4" ))
-    if ((spp_total*0.5)<confirmed_total) {
-      confirmed_class = "success"
-    } else {
-      confirmed_class = "failed"
-    }
+    # confirmed_total <- nrow(filter(sa_list, bcat == "C4" ))
+    # if ((spp_total*0.5)<confirmed_total) {
+    #   confirmed_class = "success"
+    # } else {
+    #   confirmed_class = "failed"
+    # }
 
     # add conditional formatting if criteria met
-    num_spp_total <- paste("Species: ", nrow(sa_list["spp"]) )
+    num_spp_total = paste("Species: ", nrow(sa_list["spp"]) )
+    print(num_spp_total)
+    num_c = nrow(filter(sa_list, bcat == "C4" ))
+    num_r = nrow(filter(sa_list, bcat == "C3"))
+    num_p = nrow(filter(sa_list, bcat == "C2"))
+    num_coded = num_c + num_r + num_p
+    print(num_coded)
+    num_coded <- num_coded %>% replace(is.na(.),0)
+    # num_o = num_spp_total - num_coded
+    pct_c = (num_c/num_coded)*100
+    pct_r = (num_r/num_coded)*100
+    pct_p = (num_p/num_coded)*100
+    print(pct_c)
+    print(pct_r)
+    print(pct_p)
+    # leg_p = paste0('Possible (', pct_p , '%)')
+    # leg_r = paste0('Probable (', pct_r , '%)')
+    # leg_c = paste0('Confirmed (', pct_c , '%)')
+
     num_breed_confirm <- paste(
-      "Confirmed (C4):<span class='", confirmed_class, "'>",
-      confirmed_total, "</span>")
+      "Confirmed (C4):", num_c,  " (", format(pct_c, digits=1), "%)")
     num_breed_prob <- paste(
-      "Probable (C3):", nrow(filter(sa_list, bcat == "C3" )))
+      "Probable (C3):", num_r, " (", format(pct_r,digits=1) , "%)")
     num_breed_poss <- paste(
-      "Possible (C2):", nrow(filter(sa_list, bcat == "C2" )))
+      "Possible (C2):", num_p, " (", format(pct_p,digits=1), "%)")
+    
+    spp_crp <- c('Possible' = num_p, 'Probable' = num_r, 'Confirmed' = num_c)
+    # waf <- waffle(
+    #       spp_crp,
+    #       rows = 5,
+    #       size = 1,
+    #       colors = c('#BF78EB',alpha('#7E2AB3', 1/3),'#300C56'),
+    #       title = "Species Breeding Status",
+    #       legend_pos = "bottom"
+    #   )
+    # print(waf)
 
     ### Block Hours ----------------------------------------------------
     diurnal_hours <- block_hrs_results()$total_hr - block_hrs_results()$noc_hr
@@ -556,6 +586,7 @@ server <- function(input, output, session) {
       num_nocturnal_hours,
       num_total_hours,
       sep='<br/>'))
+
   })
 
 
@@ -982,21 +1013,50 @@ server <- function(input, output, session) {
   # print(pipeline)
   # ebird <- aggregate_ebd_data(pipeline)
 
+  # pipeline  <- sprintf(
+  #   '[{"$match":{"COMMON_NAME": "%s"}},
+  #     {"$unwind":{"path": "$bcList"}},
+  #     {"$project":{"_id": "$COMMON_NAME",
+  #                 "COMMON_NAME": 1,
+  #                 "SAMPLING_EVENT_IDENTIFIER" : 1,
+  #                 "OBSERVATION_DATE":"$bcList.OBSERVATION_DATE",
+  #                 "BREEDING_CODE": "$bcList.BREEDING_CODE"
+  #               }
+  #     }]',
+  #     spp)
+
+  #this pipeline pulls from the ebd_observations collection
+  # slower, but needs less pre-compilation (like spp_summaries)
   pipeline  <- sprintf(
-    '[{"$match":{"COMMON_NAME": "%s"}},
-      {"$unwind":{"path": "$bcList"}},
-      {"$project":{"COMMON_NAME": 1,
-                  "OBSERVATION_DATE":"$bcList.OBSERVATION_DATE",
-                  "BREEDING_CODE": "$bcList.BREEDING_CODE"
-                }
-      }]',
+    '[{
+      "$match": {"COMMON_NAME": "%s"}
+      },
+      {"$group":
+          {"_id": {
+              "bcode": "$BREEDING_CODE",
+              "odate": "$OBSERVATION_DATE"
+            },
+            "cname": {
+              "$first": "$COMMON_NAME"
+            }
+          }
+      },
+      {
+        "$project": {
+          "_id": "$cname",
+          "COMMON_NAME": "$cname",
+          "OBSERVATION_DATE": "$_id.odate",
+          "BREEDING_CODE": "$_id.bcode"
+        }
+      }
+    ]' ,
       spp)
 
-
+  # print(pipeline)
   ebird <- aggregate_spp_data(pipeline)
 
   print("aggregate pipeline completed.")
-  print(ebird)
+  # print(ebird)
   ##### END EXPERIMENT
 
   print("ebd records retrieved, plotting data")

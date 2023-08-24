@@ -43,6 +43,11 @@ m_spp_summaries <- mongo(
   url = URI,
   options = ssl_options(weak_cert_validation = T))
 
+m_observations <- mongo(
+  "ebd_observations",
+  url = URI,
+  options = ssl_options(weak_cert_validation = T))
+
 m_sd <- mongo(
   "safe_dates",
   url = URI,
@@ -101,8 +106,10 @@ aggregate_ebd_data <- function (pipeline) {
   mongodata <- m$aggregate(pipeline)
   return(mongodata)
 }
-aggregate_spp_data <- function (pipeline) {
-  mongodata <- m_spp_summaries$aggregate(pipeline)
+aggregate_spp_data <- function (pipeline) {  
+
+  mongodata <- m_observations$aggregate(pipeline)
+  # mongodata <- m_spp_summaries$aggregate(pipeline)
   return(mongodata)
 }
 
@@ -146,32 +153,66 @@ get_spp_by_block <- function(species){
 # species,
 # species
 #   )
-  # mongodata <- m$aggregate(pipeline)
+#   mongodata <- m$aggregate(pipeline)
 
+# pulls from block_summaries collection
+  # pipeline <- sprintf(
+  #   '[
+  #     {
+  #       "$unwind":
+  #         {
+  #           "path": "$sppList"
+  #         }
+  #     },
+  #     {
+  #       "$match": {
+  #           "sppList.COMMON_NAME": "%s"
+  #         }
+  #     },
+  #     {
+  #       "$project":
+  #         {
+  #           "ID_NCBA_BLOCK": 1,
+  #           "bc": "$sppList.breedMaxCategory"
+  #         }
+  #     }
+  #   ]',
+  #   species
+  #   )
+  # mongodata <- m_block_summaries$aggregate(pipeline)
+# pulls from ebd_observations  collection
   pipeline <- sprintf(
     '[
       {
-        "$unwind":
-          {
-            "path": "$sppList"
+        "$match": {
+            "COMMON_NAME": "%s"
           }
       },
       {
-        "$match": {
-            "sppList.COMMON_NAME": "%s"
+        "$group": {
+          "_id": "$ID_NCBA_BLOCK",
+          "bcat": {
+            "$max": "$BREEDING_CATEGORY" 
+          },
+          "ID_NCBA_BLOCK" : {
+            "$first" : "$ID_NCBA_BLOCK" 
           }
+        }
       },
       {
         "$project":
           {
             "ID_NCBA_BLOCK": 1,
-            "bc": "$sppList.breedMaxCategory"
+            "bc": "$bcat"
           }
       }
     ]',
     species
     )
-  mongodata <- m_block_summaries$aggregate(pipeline)
+  mongodata <- m_observations$aggregate(pipeline)
+
+
+
 
   return(mongodata)
 
