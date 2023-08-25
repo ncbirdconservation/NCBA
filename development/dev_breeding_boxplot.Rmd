@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 ```
 
 # Purpose
-This document details a function that generates a boxplot of breeding codes with some customization options and supports the ability to view the checklist behind individual data points by clicking on them in the figure.  The function offers several options as arguments.
+This document details a function that generates a boxplot of breeding codes with some customization options and supports the ability to view the checklist behind individual data points by clicking on them in the figure.  The function offers several options as parameters.
 
 interactive -- whether to create an interactive plot that supports opening
    checklist URLs by clicking on data points in the figure.
@@ -27,7 +27,6 @@ drop -- TRUE or FALSE whether to include unreported codes in the plot
 
 # Function Definition
 ```{r}
-# ------------------------------------------------------------------------------
 breeding_boxplot_dev <- function(species, data, interactive=TRUE, 
                                  pallet="Paired", omit_codes=NULL,
                                  lump=NULL, drop=TRUE, cex.x.axis = 0.9, 

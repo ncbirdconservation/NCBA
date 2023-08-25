@@ -1,0 +1,1 @@
+Map of blocks where the species has been predicted to occur, but has not yet been reported, including highest coded observation per species in block and distinguished by breeding/non-breeding season based on best available safe dates, GAP predictions, or other appropriate metrics. 

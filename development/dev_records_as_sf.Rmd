@@ -1,11 +1,9 @@
 ---
-title: "dev_plot_record_coordinates"
+title: "dev_records_as_sf"
 author: "N.M. Tarr"
-output: html_document
-  html_document:
-    df_print: paged
-    code_folding: hide
-  rmdformats::downcute:
+output:
+  word_document: default
+  html_document: default
 ---
 ```{r setup, include=TRUE, message=TRUE, warning=TRUE}
 knitr::opts_chunk$set(
@@ -118,10 +116,16 @@ connection <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt",
                               collection = "ebd")
 ```
 
+ncba_functions has a function that returns a spatial data frame of NC counties in the 6542 CRS.  Get that for use later in maps.
+```{r}
+counties <- counties_NC()
+```
+
+
 ## Observations (species-level records)
 Identify a species to investigate.
 ```{r}
-species <- "Kentucky Warbler"
+species <- "Willow Flycatcher"
 ```
 
 Retrieve the records for the species from the Atlas Cache
@@ -135,26 +139,40 @@ nc_data <- connection$find(query) %>%
   unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
   filter(COMMON_NAME == species)
 
+# format columns to the standard analysis format (ebd format)
+records <- to_ebd_format(nc_data, drop=FALSE)
+
 # Calculate processing time
 mongotime <- proc.time() - time1
 
 # Print number of records returned
 print(paste("Records returned:", nrow(records)))
 print(paste("Runtime: ", mongotime[["elapsed"]]))
-print(head(records))
 ```
 
 Plot the coordinates
 ```{r}
 coords <- records_as_sf_dev(records, kind="observations", method="points")
-plot(coords$geometry)
+
+# Make a simple map
+ggplot(data = counties) +
+    geom_sf() +
+    geom_sf(data = coords, size = 4, shape = 20, 
+            crs = st_crs(6542), colour = "darkred") + 
+    ggtitle(paste("All Record Coordinates for the", species), subtitle = "")
 ```
 
-Plot the footprint
+Plot the footprints.
 ```{r}
 footprints <- records_as_sf_dev(records, kind="observations", 
                               method="point-radius")
-plot(footprints$geometry)
+
+# Make a simple map
+ggplot(data = counties) +
+    geom_sf() +
+    geom_sf(data = footprints, size = 4, shape = 20, 
+            crs = st_crs(6542), colour = "darkred", fill = NA) + 
+    ggtitle(paste("All Record Footprints for the", species), subtitle = "")
 ```
 
 Preview the result as a data frame
@@ -162,17 +180,43 @@ Preview the result as a data frame
 print(head(footprints))
 ```
 
+Plot just the records that confirm breeding
+```{r}
+# Get our list of confirmation codes from ncba_functions
+conf_codes <- breeding_codes()["confirmed"][[1]]
+
+# Select only those records that confirm
+confirmed <- records %>% filter(breeding_code %in% conf_codes)
+
+# Make it spatial
+confirmed_sf <- records_as_sf_dev(confirmed, kind="observations", 
+                                  method="points")
+
+# Make a simple map
+ggplot(data = counties) +
+    geom_sf() +
+    geom_sf(data = confirmed_sf, size = 4, shape = 20, 
+            crs = st_crs(6542), colour = "darkred") + 
+    ggtitle(paste("Coordinates for Confirmed Breeding by the", species), subtitle = "")
+```
+
 ## Checklists
 Retrieve a dataframe of checklists.  Note that this use depends on connection code from above.
 ```{r}
-some_checklists <- head(get_all_checklists(ncba_config=config, 
-                                           drop_ncba_col=TRUE), 200)
+all_checklists <- get_all_checklists(ncba_config=config, drop_ncba_col=TRUE)
 ```
 
-Plot the checklists
+Plot the coordinates for all of the checklists from the Atlas Cache.
 ```{r}
-footprints <- records_as_sf_dev(some_checklists, kind="checklists", 
-                                method="point-radius")
-plot(footprints$geometry)
+# Make the data frame spatial
+footprints <- records_as_sf_dev(all_checklists, kind="checklists", 
+                                method="points")
+
+# Make a simple map
+ggplot(data = counties) +
+       geom_sf() +
+       geom_sf(data = footprints, size = 4, shape = 3, crs = st_crs(6542),
+               colour = "darkred") + 
+       ggtitle("All NC Atlas Cache Checklist Coordinates", subtitle = "")
 ```
 

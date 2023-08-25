@@ -1,11 +1,11 @@
 ---
 title: "dev_describe_checklists"
 author: "N.M. Tarr"
-output: html_document
+output:
   html_document:
     df_print: paged
-    code_folding: hide
-  rmdformats::downcute:
+  rmdformats::downcute: null
+  word_document: default
 ---
 ```{r setup, include=TRUE, message=TRUE, warning=TRUE}
 knitr::opts_chunk$set(
@@ -80,6 +80,7 @@ start_time_boxplot_dev <- function(checklists){
   #                                                    drop_ncba_col=TRUE))
   # plot(start.box)
   # make a vector of plottable start times.
+  library(hms)
   times <- checklists %>%
     filter(time_observations_started != "") %>% # empty strings cause probs.
     select(time_observations_started) %>%
@@ -190,8 +191,6 @@ year_bar_dev <- function(checklists){
 ```
 
 
-
-
 # Usage
 This demo requires the tidyverse packages.
 ```{r}
@@ -219,7 +218,7 @@ connection <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt",
 
 Identify a species to investigate.
 ```{r}
-species <- "Willow Flycatcher"
+species <- "Ovenbird"
 print(species)
 ```
 
@@ -235,7 +234,7 @@ nc_data <- connection$find(query) %>%
   filter(COMMON_NAME == species)
 
 # format columns to the standard analysis format (ebd format)
-records <- to_ebd_format(nc_data, drop=FALSE)
+records <- to_ebd_format(nc_data, drop=TRUE)
 
 # Calculate processing time
 mongotime <- proc.time() - time1
