@@ -1,0 +1,25 @@
+Running the following lines of code will load the NCBA functions and connect to a table in the Atlas Cache
+```{r}
+# Set working directory to your code repo so that ncba functions can be loaded.
+setwd("~/Code/NCBA/resources")
+
+# Load the NCBA functions
+source("ncba_functions.R")
+
+# Assign the path to your NCBA config file
+config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+
+# connect to a specific collection (table)
+connection <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt", 
+                              collection = "ebd")
+```
+
+Here is the same code without any comments
+```{r}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+connection <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt", 
+                              collection = "ebd")
+```
+
