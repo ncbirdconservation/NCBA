@@ -30,7 +30,7 @@ drop -- TRUE or FALSE whether to include unreported codes in the plot
 breeding_boxplot_dev <- function(species, data, interactive=TRUE, 
                                  pallet="Paired", omit_codes=NULL,
                                  lump=NULL, drop=TRUE, cex.x.axis = 0.9, 
-                                 cex.y.axis = 0.8) {
+                                 cex.y.axis = 0.8, subtitle = NULL) {
   # Produces a boxplot of breeding codes over calendar day.
   #
   # Description:
@@ -53,6 +53,8 @@ breeding_boxplot_dev <- function(species, data, interactive=TRUE,
   #   variable "codelevels" in function "chronplot" (below) will need to be added
   #   there.
   # drop -- TRUE or FALSE whether to include unreported codes in the plot
+  # subtitle -- NULL or text that you wish to use as a subtitle.
+  
   library(lubridate)
   library(grid)
   library(gridBase)
@@ -282,13 +284,13 @@ setwd("~/Documents/NCBA/species/")
 Use the NCBA connection function to connect to the Atlas Cache (the mongodb).
 ```{r}
 # connect to a specific collection (table)
-connection <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt", 
+connection_ebd <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt", 
                               collection = "ebd")
 ```
 
 Identify a species to investigate.
 ```{r}
-species <- "Willow Flycatcher"
+species <- "Black-and-white Warbler"
 print(species)
 ```
 
@@ -338,6 +340,36 @@ omit <- c("S7", "M", "NC", "H", "T", "P", "C", "CN", "N", "A", "NB",
 breeding_boxplot_dev(species, records, interactive=TRUE, pallet="Set3",
                  omit_codes=omit, lump=NULL, drop=TRUE)
 ```
+
+Make a figure that has a boxplot for each ecoregion.
+```{r}
+# Connect to the blocks collection (table)
+connection_blocks <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt", 
+                              collection = "blocks")
+
+# Get the blocks data frame with an ecoregion column.
+blocks <- connection_blocks$find()
+
+# Join the records to the blocks data frame to gain the ecoregion column
+records2 <- left_join(records, blocks, by = c("ncba_block" = "ID_EBD_NAME"))
+
+# Split into data frames for each ecoregion
+coastal <- subset(records2, ECOREGION == "CP")
+piedmont <- subset(records2, ECOREGION == "P")
+mountain <- subset(records2, ECOREGION == "M")
+
+# Make a three panel figure of boxplots
+par(mfrow=c(3,1))
+
+# Use the basic breeding code categories
+lumped_codes <- breeding_codes()
+
+# Make the boxplots
+breeding_boxplot_dev(c(species," CP"), coastal, interactive=FALSE, lump=lumped_codes)
+breeding_boxplot_dev(c(species," P"), piedmont, interactive=FALSE, lump=lumped_codes)
+breeding_boxplot_dev(c(species," M"), mountain, interactive=FALSE, lump=lumped_codes)
+```
+
 
 # Tests
 Fully programmed tests are not feasible because the function returns a figure, but we can summarize the aspects of the dataset behind the figure and visually compare them to what the figure shows.  From the cells above, the input data frame is named "records".

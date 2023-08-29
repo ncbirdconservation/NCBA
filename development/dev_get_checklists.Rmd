@@ -1,0 +1,101 @@
+---
+title: "dev_get_checklists"
+author: "N.M. Tarr"
+date: "2023-08-28"
+output: html_document
+---
+
+```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
+```
+
+# Function
+```{r}
+get_checklists_dev <- function(dataset = "AtlasCache", drop_columns = TRUE, 
+                               ncba_config){
+  # Get a data frame of checklists from the AtlasCache
+  # 
+  # Parameters:
+  # dataset -- either "EBD" for a downloaded eBird dataset or "AtlasCache" for
+  #   the NCBA mongodb.
+  # drop_columns -- whether to drop non-eBird columns from the output data frame.
+  #   TRUE or FALSE and defaults to TRUE.
+  # ncba_config -- config file with NCBA MongoDB username and password
+
+  library(tidyverse)
+  
+  # Connect to the NCBA database
+  connection <- connect_ncba_db(ncba_config, "ebd_mgmt", "ebd")
+  
+  # Define a query
+  query <- '{}'
+  
+  # Define a filter that excludes the observation column
+  filter <- '{"OBSERVATIONS":0}'
+  
+  # Retrieve the checklists
+  checklists <- connection$find(query = query, fields = filter)
+  
+  # Make column names lower case to match eBird data download format
+  colnames(checklists) <- tolower(colnames(checklists))
+  
+  # Drop columns not in eBird sampling database.
+  colnames(checklists)[1] <- c("checklist_id")
+  
+  if (drop_ncba_col == TRUE) {checklists %>% select(
+    c(checklist_id, last_edited_date, county, county_code,
+      iba_code, bcr_code, usfws_code, atlas_block,
+      locality, locality_id, locality_type, latitude,
+      longitude, observation_date, time_observations_started,
+      observer_id, sampling_event_identifier, protocol_type,
+      protocol_code, project_code, duration_minutes, 
+      effort_distance_km, effort_area_ha, number_observers,
+      all_species_reported, group_identifier, trip_comments))}
+  else {checklists <- checklists}
+  
+  # Coerce data types of some columns to match eBird database format
+  checklists <- transform(checklists, bcr_code = as.integer(bcr_code),
+                          duration_minutes = as.integer(duration_minutes),
+                          all_species_reported = as.logical(all_species_reported),
+                          observation_date = as.Date(observation_date))
+}
+```
+
+# Usage
+This demo requires the tidyverse packages.
+```{r}
+library(tidyverse)
+```
+
+Load the NCBA functions because this function relies upon the output from some of them.
+```{r}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+```
+
+Retrieve observation functions with the function
+```{r}
+get_checklists_dev(dataset = "AtlasCache", 
+                   drop_columns = FALSE, ncba_config = config)
+```
+
+# Tests
+
+# Speed
+```{r}
+# # Run the function 30 times and record the runtime
+# time <- c()
+# for (i in 1:30) {
+#   time1 <- proc.time()
+#   get_observations_dev(species = "Willow Flycatcher", dataset = "AtlasCache", 
+#                        drop_columns = FALSE)
+#   time[i] <- proc.time() - time1
+# }
+# 
+# # Print the descriptive statistics
+# print(summary(time))

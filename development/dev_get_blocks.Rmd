@@ -1,0 +1,226 @@
+---
+title: "dev_get_blocks"
+author: "N.M. Tarr"
+date: "2023-08-28"
+output: word_document
+---
+
+```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
+```
+
+
+# Purpose
+This document details a functio to retrieve information about NCBA blocks in the form of a data frame or a spatial data frame (simple feature).  The function also allows the user to pass a list of fields to return if they do not want all of the available fields.  Restricting the fields returned can drastically speed up the query because some fields are nested with a large amount of data.
+
+
+# Function
+```{r}
+get_blocks_dev <- function(ncba_config, spatial = FALSE, fields = NULL,
+                           crs = 4326) {
+  # Returns a data frame of blocks with or without geometries
+  # 
+  # Description:
+  #   Retrieves the blocks data set in a data frame or spatial data frame 
+  #   (simple feature).  A subset of all available fields can be specified
+  #   to speed up the query.
+  # 
+  # Parameters:
+  # ncba_config -- config file with NCBA MongoDB username and password
+  # spatial -- TRUE or FALSE whether to return a spatially enabled data frame
+  #     TRUE yields a data frame whereas FALSE returns a simple features data 
+  #     frame.
+  # fields -- either NULL or a list of column names to include while excluding
+  #     all others.  On August 28, 2023, column names available were:
+  #   "AREA_SQMI"             "COUNTY"                "GEOM"                 
+  #   "ID_BLOCK"              "ID_BLOCK_CODE"         "ID_EBD_NAME"          
+  #   "ID_NCBA_BLOCK"         "ID_OLD_ID"             "ID_S123_NOSPACES"     
+  #   "ID_S123_SPACES"        "ID_WEB_BLOCKMAP"       "NW_X"                 
+  #   "NW_Y"                  "POSITION"              "PRIORITY"             
+  #   "QUADID"                "QUAD_BLOCK"            "QUAD_NAME"            
+  #   "REGION"                "SE_X"                  "SE_Y"                 
+  #   "SUBNAT2"               "TYPE"                  "ID_S123_NOSPACES_TEMP"
+  #   "ID_S123_SPACES_TEMP"   "GAP_SPP" (nested)      "EBD_SPP" (nested)    
+  #   "ECOREGION" 
+  #
+  #   crs -- code of the CRS that you want spatial output in.  Defaults to 4326.
+  library(sf)
+  
+  # Connect to the blocks collection (table)
+  connection_blocks <- connect_ncba_db(ncba_config = ncba_config, 
+                                       database = "ebd_mgmt", 
+                                       collection = "blocks")
+  
+  # Condition on whether fields were provided
+  if (is.null(fields) == TRUE) {
+    # Run query for data frame
+    blocks <- connection_blocks$find()
+    
+  } else {
+    
+    # If spatial is true, add necessary fields to fields list
+    if (spatial == TRUE) {
+      fields <- c(fields, "SE_X", "SE_Y", "NW_X", "NW_Y")
+    }
+      
+    # Convert the list of field names to a mongolite filter string
+    fields_string <- paste0('{', paste0('"', fields, '" : true', 
+                                        collapse = ', '), '}')
+      
+    # Run query for data frame
+    blocks <- connection_blocks$find(fields = fields_string)
+  }
+  
+  # Spatial - get a simple features data frame
+  if (spatial == TRUE) {
+    # Make a column with Well-known Text from SE_X and SE_Y etc.
+    blocks$wkt <- paste0("POLYGON((", blocks$SE_X, " ", blocks$SE_Y, ", ", 
+                      blocks$SE_X, " ", blocks$NW_Y, ", ", blocks$NW_X, " ", 
+                      blocks$NW_Y, ", ", blocks$NW_X, " ", blocks$SE_Y, ", ", 
+                      blocks$SE_X, " ", blocks$SE_Y, "))")
+
+    # Use the st_as_sf function to create a simple features data frame
+    blocks_sf <- st_as_sf(blocks, wkt = "wkt", crs = 4326)
+    
+    # Transform coordinate reference system
+    if (crs != 4326) {
+      blocks_sf <- st_transform(blocks_sf, crs)
+    }
+    
+    return(blocks_sf)
+    
+  } else {
+    
+    return(blocks)
+  }
+}
+```
+
+
+# Usage
+This demo requires the tidyverse packages.
+```{r}
+library(tidyverse)
+```
+
+Load the NCBA functions because this function relies upon the output from some of them.
+```{r}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+ncba_config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+```
+
+Retrieve a blocks data frame with all columns
+```{r}
+blocks <- get_blocks_dev(ncba_config = ncba_config, spatial = FALSE)
+print(head(blocks, 3))
+```
+
+Retrieve a blocks data frame with a subset of columns
+```{r}
+fields <- c("ID_BLOCK", "ECOREGION", "COUNTY")
+blocks <- get_blocks_dev(ncba_config = ncba_config, spatial = FALSE,
+                         fields = fields)
+print(head(blocks))
+```
+
+Retrieve a spatial data frame with a few columns
+```{r}
+fields <- c("ID_BLOCK", "ECOREGION")
+blocks_sf <- get_blocks_dev(ncba_config = ncba_config, spatial = TRUE,
+                         fields = fields)
+print(head(blocks_sf, 5))
+```
+
+
+# Tests
+Plot a blocks spatial data frame.
+```{r}
+fields <- c("ID_BLOCK", "TYPE")
+blocks_sf <- get_blocks_dev(ncba_config = ncba_config, spatial = TRUE,
+                         fields = fields)
+
+# Plot the spatial data frame
+ggplot(blocks_sf) +
+  geom_sf()
+```
+
+Get a data frame with a subset of fields
+```{r}
+fields <- c("ID_BLOCK", "ECOREGION")
+blocks <- get_blocks_dev(ncba_config = ncba_config, spatial = FALSE,
+                         fields = fields)
+print(names(blocks))
+```
+
+Confirm that the default CRS of output is 4326
+```{r}
+fields <- c("ID_BLOCK")
+blocks_sf <- get_blocks_dev(ncba_config = ncba_config, spatial = TRUE,
+                            fields = fields)
+st_crs(blocks_sf)
+```
+
+Confirm that the CRS changes appropriately
+```{r}
+fields <- c("ID_BLOCK")
+blocks_sf <- get_blocks_dev(ncba_config = ncba_config, spatial = TRUE,
+                            fields = fields, crs = 5070)
+st_crs(blocks_sf)
+```
+
+
+# Speed
+Describe runtimes for queries of a subset of fields
+```{r}
+fields <- c("ID_BLOCK", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
+
+#Run the function 30 times and record the runtime
+time <- c()
+for (i in 1:30) {
+  time1 <- proc.time()
+  get_blocks_dev(ncba_config = ncba_config, fields = fields)
+  time[i] <- proc.time() - time1
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
+
+Describe runtimes for subset queries with geometries (spatial set to TRUE)
+```{r}
+fields <- c("ID_BLOCK", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
+
+#Run the function 30 times and record the runtime
+time <- c()
+for (i in 1:30) {
+  time1 <- proc.time()
+  get_blocks_dev(ncba_config = ncba_config, fields = fields, spatial = TRUE)
+  time[i] <- proc.time() - time1
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
+
+Describe runtimes for query of all fields
+```{r}
+# fields <- c("ID_BLOCK", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
+# 
+# #Run the function 30 times and record the runtime
+# time <- c()
+# for (i in 1:30) {
+#   time1 <- proc.time()
+#   get_blocks_dev(ncba_config = ncba_config, fields = NULL)
+#   time[i] <- proc.time() - time1
+# }
+# 
+# # Print the descriptive statistics
+# print(summary(time))
+```
+
