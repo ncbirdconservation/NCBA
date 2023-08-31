@@ -19,7 +19,7 @@ __block_assessments__ -- descriptive analyses of individual blocks or groups of 
 
 __data_review__ -- QAQC code.
 
-__develop__ -- holds scripts used for testing and developing code.
+__development__ -- holds scripts used for testing and developing code.
 
 __effort_summaries__ -- summaries of eBird sampling data (eBird checklists) and NCBA data at the survey level.
 

@@ -40,7 +40,126 @@ connect_ncba_db <- function(ncba_config="ncba_config.R", database, collection){
 }
 
 # ------------------------------------------------------------------------------
-to_ebd_format <- function(dataframe, drop){
+get_blocks <- function(ncba_config, spatial = FALSE, fields = NULL,
+                           crs = 4326) {
+  # Returns a data frame of blocks with or without geometries
+  # 
+  # Description:
+  #   Retrieves the blocks data set in a data frame or spatial data frame 
+  #   (simple feature).  A subset of all available fields can be specified
+  #   to speed up the query.
+  # 
+  # Parameters:
+  # ncba_config -- config file with NCBA MongoDB username and password
+  # spatial -- TRUE or FALSE whether to return a spatially enabled data frame
+  #     TRUE yields a data frame whereas FALSE returns a simple features data 
+  #     frame.
+  # fields -- either NULL or a list of column names to include while excluding
+  #     all others.  On August 28, 2023, column names available were:
+  #   "AREA_SQMI"             "COUNTY"                "GEOM"                 
+  #   "ID_BLOCK"              "ID_BLOCK_CODE"         "ID_EBD_NAME"          
+  #   "ID_NCBA_BLOCK"         "ID_OLD_ID"             "ID_S123_NOSPACES"     
+  #   "ID_S123_SPACES"        "ID_WEB_BLOCKMAP"       "NW_X"                 
+  #   "NW_Y"                  "POSITION"              "PRIORITY"             
+  #   "QUADID"                "QUAD_BLOCK"            "QUAD_NAME"            
+  #   "REGION"                "SE_X"                  "SE_Y"                 
+  #   "SUBNAT2"               "TYPE"                  "ID_S123_NOSPACES_TEMP"
+  #   "ID_S123_SPACES_TEMP"   "GAP_SPP" (nested)      "EBD_SPP" (nested)    
+  #   "ECOREGION" 
+  #
+  #   crs -- code of the CRS that you want spatial output in.  Defaults to 4326.
+  library(sf)
+  
+  # Connect to the blocks collection (table)
+  connection_blocks <- connect_ncba_db(ncba_config = ncba_config, 
+                                       database = "ebd_mgmt", 
+                                       collection = "blocks")
+  
+  # Condition on whether fields were provided
+  if (is.null(fields) == TRUE) {
+    # Run query for data frame
+    blocks <- connection_blocks$find()
+    
+  } else {
+    
+    # If spatial is true, add necessary fields to fields list
+    if (spatial == TRUE) {
+      fields <- c(fields, "SE_X", "SE_Y", "NW_X", "NW_Y")
+    }
+    
+    # Convert the list of field names to a mongolite filter string
+    fields_string <- paste0('{', paste0('"', fields, '" : true', 
+                                        collapse = ', '), '}')
+    
+    # Run query for data frame
+    blocks <- connection_blocks$find(fields = fields_string)
+  }
+  
+  # Spatial - get a simple features data frame
+  if (spatial == TRUE) {
+    # Make a column with Well-known Text from SE_X and SE_Y etc.
+    blocks$wkt <- paste0("POLYGON((", blocks$SE_X, " ", blocks$SE_Y, ", ", 
+                         blocks$SE_X, " ", blocks$NW_Y, ", ", blocks$NW_X, " ", 
+                         blocks$NW_Y, ", ", blocks$NW_X, " ", blocks$SE_Y, ", ", 
+                         blocks$SE_X, " ", blocks$SE_Y, "))")
+    
+    # Use the st_as_sf function to create a simple features data frame
+    blocks_sf <- st_as_sf(blocks, wkt = "wkt", crs = 4326)
+    
+    # Transform coordinate reference system
+    if (crs != 4326) {
+      blocks_sf <- st_transform(blocks_sf, crs)
+    }
+    
+    return(blocks_sf)
+    
+  } else {
+    
+    return(blocks)
+  }
+}
+
+# ------------------------------------------------------------------------------
+get_observations <- function(species, dataset = "AtlasCache", 
+                                 drop_columns = TRUE) {
+  # Returns a data frame of species observations
+  # 
+  # Description:
+  #   Retrieves the observation records for a species from either the NCBA 
+  #   database or from a downloaded copy of the EBD.  If data is requested from
+  #   the Atlas Cache, then NCBA columns that are not found in the EBD datasets
+  #   can be dropped or retained.
+  # 
+  # Parameters:
+  # species -- common name of the species
+  # dataset -- either "EBD" for a downloaded eBird dataset or "AtlasCache" for
+  #   the NCBA mongodb.
+  # drop_columns -- whether to drop non-eBird columns from the output data frame
+  
+  if (dataset == "AtlasCache") {
+    # connect to a specific collection (table)
+    connection_ebd <- connect_ncba_db(ncba_config = config, 
+                                      database = "ebd_mgmt", 
+                                      collection = "ebd")
+    
+    # execute a query
+    query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
+    
+    nc_data <- connection_ebd$find(query) %>%
+      unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
+      filter(COMMON_NAME == species)
+    
+    # format columns to the standard analysis format (ebd format)
+    records <- to_ebd_format(nc_data, drop=drop_columns)
+    
+    if (dataset == "EBD") {
+      print("NOT AVAILABLE YET")
+    }
+  }
+}
+
+# ------------------------------------------------------------------------------
+to_EBD_format <- function(dataframe, drop){
   # Reformat columns to match that of the EBD.
   #
   # Description:
@@ -65,8 +184,8 @@ to_ebd_format <- function(dataframe, drop){
                    "effort_distance_km", "effort_area_ha", "number_observers",
                    "all_species_reported", "group_identifier", "trip_comments", 
                    "breeding_code", "observation_count", "breeding_category", 
-                   "has_media", "behavior_category", "subspecies_scientific_name",
-                   "subspecies_common_name")
+                   "has_media", "subspecies_scientific_name",
+                   "subspecies_common_name") # Add in "behavior_category", ???
   if (drop == TRUE) {
     x <- dataframe %>% select(all_of(ebd_columns))
   }
@@ -76,79 +195,138 @@ to_ebd_format <- function(dataframe, drop){
 }
 
 # ------------------------------------------------------------------------------
-breeding_boxplot <- function(species, data, pallet, out_pdf, no_plot_codes,
-                             lump, drop, cex.x.axis = 0.9, cex.y.axis = 0.8) {
+breeding_boxplot <- function(species, data, interactive=TRUE, 
+                                 pallet="Paired", omit_codes=NULL,
+                                 lump=NULL, drop=TRUE, cex.x.axis = 0.9, 
+                                 cex.y.axis = 0.8, subtitle = NULL) {
   # Produces a boxplot of breeding codes over calendar day.
   #
   # Description:
   #   Produces a boxplot of breeding codes with some customization options.  
-  #     Copied from the wbbii_tools repo.
+  #     Copied from the wbbii_tools repo and altered.
   # 
   # Arguments:
   # species -- common name of the species
   # data -- data frame of ebird or NCBA data
-  # pallet -- choose a named RColorBrewer pallet (multiple colors), or a single color (name
-  #   or hex); see brewer.pal.info for list and display.brewer.all() to view all
-  #   pallets
-  # out_pdf -- path and name where to save an output pdf.  Set to NULL if you
-  #   don't want to save output.
-  # no_plot_codes -- a vector of evidence codes not be plotted. For example, 
+  # interactive -- whether to create an interactive plot that supports opening
+  #   checklist URLs by clicking on data points in the figure.
+  # pallet -- choose a named RColorBrewer pallet (multiple colors), or a single
+  #   color (name or hex); see brewer.pal.info for list and 
+  #   display.brewer.all() to view all pallets
+  # omit_codes -- a vector of evidence codes not be plotted. For example, 
   #   c("PE", "UN")
   # lump -- a list of named vectors where the vector name is used to place all
-  #   codes in the corresponding vector (e.g. 'S = c("S", "S7", "M")' replaces all
-  #   "S", "S7", and "M" with "S"). Note that any code that is not already in
+  #   codes in the corresponding vector (e.g. 'S = c("S", "S7", "M")' replaces
+  #   all "S", "S7", and "M" with "S"). Note that any code that is not already in
   #   variable "codelevels" in function "chronplot" (below) will need to be added
   #   there.
   # drop -- TRUE or FALSE whether to include unreported codes in the plot
+  # subtitle -- NULL or text that you wish to use as a subtitle.
   library(lubridate)
   library(grid)
   library(gridBase)
   library(RColorBrewer)
+  library(ggiraph)
+  library(ggplot2)
   
-  # Data prep
-  ebird <- data # THis should eventually be removed and ebird renamed.
+  # Data prep ------------------------------------------------------------------
+  ebird <- data # This should eventually be removed and ebird renamed.
+  
+  # replace breeding code entries "" with NULL
+  ebird["breeding_code"][ebird["breeding_code"] == ""] <- "NULL"
+  
   # put all dates within the same year -- ignores leap year
-  ebird$observation_date <- sub("^20\\d\\d", "2016", ebird$observation_date)
+  ebird$observation_date <- sub("^20\\d\\d", "2050", ebird$observation_date)
   
   # remove white space from evidence codes
   ebird$breeding_code <- trimws(ebird$breeding_code)
   
-  # lump evidence codes if lump has been set
-  if (is.null("lump") == FALSE) {
-    for (i in seq_along(lump)) {
-      indx <- ebird$breeding_code %in% lump[[i]]
-      ebird[indx, "breeding_code"] <- names(lump)[i]
-    }
-  }
-  
-  # remove unneeded evidence codes
-  if (is.null("no_plot_codes") == FALSE) {
-    ebird <- ebird[! ebird$breeding_code %in% no_plot_codes, ]
-  }
-  
-  # rename columns because ebird names are long
-  cols <- c("common_name", "breeding_code", "observation_date")
-  newnames <- c("name", "code", "obsdate")
-  ebird <- ebird[ebird$common_name == species, cols]
-  names(ebird) <- newnames
-  
   # make obsdate a date object
-  ebird$obsdate <- as.Date(ebird$obsdate, "%Y-%m-%d")
+  ebird$obsdate <- as.Date(ebird$observation_date, "%Y-%m-%d")
   
-  # set order that box plots will be plotted.
-  # http://stackoverflow.com/questions/19681586/ordering-bars-in-barplot
-  # this will be the order that codes are plotted in.
+  # Manage Breeding Codes ------------------------------------------------------
+  # set drop to true if lump is used
+  if (is.null(lump) == FALSE) {
+    drop <- TRUE
+  }
+  
+  # set drop to true if no plot codes is used
+  if (is.null(omit_codes) == FALSE) {
+    drop <- TRUE
+  }
+  
+  # specificy breeding codes and preferred plotting order
   # this vector will need updating if any new codes are introduced via "lump".
   codelevels <- c("H", "S", "S7", "M", "T", "P", "C", "B", "CN", "NB", "A", "N",
                   "DD", "ON", "NE", "FS", "CF", "NY", "FY", "FL", "PE", "UN",
-                  "F", "", "O", "NC")
+                  "F", "O", "NC", "NULL")
+  # http://stackoverflow.com/questions/19681586/ordering-bars-in-barplot
   
-  if (! all(ebird$code %in% codelevels)) {
+  # add any new codes from the lump categories    
+  if (is.null("lump") == FALSE) {
+    codelevels <- c(codelevels, names(lump)[! names(lump) %in% codelevels])
+  }
+  
+  # warn of unknown breeding codes in the data
+  if (! all(ebird$breeding_code %in% codelevels)) {
     warn <- paste("Not all eBird codes (breeding_code) for",
                   species, "are in codelevels")
     warning(warn)
   }
   
+  # add in unreported breeding codes to the data if drop is set to FALSE
+  if (drop == FALSE) {
+    # add rows with breeding codes from codelevels that are not present in ebird, 
+    # but are present in codelevels.  Leave all field blank except for breeding_code.
+    # get missing codes
+    missing_codes <- codelevels[! codelevels %in% ebird$breeding_code]
+    
+    # make a dataframe with same columns as ebird where all fields are blank except
+    # for breeding_code
+    missing <- data.frame(matrix(ncol = ncol(ebird), 
+                                 nrow = length(missing_codes)))
+    names(missing) <- names(ebird)
+    
+    # add missing_codes to breeding_codes
+    missing$breeding_code <- missing_codes
+    
+    # add missing codes to ebird
+    ebird <- rbind(ebird, missing)
+    
+    # make breeding codes factors so they are ordered correctly
+    ebird <- ebird %>% 
+      mutate(breeding_code = factor(ebird$breeding_code, 
+                                    levels = codelevels, ordered = TRUE))
+  }
+  
+  # if drop is set to TRUE, use present breeding codes as the code levels
+  #   but maintain the desired order.
+  if (drop == TRUE) {
+    # remove unwanted evidence codes
+    if (is.null("omit_codes") == FALSE) {
+      ebird <- ebird[! ebird$breeding_code %in% omit_codes, ]
+    }
+    
+    # lump evidence codes if lump has been set
+    for (i in seq_along(lump)) {
+      indx <- ebird$breeding_code %in% lump[[i]]
+      ebird[indx, "breeding_code"] <- names(lump)[i]
+    }
+    
+    # make breeding codes factors so they are ordered correctly
+    codelevels <- codelevels[codelevels %in% ebird$breeding_code]
+    
+    if (is.null("omit_codes") == FALSE) {
+      codelevels <- codelevels[! codelevels %in% omit_codes]
+    }
+    
+    ebird <- ebird %>% 
+      mutate(breeding_code = factor(ebird$breeding_code, levels = codelevels, 
+                                    ordered = TRUE))
+  }
+  
+  
+  # Colors ---------------------------------------------------------------------
   # associate colors with codelevels
   if (pallet %in% rownames(brewer.pal.info)) {
     n <- brewer.pal.info[pallet, "maxcolors"]
@@ -157,80 +335,104 @@ breeding_boxplot <- function(species, data, pallet, out_pdf, no_plot_codes,
     codecolors <- rep(pallet, length(codelevels))
   }
   
+  # colors 
   names(codecolors) <- codelevels
   
-  # used droplevels so that codes that where not observed are not plotted;
-  # remove droplevels if you'd like unobserved codes to be included on the plot
-  if (drop == TRUE) {
-    ebird$code <- droplevels(factor(ebird$code, levels = codelevels,
-                                    ordered = TRUE))
-  } 
+  # add column for color
+  ebird$col <- codecolors[ebird$breeding_code]
   
-  # plot "empty" box plot
-  boxplot(obsdate ~ code, horizontal = TRUE, cex.axis = cex.y.axis, xaxt = "n",
-          data = ebird, border = "white", main = species, las = 2,
-          xlab = "Date", ylab = "Breeding Codes", show.names = TRUE)
-  
-  date0 <- round_date(min(ebird$obsdate), "month")
-  date1 <- round_date(max(ebird$obsdate), "month")
-  labels <- seq(from = date0, to = date1, by = "month")
-  
-  if (length(unique(month(ebird$obsdate))) == 1) {
-    labels <- c(min(ebird$obsdate), max(ebird$obsdate))
-    labels <- unique(labels)  # in case there's only one obs
-  } else {
-    # limit labels to those within observed range
-    int <- interval(min(ebird$obsdate), max(ebird$obsdate))
-    labels <- labels[labels %within% int]
+  # Non-interactive plot -------------------------------------------------------
+  if (interactive == FALSE) {
+    # plot "empty" box plot
+    boxplot(obsdate ~ breeding_code, horizontal = TRUE, 
+            cex.axis = cex.y.axis, xaxt = "n", data = ebird, border = "white", 
+            main = species, las = 2, xlab = "Calendar Day", 
+            ylab = "Breeding Code", show.names = TRUE,
+            na.action = na.pass)
     
-    if (nrow(ebird) > 1 && length(labels) == 1) {
-      labels <- unique(c(min(ebird$obsdate), max(ebird$obsdate)))
+    have_dates <- subset(ebird, is.na(observation_date) == FALSE)
+    date0 <- round_date(min(have_dates$obsdate), "month")
+    date1 <- round_date(max(have_dates$obsdate), "month")
+    labels <- seq(from = date0, to = date1, by = "month")
+    
+    if (length(unique(month(have_dates$obsdate))) == 1) {
+      labels <- c(min(have_dates$obsdate), max(have_dates$obsdate))
+      labels <- unique(labels)  # in case there's only one obs
+    } else {
+      # limit labels to those within observed range
+      ##int <- interval(min(have_dates$obsdate), max(have_dates$obsdate))
+      ##labels <- labels[labels %within% int]
+      
+      if (nrow(have_dates) > 1 && length(labels) == 1) {
+        labels <- unique(c(min(have_dates$obsdate), max(have_dates$obsdate)))
+      }
     }
+    
+    # use format "%m/%d" for e.g. 06/01
+    # use format "%b %d" for e.g. "Aug 23"
+    names(labels) <- format(labels, "%b %d")
+    
+    vps <- baseViewports()
+    pushViewport(vps$inner, vps$figure, vps$plot)
+    
+    # label x axis; set font size in gpar(cex = relative_fontsize);
+    # grid.text is can be hard to follow but allows for arbitrary rotation of
+    # x labels
+    grid.text(names(labels), x = unit(labels, "native"),
+              y = unit(-0.7, "lines"), just = "right", rot = 65,
+              gp = gpar(cex = cex.x.axis))
+    popViewport(3)
+    
+    # add tick marks
+    axis(1, labels, labels = FALSE)
+    
+    # uncomment this to label the x axis a second time for sanity check
+    # because grid.text can be difficult to understand
+    # axis(1, labels, format(labels, "%m/%d"), col.axis = "red", las = 2)
+    
+    # select colors for stripchart
+    # should be able to use "codecolors[levels(ebird$breeding_code)]",  but
+    # that's giving an issue matching the empty string...
+    #col <- codecolors[names(codecolors) %in% levels(ebird$breeding_code)]
+    col <- unique(ebird$col)
+    
+    stripchart(obsdate ~ breeding_code, data = ebird, vertical = FALSE,
+               method = "jitter", pch = 16, col = col, add = TRUE, 
+               na.action = na.pass)
+    
+    # plot
+    boxplot(obsdate ~ breeding_code, horizontal = TRUE,  col = "#F5F5F500",
+            yaxt = "n", xaxt = "n", data = ebird, add = TRUE, 
+            na.action = na.pass)
   }
   
-  # use format "%m/%d" for e.g. 06/01
-  # use format "%b %d" for e.g. "Aug 23"
-  names(labels) <- format(labels, "%b %d")
-  
-  vps <- baseViewports()
-  pushViewport(vps$inner, vps$figure, vps$plot)
-  
-  # label x axis; set font size in gpar(cex = relative_fontsize);
-  # grid.text is can be hard to follow but allows for arbitrary rotation of
-  # x labels
-  grid.text(names(labels), x = unit(labels, "native"), y = unit(-0.7, "lines"),
-            just = "right", rot = 65, gp = gpar(cex = cex.x.axis))
-  popViewport(3)
-  
-  # add tick marks
-  axis(1, labels, labels = FALSE)
-  
-  # uncomment this to label the x axis a second time for sanity check
-  # because grid.text can be difficult to understand
-  # axis(1, labels, format(labels, "%m/%d"), col.axis = "red", las = 2)
-  
-  # select colors for stripchart
-  # should be able to use "codecolors[levels(ebird$code)]",  but
-  # that's giving an issue matching the empty string...
-  col <- codecolors[names(codecolors) %in% levels(ebird$code)]
-  
-  stripchart(obsdate ~ code, data = ebird, vertical = FALSE, method = "jitter",
-             pch = 16, col = col, add = TRUE)
-  
-  #set boxplot color and partial transparency (where alpha is opacity)
-  #run mycol to get the color code, then paste it into the next line
-  #mycol <- rgb(245, 245, 245, max = 255, alpha = 0, names = "ltgrayclear")
-  #mycol
-  
-  # plot
-  boxplot(obsdate ~ code, horizontal = TRUE,  col = "#F5F5F500", yaxt = "n", 
-          xaxt = "n", data = ebird, add = TRUE)
+  # Interactive plot -----------------------------------------------------------
+  if (interactive == TRUE) {
+    ebird$front <- 'https://ebird.org/checklist/'
+    ebird$ChecklistLink <- with(ebird, paste0(front, sampling_event_identifier))
+    
+    # ggiraph code for boxplot and interactive points
+    gg_point = ggplot(data = ebird) +
+      labs(y="Breeding Code", x="Calendar Day") +
+      geom_boxplot(aes(x = obsdate, y = breeding_code)) +
+      geom_point_interactive(aes(x = obsdate, y = breeding_code, color = col, 
+                                 tooltip = obsdate, data_id = obsdate,
+                                 onclick=paste0('window.open("', ChecklistLink,
+                                                '", "_blank")')),
+                             show.legend = FALSE, 
+                             position = position_jitter(width = .2, 
+                                                        height = .2)) +
+      theme_minimal() + labs(title = species)
+    
+    girafe(ggobj = gg_point, width_svg=10, 
+           options = list(opts_sizing(rescale = TRUE)))
+  }
 }
 
 
 # ------------------------------------------------------------------------------
 get_all_checklists <- function(ncba_config, drop_ncba_col=TRUE){
-  # Get a data frame of checklists from the NCBAdb.
+  # Get a data frame of checklists from the AtlasCache
   # 
   # Parameters:
   # ncba_config -- Config file with NCBA MongoDB username and password
@@ -307,7 +509,9 @@ lists_by_week <- function(checklists){
 
 
 # ------------------------------------------------------------------------------
-counties <- function(){
+counties_NC <- function(){
+  library(maps)
+  library(sf)
   # Read in a county spatial data frame in EPSG 6542
   st_as_sf(map("county", plot = FALSE, fill = TRUE)) %>%
   subset(grepl("north carolina", ID)) %>%
@@ -739,3 +943,42 @@ observations_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT
   }
   return(result)
 }
+
+# ------------------------------------------------------------------------------
+breeding_codes <- function(lumped = TRUE){
+  # Returns either a full or nested list of all breeding codes.
+  
+  # Parameters:
+  # collapsed -- TRUE or FALSE whether you want codes lumped into categories: 
+  #   observed, possible, probable, confirmed.
+  if (lumped == FALSE) {
+    list <- c("H", "S", "S7", "M", "T", "P", "C", "B", "CN", "NB", "A", "N",
+              "DD", "ON", "NE", "FS", "CF", "NY", "FY", "FL", "PE", "UN",
+              "F", "O", "NC", "NULL")
+  }
+  
+  if (lumped == TRUE) {
+    lists <- list(observed = c("F", "NULL", ""), 
+                  possible = c("H", "S"),
+                  probable = c("S7", "M", "P", "T", "C", "N", "A", "B"), 
+                  confirmed = c("PE", "CN", "NB", "DD", "UN", "ON", "FL", "CF",
+                                "FY", "FS", "CF", "NE", "NY")
+                  )
+  }
+}
+  
+# ------------------------------------------------------------------------------
+nonEBD_fields <- function() {
+  # Returns a list of NCBA only fields that are in the Atlas Cache EBD 
+  #   collection.
+  fields <- c("GEOM", "NCBA_REVIEW_DATE", "NCBA_REVIEWED", "NCBA_APPROVED",
+              "NCBA_REVIEWER", "NCBA_COMMENTS", "NCBA_BLOCK", "ID_BLOCK_CODE", 
+              "ID_NCBA_BLOCK", "PRIORITY_BLOCK", "EBD_NOCTURNAL", 
+              "NCBA_NOCTURNAL", "NCBA_NOCTURNAL_DURATION", 
+              "NCBA_NOCTURNAL_PARTIAL", "NCBA_OBSDT_UTC", "NCBA_SEASON",
+              "NCBA_QUARTER", "EXOTIC_CODE", "NCBA_INKIND", "NCBA_BLOCK_CODE",
+              "NOCTURNAL", "ID_NCBA_BLOCK_CODE" ) 
+  return(fields)
+}
+  
+  

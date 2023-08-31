@@ -1,0 +1,69 @@
+---
+title: "dev_to_EBD_format"
+author: "N.M. Tarr"
+date: "2023-08-30"
+output: word_document
+---
+
+```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
+```
+
+# Purpose
+Whereas the primary objective for this repository of code is to support the exploration and analysis of data by NC Bird Atlas staff, we are making an effort to support deployment of the code by other states as well.  The NCBA has its own database, the Atlas Cache, which uses a different database schema than the Ebird Basic Dataset.  Therefore, a function is needed to wrangle NCBA data into a format that is consistent with the EBD so that functions that use observation and checklist records as inputs could be used by other states.  This document details the format conversion function for making Atlas Cache records match the format of EBD records.
+
+
+# Function
+```{r}
+to_EBD_format <- function(dataframe, drop){
+  # Reformat columns to match that of the EBD.
+  #
+  # Description:
+  # Change the column names of a data frame retrieved from the NCBA mongo 
+  #   database to the format of tables retrieved from the eBird EBD.  This is to
+  #   facilitate the use and development of code for either the EBD or NCBA db. 
+  # 
+  # Parameters:
+  # dataframe -- a data frame retrieved from the NCBA mongo database.
+  # drop -- TRUE or FALSE whether to drop columns not present in the EBD.
+  
+  # Column capitalization
+  names(dataframe) <- str_to_lower(names(dataframe))
+  
+  # Column inclusion
+  ebd_columns <- c("last_edited_date", "county", "county_code",
+                   "iba_code", "bcr_code", "usfws_code", "atlas_block",
+                   "locality", "locality_id", "locality_type", "latitude",
+                   "longitude", "observation_date", "time_observations_started",
+                   "observer_id", "sampling_event_identifier", "protocol_type",
+                   "protocol_code", "project_code", "duration_minutes",
+                   "effort_distance_km", "effort_area_ha", "number_observers",
+                   "all_species_reported", "group_identifier", "trip_comments", 
+                   "breeding_code", "observation_count", "breeding_category", 
+                   "has_media", "subspecies_scientific_name",
+                   "subspecies_common_name") # Add in "behavior_category", ???
+  if (drop == TRUE) {
+    x <- dataframe %>% select(all_of(ebd_columns))
+  }
+  else {
+    x <- dataframe
+  }
+  
+  # Column formats
+  
+}
+```
+
+
+# Usage
+
+
+
+
+# Tests
+
+# Speed

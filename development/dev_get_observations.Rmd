@@ -16,7 +16,9 @@ knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
 # Function
 ```{r}
 get_observations_dev <- function(species, dataset = "AtlasCache", 
-                                 drop_columns = TRUE, fields = NULL,
+                                 ncba_only = FALSE,
+                                 drop_columns = TRUE, 
+                                 fields = NULL,
                                  ncba_config) {
   # Returns a data frame of species observations
   # 
@@ -30,6 +32,7 @@ get_observations_dev <- function(species, dataset = "AtlasCache",
   # species -- common name of the species
   # dataset -- either "EBD" for a downloaded eBird dataset or "AtlasCache" for
   #   the NCBA mongodb.
+  # ncba_only -- TRUE or FALSE whether to restrict records to NCBA records or not.
   # drop_columns -- whether to drop non-eBird columns from the output data frame
   # fields -- a list of field names to retrieve.  Default of NULL returns all 
   #   fields.  
@@ -42,20 +45,30 @@ get_observations_dev <- function(species, dataset = "AtlasCache",
                                       collection = "ebd")
   
     # Make a query
-    query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
+    query <- str_interp('{"OBSERVATIONS.COMMON_NAME" : "${species}"}')
+    print(query)
     
     # Condition on whether fields were provided.
-    if (is.na(fields) == TRUE) {
+    if (is.null(fields) == TRUE) {
       nc_data <- connection_ebd$find(query) %>%
         unnest(cols = (c(OBSERVATIONS))) #%>% # Expand observations
         #filter(COMMON_NAME == species)
     } else {
-      nc_data <- connection_ebd$find(query, fields = fields) %>%
+      # Add "OBSERVATIONS" to the field list, it is needed.
+      fields <- c(fields, "OBSERVATIONS")
+      
+      # Convert the list of field names to a mongolite filter string
+      fields_string <- paste0('{', paste0('"', fields, '" : true', 
+                                        collapse = ', '), '}')
+      
+      nc_data <- connection_ebd$find(query, fields = fields_string) %>%
         unnest(cols = (c(OBSERVATIONS)))
     }
     
     # format columns to the standard analysis format (ebd format)
     records <- to_ebd_format(nc_data, drop=drop_columns)
+    
+    return(records)
   }
     
   if (dataset == "EBD") {
@@ -80,12 +93,24 @@ ncba_config <- "~/Documents/NCBA/Scripts/ncba_config.R"
 
 Retrieve observation functions with the function
 ```{r}
+fields <- c("common_name", "global_unique_identifier", "project_code",
+            "ncba_block")
+
 obs <- get_observations_dev(species = "Willow Flycatcher", 
-                            dataset = "AtlasCache", 
-                            drop_columns = TRUE, ncba_config = ncba_config)
+                            dataset = "AtlasCache",
+                            ncba_only = FALSE,
+                            drop_columns = FALSE, 
+                            fields = fields,
+                            ncba_config = ncba_config)
 ```
 
 # Tests
+
+There should only be one species name in the data frame
+```{r}
+print(unique(obs$common_name))
+```
+
 
 # Speed
 ```{r}
