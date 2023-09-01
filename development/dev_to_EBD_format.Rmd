@@ -14,56 +14,182 @@ knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
 ```
 
 # Purpose
-Whereas the primary objective for this repository of code is to support the exploration and analysis of data by NC Bird Atlas staff, we are making an effort to support deployment of the code by other states as well.  The NCBA has its own database, the Atlas Cache, which uses a different database schema than the Ebird Basic Dataset.  Therefore, a function is needed to wrangle NCBA data into a format that is consistent with the EBD so that functions that use observation and checklist records as inputs could be used by other states.  This document details the format conversion function for making Atlas Cache records match the format of EBD records.
+Whereas the primary objective for this repository of code is to support the exploration and analysis of data by NC Bird Atlas staff, we are making an effort to support deployment of the code by other states as well.  The NCBA has its own database, the Atlas Cache, which uses a different database schema than the Ebird Basic Dataset.  Therefore, a function for wrangling NCBA data into a format that is consistent with the EBD would be valuable.  Functions that use observation and checklist records as inputs could then be used by other states.  This document details the format conversion function for making Atlas Cache records match the format of EBD records.
 
 
 # Function
 ```{r}
-to_EBD_format <- function(dataframe, drop){
-  # Reformat columns to match that of the EBD.
+to_EBD_format <- function(dataframe, drop = FALSE) {
+  # Reformat columns to match that of the EBD
   #
   # Description:
-  # Change the column names of a data frame retrieved from the NCBA mongo 
-  #   database to the format of tables retrieved from the eBird EBD.  This is to
-  #   facilitate the use and development of code for either the EBD or NCBA db. 
+  # Change the column names of a data frame retrieved from the NCBA Atlas Cache 
+  #   database to the format of tables retrieved from the eBird EBD.  Also 
+  #   assign data types of columns to match those of EBD as read in by the auk
+  #   package.  This functions first assesses whether a data frame has the EBD
+  #   format.  If not, it then reformats the data frame to match the EBD.  It 
+  #   then checks again for compliance before returning output.
   # 
   # Parameters:
-  # dataframe -- a data frame retrieved from the NCBA mongo database.
+  # dataframe -- a data frame retrieved from the NCBA Atlas Cache.
   # drop -- TRUE or FALSE whether to drop columns not present in the EBD.
   
-  # Column capitalization
+  # Get an EBD template to compare against.  One is available from auk
+  input_file <- system.file("extdata/ebd-sample.txt", package = "auk")
+  
+  # output text file
+  output_file <- "ebd_filtered_grja.txt"
+  
+  # Query EBD
+  EBD <- input_file %>% 
+    # 1. reference file
+    auk_ebd() %>% 
+    # 2. define filters
+    auk_species(species = "Canada Jay") %>% 
+    auk_country(country = "Canada") %>% 
+    # 3. run filtering
+    auk_filter(file = output_file, overwrite = TRUE) %>% 
+    # 4. read text file into r data frame
+    read_ebd()
+
+  
+  # Column capitalization ------------------------------------------------------
   names(dataframe) <- str_to_lower(names(dataframe))
   
-  # Column inclusion
-  ebd_columns <- c("last_edited_date", "county", "county_code",
-                   "iba_code", "bcr_code", "usfws_code", "atlas_block",
-                   "locality", "locality_id", "locality_type", "latitude",
-                   "longitude", "observation_date", "time_observations_started",
-                   "observer_id", "sampling_event_identifier", "protocol_type",
-                   "protocol_code", "project_code", "duration_minutes",
-                   "effort_distance_km", "effort_area_ha", "number_observers",
-                   "all_species_reported", "group_identifier", "trip_comments", 
-                   "breeding_code", "observation_count", "breeding_category", 
-                   "has_media", "subspecies_scientific_name",
-                   "subspecies_common_name") # Add in "behavior_category", ???
+  
+  # Column exclusion (dropping) ------------------------------------------------
   if (drop == TRUE) {
-    x <- dataframe %>% select(all_of(ebd_columns))
+    dataframe <- dataframe %>% select(any_of(names(EBD)))
   }
-  else {
-    x <- dataframe
-  }
+
   
-  # Column formats
+  # Data types -----------------------------------------------------------------  #### NOT WORKING
+  # Transform the data types of the columns in records that are also in EBD and
+  #   have different data types.
+  df2 <- transform(dataframe, 
+                       bcr_code = as.integer(bcr_code),
+                       duration_minutes = as.integer(duration_minutes),
+                       effort_area_ha = as.numeric(effort_area_ha),
+                       all_species_reported = as.logical(all_species_reported),
+                       observation_date = as.Date(observation_date),
+                       observation_count = as.character(observation_count),
+                       has_media = as.logical(has_media),
+                       taxonomic_order = as.numeric(taxonomic_order),
+                       approved = as.logical(approved),
+                       reviewed = as.logical(reviewed)
+                       )
   
+  return(df2)
 }
 ```
 
 
 # Usage
 
+Get a dataframe of observations from the Atlas Cache
+```{r}
+# Load the tidyverse packages
+library(tidyverse)
 
+# Load the NCBA functions
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+# Point to and load the config file
+ncba_config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+source(ncba_config)
+
+# Get observations
+observations <- get_observations(species = "King Rail", 
+                                     database = "AtlasCache", NCBA_only = TRUE,
+                                     EBD_fields_only = FALSE, fields = NULL,
+                                     ncba_config = ncba_config)
+```
+
+Convert the dataframe to the EBD format.
+```{r}
+observations2 <- to_EBD_format(observations, drop = TRUE)
+print(head(observations2))
+```
 
 
 # Tests
+
+Test that non EBD fields are dropped when drop is set to TRUE.  If this chunk returns FALSE, then the test is passed.
+```{r}
+# Get observations
+observations <- get_observations(species = "King Rail", 
+                                 database = "AtlasCache", NCBA_only = TRUE,
+                                 EBD_fields_only = FALSE, fields = NULL,
+                                 ncba_config = ncba_config)
+
+# Reformat
+observations2 <- to_EBD_format(observations, drop = TRUE)
+
+# Test if any non EBD fields are present
+print(unique(str_to_lower(nonEBD_fields()) %in% names(observations2)))
+```
+
+Also print the column names to demonstrate that they were made lowercase.
+```{r}
+print(names(observations))
+print("------------------------------------")
+print(names(observations2))
+```
+!!!!!WHY ARE NAMES GETTING DROPPED?
+
+Examine the data types.  Compare the data types of the output data frame to those of a data frame from an EBD sample.  This chunk shouldn't return the names of any columns.
+```{r}
+# Get an EBD template to compare against.  One is available from auk
+input_file <- system.file("extdata/ebd-sample.txt", package = "auk")
+# output text file
+output_file <- "ebd_filtered_grja.txt"
+EBD <- input_file %>% 
+    # 1. reference file
+    auk_ebd() %>% 
+    # 2. define filters
+    auk_species(species = "Canada Jay") %>% 
+    auk_country(country = "Canada") %>% 
+    # 3. run filtering
+    auk_filter(file = output_file, overwrite = TRUE) %>% 
+    # 4. read text file into r data frame
+    read_ebd()
+
+# Get the data types of the columns in records
+records.types <- sapply(observations2, class)
+
+# Get the data types of the columns in EBD
+EBD.types <- sapply(EBD, class)
+
+# Get the names of the columns in records that are also in EBD
+common.columns <- intersect(names(observations2), names(EBD))
+
+# Go through common columns and look for data type mismatches.
+for (x in common.columns) {
+  if (records.types[x] != EBD.types[x]) {
+    print(x)
+    print(EBD.types[x])
+    print(records.types[x])
+  }
+}
+```
+
+
+```{r}
+# po <- transform(observations2, 
+#                        bcr_code = as.integer(bcr_code),
+#                        duration_minutes = as.integer(duration_minutes),
+#                        effort_area_ha = as.numeric(effort_area_ha),
+#                        all_species_reported = as.logical(all_species_reported),
+#                        observation_date = as.Date(observation_date),
+#                        observation_count = as.character(observation_count),
+#                        has_media = as.logical(has_media),
+#                        taxonomic_order = as.numeric(taxonomic_order),
+#                        approved = as.logical(approved),
+#                        reviewed = as.logical(reviewed)
+#                        )
+```
+
+
 
 # Speed

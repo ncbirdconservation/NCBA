@@ -41,6 +41,7 @@ get_checklists_dev <- function(database = "AtlasCache", EBD_fields_only = TRUE,
   #     functions can be used.
 
   library(tidyverse)
+  library(auk)
   
   # Set the working directory
   if (is.null(work_dir) == FALSE) {
@@ -125,30 +126,6 @@ get_checklists_dev <- function(database = "AtlasCache", EBD_fields_only = TRUE,
   }
     
   return(checklists)
-
-  
-  # Make column names lower case to match eBird data download format
-  #colnames(checklists) <- tolower(colnames(checklists))
-  
-  # Drop columns not in eBird sampling database.
-  # colnames(checklists)[1] <- c("checklist_id")
-  # 
-  # if (drop_ncba_col == TRUE) {checklists %>% select(
-  #   c(checklist_id, last_edited_date, county, county_code,
-  #     iba_code, bcr_code, usfws_code, atlas_block,
-  #     locality, locality_id, locality_type, latitude,
-  #     longitude, observation_date, time_observations_started,
-  #     observer_id, sampling_event_identifier, protocol_type,
-  #     protocol_code, project_code, duration_minutes, 
-  #     effort_distance_km, effort_area_ha, number_observers,
-  #     all_species_reported, group_identifier, trip_comments))}
-  # else {checklists <- checklists}
-  
-  # # Coerce data types of some columns to match eBird database format
-  # checklists <- transform(checklists, bcr_code = as.integer(bcr_code),
-  #                         duration_minutes = as.integer(duration_minutes),
-  #                         all_species_reported = as.logical(all_species_reported),
-  #                         observation_date = as.Date(observation_date))
 }
 ```
 
@@ -190,7 +167,7 @@ Records from the Atlas Cache should also not include the nonEBD fields when EBD_
 print(unique(nonEBD_fields() %in% names(checklists)))
 ```
 
-On the other hand, if EBD_fields_only is set to FALSE, then nonEBD fields should be present in a returned data frame and the test from above should return TRUE in this chunk.
+On the other hand, if EBD_fields_only is set to FALSE, then non-EBD fields should be present in a returned data frame and the test from above should return TRUE in this chunk.
 ```{r}
 checklists <- get_checklists_dev(database = "AtlasCache", 
                                  ncba_config = ncba_config,
@@ -235,7 +212,7 @@ Perform the same test, but with the EBD database.  WARNING: this is very slow.
 ```
 
 
-# Speed
+# Speed (in seconds)
 Describe runtimes for queries of the Atlas Cache with ncba_only = TRUE
 ```{r}
 # Run the function 10 times and record the runtime
@@ -244,7 +221,8 @@ for (i in 1:30) {
   time1 <- proc.time()
   get_checklists_dev(database = "AtlasCache", ncba_config = ncba_config,
                      NCBA_only = TRUE)
-  time[i] <- proc.time() - time1
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
 }
 
 # Print the descriptive statistics

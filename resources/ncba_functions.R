@@ -431,6 +431,120 @@ breeding_boxplot <- function(species, data, interactive=TRUE,
 
 
 # ------------------------------------------------------------------------------
+get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
+                               NCBA_only = TRUE, fields = NULL,
+                               ncba_config){
+  # Get a data frame of checklists from the AtlasCache.  Use get_observations()
+  #   instead if you want species observation records.
+  # 
+  # Parameters:
+  # database -- either "EBD" for a downloaded eBird database or "AtlasCache" for
+  #   the NCBA mongodb.
+  # EBD_fields_only -- whether to include non-EBD, Atlas Cache fields in the output 
+  #   data frame. TRUE or FALSE and defaults to FALSE. This argument is set to 
+  #   FALSE if the fields argument in not NULL. When database is set to EBD,
+  #   this parameter is obsolete.
+  # NCBA_only -- whether to exclude non-NCBA project records.  This argument 
+  #   is set to FALSE if the fields argument in not NULL.
+  # fields -- a list of fields to return, excluding those not listed.  This 
+  #   parameter offers no speed benefit with EBD sampling datasets.
+  # ncba_config -- config file with NCBA MongoDB username and password.f
+  #
+  # Notes:
+  # - Data frame output when setting database to "AtlasCache" may require 
+  #     additional wrangling with the to_EBD_format function before subsequent
+  #     functions can be used.
+  
+  library(tidyverse)
+  library(auk)
+  
+  # Set the working directory
+  if (is.null(work_dir) == FALSE) {
+    setwd(work_dir)
+  }
+  
+  # If a list of fields is provided, set EBD_fields_only to FALSE
+  if (is.null(fields) == FALSE) {
+    EBD_fields_only = FALSE
+  }
+  
+  if (database == "AtlasCache") {
+    # Connect to the NCBA database
+    connection <- connect_ncba_db(ncba_config, "ebd_mgmt", "ebd")
+    
+    # Define a query
+    if (NCBA_only == FALSE) {
+      query <- '{}'
+    } else {
+      query <- '{"PROJECT_CODE" : "EBIRD_ATL_NC"}'
+    }
+    
+    # Define a filter that excludes the observation column...
+    if (is.null(fields) == TRUE) {
+      fields <- '{"OBSERVATIONS" : false}'
+      
+      # Identify AC fields for omission
+      AC.fields <- nonEBD_fields()
+      
+      # Build a field string for the query if necessary
+      if (EBD_fields_only == TRUE) {
+        # Convert the list of field names to a mongolite filter string
+        fields_string <- paste0('{', paste0('"', AC.fields, '" : false', 
+                                            collapse = ', '))
+        
+        # Redefine fields so that it can be pasted with the filter string
+        fields <- ', "OBSERVATIONS" : false}'
+        
+        # Combine with the existing fields string
+        fields <- paste0(fields_string, fields)
+      }
+      
+      # ... but if fields are provided, use those as a filter
+    } else {
+      # Convert the list of field names to a mongolite filter string
+      fields_string <- paste0('{', paste0('"', fields, '" : true', 
+                                          collapse = ', '), '}')
+      fields <- c(fields_string)
+    }
+    
+    # Retrieve the checklists
+    checklists <- connection$find(query = query, fields = fields)
+  }
+  
+  
+  if (database == "EBD") {
+    library(auk)
+    
+    # Condition next action on whether NCBA records only are desired.
+    if (ncba_only == TRUE) {
+      # Read in sampling data frame with auk
+      sampling <- EBD_sampling %>%
+        auk_sampling() %>%
+        auk_project("EBIRD_ATL_NC") %>%
+        auk_filter("TMP_EBD.txt") %>%
+        read_sampling() %>%
+        data.frame()
+    } else {
+      sampling <- EBD_sampling %>%
+        auk_sampling() %>%
+        auk_filter("TMP_EBD.txt") %>%
+        read_sampling() %>%
+        data.frame()
+    }
+    
+    # Subset the columns
+    if (is.null(fields) == FALSE) {
+      checklists <- select(sampling, fields)
+    } else {
+      checklists <- sampling
+    }
+  }
+  
+  return(checklists)
+}
+
+
+# ------------------------------------------------------------------------------
 get_all_checklists <- function(ncba_config, drop_ncba_col=TRUE){
   # Get a data frame of checklists from the AtlasCache
   # 
@@ -479,6 +593,152 @@ get_all_checklists <- function(ncba_config, drop_ncba_col=TRUE){
                           duration_minutes = as.integer(duration_minutes),
                           all_species_reported = as.logical(all_species_reported),
                           observation_date = as.Date(observation_date))
+}
+
+
+# ------------------------------------------------------------------------------
+get_observations <- function(species, database = "AtlasCache", 
+                                 NCBA_only = FALSE,
+                                 EBD_fields_only = FALSE,
+                                 fields = NULL,
+                                 ncba_config) {
+  # Returns a data frame of species observations
+  # 
+  # Description:
+  #   Retrieves the observation records for a species from either the NCBA 
+  #   database or from a downloaded copy of the EBD.  If data is requested from
+  #   the Atlas Cache, then NCBA columns that are not found in the EBD databases
+  #   can be dropped or retained. Additionally, a customized list of fields can 
+  #   be specified to limit the columns that are included in the output data 
+  #   frame.
+  # 
+  # Parameters:
+  # species -- common name of the species
+  # database -- either "EBD" for a downloaded eBird database or "AtlasCache" for
+  #   the NCBA mongodb.
+  # EBD_fields_only -- whether to include non-EBD, Atlas Cache fields in the output 
+  #   data frame. TRUE or FALSE and defaults to FALSE. This argument is set to 
+  #   FALSE if the fields argument in not NULL. When database is set to EBD,
+  #   this parameter is obsolete.
+  # NCBA_only -- whether to exclude non-NCBA project records.  This argument 
+  #   is set to FALSE if the fields argument in not NULL.
+  # fields -- a list of fields to return, excluding those not listed.  This 
+  #   parameter offers no speed benefit with EBD sampling datasets.
+  # ncba_config -- config file with NCBA MongoDB username and password.
+  #
+  # Notes:
+  # - Data frame output when setting database to "AtlasCache" may require 
+  #     additional wrangling with the to_EBD_format function before subsequent
+  #     functions can be used.
+  
+  library(tidyverse)
+  library(auk)
+  
+  # Set the working directory
+  if (is.null(work_dir) == FALSE) {
+    setwd(work_dir)
+  }
+  
+  # If a list of fields is provided, set EBD_fields_only to FALSE
+  if (is.null(fields) == FALSE) {
+    EBD_fields_only = FALSE
+  }
+  
+  if (database == "AtlasCache") {
+    # Connect to the NCBA database
+    connection <- connect_ncba_db(ncba_config, "ebd_mgmt", "ebd")
+    
+    # Define a query
+    if (NCBA_only == FALSE) {
+      query <- str_interp('{"OBSERVATIONS.COMMON_NAME" : "${species}"}')
+    } 
+    
+    if (NCBA_only == TRUE) {
+      query <- str_interp('{"PROJECT_CODE" : "EBIRD_ATL_NC", "OBSERVATIONS.COMMON_NAME" : "${species}"}')
+    }
+    
+    # Define a fields filter for the desired columns...
+    if (is.null(fields) == TRUE) {
+      if (EBD_fields_only == TRUE) {
+        # Identify AC fields for omission
+        AC.fields <- nonEBD_fields()
+        
+        # Convert the list of field names to a mongolite filter string
+        #   this will allow observations field through which then gets unnested
+        #   but that is OK because all fields nested within OBSERVATIONS are 
+        #   EBD fields
+        fields2 <- paste0('{', paste0('"', AC.fields, '" : false', 
+                                      collapse = ', '), '}')
+      } 
+      
+      if (EBD_fields_only == FALSE) {
+        fields2 <- "{}"
+      }
+    }
+    
+    # ... but if fields are provided, use those as a filter
+    if (is.null(fields) == FALSE) {
+      # Convert the list of field names to a mongolite filter string
+      fields_string <- paste0('{', paste0('"', fields, '" : true', 
+                                          collapse = ', '))
+      
+      # Redefine fields so that it can be pasted with the filter string
+      fields2 <- ', "OBSERVATIONS" : true}'
+      
+      # Combine with the existing fields string
+      fields2 <- paste0(fields_string, fields2)
+    }
+    
+    # Retrieve the checklists
+    records <- connection$find(fields = fields2, query = query) %>%
+      unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
+      filter(COMMON_NAME == species) # Rows for non-target species detected along
+    # with target species exist and need to be
+    # dropped.
+    
+    # Second pass at dropping unwanted fields (needed because of nested fields).
+    if (is.null(fields) == FALSE) {
+      # Get a list of names from fields that are still in the columns of records
+      dropem <- intersect(names(records), fields)
+      
+      # Drop the unwanted columns
+      records <- records %>% select(any_of(dropem))
+    }
+    return(records)
+  }
+  
+  
+  if (database == "EBD") {
+    library(auk)
+    
+    # Condition next action on whether NCBA records only are desired.
+    if (NCBA_only == TRUE) {
+      # Read in sampling data frame with auk
+      ebd <- EBD_observations %>%
+        auk_ebd() %>%
+        auk_project("EBIRD_ATL_NC") %>%
+        auk_species(species = species) %>%
+        auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
+        read_ebd() %>%
+        data.frame()
+    } 
+    
+    if (NCBA_only == FALSE) {
+      ebd <- EBD_observations %>%
+        auk_ebd() %>%
+        auk_species(species = species) %>% 
+        auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
+        read_ebd() %>%
+        data.frame()
+    }
+    
+    # Subset the columns
+    if (is.null(fields) == FALSE) {
+      checklists <- select(ebd, fields)
+    } else {
+      checklists <- ebd
+    }
+  }
 }
 
 
