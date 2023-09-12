@@ -33,7 +33,7 @@ get_checklists_dev <- function(database = "AtlasCache", EBD_fields_only = TRUE,
   #   is set to FALSE if the fields argument in not NULL.
   # fields -- a list of fields to return, excluding those not listed.  This 
   #   parameter offers no speed benefit with EBD sampling datasets.
-  # ncba_config -- config file with NCBA MongoDB username and password.f
+  # ncba_config -- config file with NCBA MongoDB username and password.
   #
   # Notes:
   # - Data frame output when setting database to "AtlasCache" may require 

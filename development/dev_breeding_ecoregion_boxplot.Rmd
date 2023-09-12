@@ -1,0 +1,244 @@
+---
+title: "Breeding Boxplot Function"
+author: "N.M. Tarr"
+output: 
+  html_document:
+    df_print: paged
+    code_folding: hide
+  rmdformats::downcute:
+---
+```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+# Purpose
+This document details a function that generates a boxplot of breeding codes with some customization options and supports the ability to view the checklist behind individual data points by clicking on them in the figure.  The function offers several options as parameters.
+
+interactive -- whether to create an interactive plot that supports opening
+   checklist URLs by clicking on data points in the figure.
+pallet -- specify an RColorBrewer pallet (multiple colors), or a single
+   color (name or hex) for the figure.
+omit_codes -- specify evidence codes not be plotted.
+lump -- an option to lump breeding codes into fewer categories.
+drop -- TRUE or FALSE whether to include unreported codes in the plot
+
+# Function Definition
+```{r}
+breeding_boxplot_dev <- function(species, data, pallet="Paired", omit_codes=NULL,
+                                 lump=NULL, drop=TRUE,
+                                 cex.x.axis = 0.9, 
+                                 cex.y.axis = 0.8, subtitle = NULL) {
+  # Produces a boxplot of breeding codes over calendar day.
+  #
+  # Description:
+  #   Produces a boxplot of breeding codes with some customization options.  
+  #     Copied from the wbbii_tools repo and altered.
+  # 
+  # Arguments:
+  # species -- common name of the species
+  # data -- data frame of ebird or NCBA data
+  # interactive -- whether to create an interactive plot that supports opening
+  #   checklist URLs by clicking on data points in the figure.
+  # pallet -- choose a named RColorBrewer pallet (multiple colors), or a single
+  #   color (name or hex); see brewer.pal.info for list and 
+  #   display.brewer.all() to view all pallets
+  # omit_codes -- a vector of evidence codes not be plotted. For example, 
+  #   c("PE", "UN")
+  # lump -- a list of named vectors where the vector name is used to place all
+  #   codes in the corresponding vector (e.g. 'S = c("S", "S7", "M")' replaces
+  #   all "S", "S7", and "M" with "S"). Note that any code that is not already in
+  #   variable "codelevels" in function "chronplot" (below) will need to be added
+  #   there.
+  # drop -- TRUE or FALSE whether to include unreported codes in the plot
+  # subtitle -- NULL or text that you wish to use as a subtitle.
+  
+  library(lubridate)
+  library(grid)
+  library(gridBase)
+  library(RColorBrewer)
+  library(ggiraph)
+  library(ggplot2)
+  
+  # Data prep ------------------------------------------------------------------
+  ebird <- data # This should eventually be removed and ebird renamed.
+  
+  # replace breeding code entries "" with NULL
+  ebird["breeding_code"][ebird["breeding_code"] == ""] <- "NULL"
+
+  # put all dates within the same year -- ignores leap year
+  ebird$observation_date <- sub("^20\\d\\d", "2050", ebird$observation_date)
+  
+  # remove white space from evidence codes
+  ebird$breeding_code <- trimws(ebird$breeding_code)
+  
+  # make obsdate a date object
+  ebird$obsdate <- as.Date(ebird$observation_date, "%Y-%m-%d")
+  
+  # Manage Breeding Codes ------------------------------------------------------
+  # set drop to true if lump is used
+  if (is.null(lump) == FALSE) {
+    drop <- TRUE
+  }
+  
+  # set drop to true if no plot codes is used
+  if (is.null(omit_codes) == FALSE) {
+    drop <- TRUE
+  }
+  
+  # specificy breeding codes and preferred plotting order
+  # this vector will need updating if any new codes are introduced via "lump".
+  codelevels <- c("H", "S", "S7", "M", "T", "P", "C", "B", "CN", "NB", "A", "N",
+                  "DD", "ON", "NE", "FS", "CF", "NY", "FY", "FL", "PE", "UN",
+                  "F", "O", "NC", "NULL")
+  # http://stackoverflow.com/questions/19681586/ordering-bars-in-barplot
+
+  # add any new codes from the lump categories    
+  if (is.null("lump") == FALSE) {
+      codelevels <- c(codelevels, names(lump)[! names(lump) %in% codelevels])
+  }
+
+  # warn of unknown breeding codes in the data
+  if (! all(ebird$breeding_code %in% codelevels)) {
+    warn <- paste("Not all eBird codes (breeding_code) for",
+                  species, "are in codelevels")
+    warning(warn)
+  }
+
+  # add in unreported breeding codes to the data if drop is set to FALSE
+  if (drop == FALSE) {
+    # add rows with breeding codes from codelevels that are not present in ebird, 
+    # but are present in codelevels.  Leave all field blank except for breeding_code.
+    # get missing codes
+    missing_codes <- codelevels[! codelevels %in% ebird$breeding_code]
+
+    # make a dataframe with same columns as ebird where all fields are blank except
+    # for breeding_code
+    missing <- data.frame(matrix(ncol = ncol(ebird), 
+                                 nrow = length(missing_codes)))
+    names(missing) <- names(ebird)
+  
+    # add missing_codes to breeding_codes
+    missing$breeding_code <- missing_codes
+
+    # add missing codes to ebird
+    ebird <- rbind(ebird, missing)
+    
+    # make breeding codes factors so they are ordered correctly
+    ebird <- ebird %>% 
+    mutate(breeding_code = factor(ebird$breeding_code, 
+                                  levels = codelevels, ordered = TRUE))
+  }
+  
+  # if drop is set to TRUE, use present breeding codes as the code levels
+  #   but maintain the desired order.
+  if (drop == TRUE) {
+    # remove unwanted evidence codes
+    if (is.null("omit_codes") == FALSE) {
+      ebird <- ebird[! ebird$breeding_code %in% omit_codes, ]
+    }
+    
+    # lump evidence codes if lump has been set
+    for (i in seq_along(lump)) {
+        indx <- ebird$breeding_code %in% lump[[i]]
+        ebird[indx, "breeding_code"] <- names(lump)[i]
+    }
+    
+    # make breeding codes factors so they are ordered correctly
+    codelevels <- codelevels[codelevels %in% ebird$breeding_code]
+    
+    if (is.null("omit_codes") == FALSE) {
+      codelevels <- codelevels[! codelevels %in% omit_codes]
+    }
+
+    ebird <- ebird %>% 
+    mutate(breeding_code = factor(ebird$breeding_code, levels = codelevels, 
+                                  ordered = TRUE))
+  }
+  
+  
+  # Colors ---------------------------------------------------------------------
+  # associate colors with codelevels
+  if (pallet %in% rownames(brewer.pal.info)) {
+    n <- brewer.pal.info[pallet, "maxcolors"]
+    codecolors <- colorRampPalette(brewer.pal(n, pallet))(length(codelevels))
+  } else {
+    codecolors <- rep(pallet, length(codelevels))
+  }
+
+  # colors 
+  names(codecolors) <- codelevels
+  
+  # add column for color
+  ebird$col <- codecolors[ebird$breeding_code]
+
+  # Ecoregions -----------------------------------------------------------------
+  if (type == "ecoregion") {
+    # Get the blocks data frame
+    fields <- c("ID_BLOCK", "ID_EBD_NAME", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
+    blocks <- get_blocks(ncba_config = config, spatial = FALSE, fields = fields, 
+                         crs = 4326)
+    
+    # Join the records to the blocks data frame to gain the ecoregion column
+    records2 <- left_join(ebird, blocks, by = c("ncba_block" = "ID_EBD_NAME")) %>%
+      filter(is.na(ECOREGION) == FALSE) 
+    
+    # Replace abbreviations
+    records2$ECOREGION[records2$ECOREGION == "CP"] <- "Coastal Plains"
+    records2$ECOREGION[records2$ECOREGION == "P"] <- "Piedmont"
+    records2$ECOREGION[records2$ECOREGION == "M"] <- "Mountains"
+    
+    # Get the values in desired order via making a factor
+    records2$ECOREGION <- factor(records2$ECOREGION, 
+                                 levels = c("Coastal Plains", "Piedmont",
+                                            "Mountains"))
+  
+    # ggiraph code for boxplot and interactive points
+    ggplot(data = records2) +
+      geom_boxplot(aes(x = obsdate, y = breeding_code)) +
+      facet_wrap(~ ECOREGION, nrow=3) + 
+      labs(y="Breeding Code", x="Calendar Day")
+  }
+}
+```
+
+# Usage
+This demo requires the tidyverse packages.
+```{r}
+library(tidyverse)
+```
+
+Load the NCBA functions because this function relies upon the output from some of them.
+```{r}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+source(config)
+```
+
+Identify a species to investigate.
+```{r}
+species <- "Yellow-billed Cuckoo"
+```
+
+Retrieve the records for the species from the Atlas Cache
+```{r}
+nc_data <- get_observations(species, database = "AtlasCache", NCBA_only = TRUE,
+                            EBD_fields_only = FALSE, fields = NULL, ncba_config)
+
+# format columns to the standard analysis format (ebd format)
+records <- to_EBD_format(nc_data, drop=FALSE)
+
+# Print number of records returned
+print(paste("Records returned:", nrow(records)))
+```
+
+Make a non-interactive boxplot without lumping codes together
+```{r}
+breeding_boxplot_dev(species = species, data = records, 
+                     lump = breeding_codes(lumped = TRUE))
+```
+
+

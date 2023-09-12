@@ -14,7 +14,7 @@ knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
 ```
 
 # Purpose
-Whereas the primary objective for this repository of code is to support the exploration and analysis of data by NC Bird Atlas staff, we are making an effort to support deployment of the code by other states as well.  The NCBA has its own database, the Atlas Cache, which uses a different database schema than the Ebird Basic Dataset.  Therefore, a function for wrangling NCBA data into a format that is consistent with the EBD would be valuable.  Functions that use observation and checklist records as inputs could then be used by other states.  This document details the format conversion function for making Atlas Cache records match the format of EBD records.
+Whereas the primary objective for this repository of code is to support the exploration and analysis of data by NC Bird Atlas staff, we are making an effort to support deployment of the code by other states as well.  The NCBA has its own database, the Atlas Cache, which uses a different database schema than the eBird Basic Dataset.  Therefore, a function for wrangling NCBA data into a format that is consistent with the EBD would be valuable.  Functions that use observation and checklist records as inputs could then be used by other states.  This document details the format conversion function for making Atlas Cache records match the format of EBD records.
 
 
 # Function
@@ -25,7 +25,7 @@ to_EBD_format <- function(dataframe, drop = FALSE) {
   # Description:
   # Change the column names of a data frame retrieved from the NCBA Atlas Cache 
   #   database to the format of tables retrieved from the eBird EBD.  Also 
-  #   assign data types of columns to match those of EBD as read in by the auk
+  #   assign data types of columns to match those of EBD as read in by the auk 
   #   package.  This functions first assesses whether a data frame has the EBD
   #   format.  If not, it then reformats the data frame to match the EBD.  It 
   #   then checks again for compliance before returning output.
@@ -33,52 +33,46 @@ to_EBD_format <- function(dataframe, drop = FALSE) {
   # Parameters:
   # dataframe -- a data frame retrieved from the NCBA Atlas Cache.
   # drop -- TRUE or FALSE whether to drop columns not present in the EBD.
-  
-  # Get an EBD template to compare against.  One is available from auk
-  input_file <- system.file("extdata/ebd-sample.txt", package = "auk")
-  
-  # output text file
-  output_file <- "ebd_filtered_grja.txt"
-  
-  # Query EBD
-  EBD <- input_file %>% 
-    # 1. reference file
-    auk_ebd() %>% 
-    # 2. define filters
-    auk_species(species = "Canada Jay") %>% 
-    auk_country(country = "Canada") %>% 
-    # 3. run filtering
-    auk_filter(file = output_file, overwrite = TRUE) %>% 
-    # 4. read text file into r data frame
-    read_ebd()
 
-  
   # Column capitalization ------------------------------------------------------
   names(dataframe) <- str_to_lower(names(dataframe))
   
-  
   # Column exclusion (dropping) ------------------------------------------------
+  # Some names are in the EBD but not the example data set from auk, add them.
+  EBD_names <- EBD_fields(case = "lower")
+  
+  # Drop extra field
   if (drop == TRUE) {
-    dataframe <- dataframe %>% select(any_of(names(EBD)))
+    dataframe <- dataframe %>% select(any_of(EBD_names))
   }
 
-  
-  # Data types -----------------------------------------------------------------  #### NOT WORKING
+  # Data types -----------------------------------------------------------------
   # Transform the data types of the columns in records that are also in EBD and
-  #   have different data types.
-  df2 <- transform(dataframe, 
-                       bcr_code = as.integer(bcr_code),
-                       duration_minutes = as.integer(duration_minutes),
-                       effort_area_ha = as.numeric(effort_area_ha),
-                       all_species_reported = as.logical(all_species_reported),
-                       observation_date = as.Date(observation_date),
-                       observation_count = as.character(observation_count),
-                       has_media = as.logical(has_media),
-                       taxonomic_order = as.numeric(taxonomic_order),
-                       approved = as.logical(approved),
-                       reviewed = as.logical(reviewed)
-                       )
-  
+  #   have different data types.  However, this statement depends on whether the
+  #   dataframe is for observations or checklists
+  if ("observation_count" %in% names(dataframe)) {
+     df2 <- transform(dataframe, bcr_code = as.integer(bcr_code),
+                   duration_minutes = as.integer(duration_minutes),
+                   effort_area_ha = as.numeric(effort_area_ha),
+                   all_species_reported = as.logical(all_species_reported),
+                   exotic_code = as.logical(exotic_code),
+                   observation_date = as.Date(observation_date),
+                   observation_count = as.character(observation_count),
+                   has_media = as.logical(has_media),
+                   taxonomic_order = as.numeric(taxonomic_order),
+                   approved = as.logical(approved),
+                   reviewed = as.logical(reviewed)
+      )
+  } else {
+    df2 <- transform(dataframe, bcr_code = as.integer(bcr_code),
+                   duration_minutes = as.integer(duration_minutes),
+                   effort_area_ha = as.numeric(effort_area_ha),
+                   all_species_reported = as.logical(all_species_reported),
+                   exotic_code = as.logical(exotic_code),
+                   observation_date = as.Date(observation_date)
+    )
+  }
+
   return(df2)
 }
 ```
@@ -100,96 +94,192 @@ ncba_config <- "~/Documents/NCBA/Scripts/ncba_config.R"
 source(ncba_config)
 
 # Get observations
-observations <- get_observations(species = "King Rail", 
-                                     database = "AtlasCache", NCBA_only = TRUE,
-                                     EBD_fields_only = FALSE, fields = NULL,
-                                     ncba_config = ncba_config)
+observations <- get_observations(species = "King Rail", database = "AtlasCache", 
+                                 NCBA_only = TRUE, EBD_fields_only = FALSE, 
+                                 fields = NULL, ncba_config = ncba_config)
 ```
 
 Convert the dataframe to the EBD format.
 ```{r}
 observations2 <- to_EBD_format(observations, drop = TRUE)
+
+# Preview
 print(head(observations2))
 ```
 
 
-# Tests
+# Tests (Observations)
+
+## Dropping columns
+Test that columns are dropped appropriately.  Refers to lists of EBD and non-EBD columns that can be returned from ncba_functions.R.  First get and test records from AtlasCache.
+```{r}
+# Get observations from AtlasCache
+AC.obs.T <- get_observations(species = "King Rail", database = "AtlasCache", 
+                             NCBA_only = TRUE, EBD_fields_only = FALSE, 
+                             fields = NULL, ncba_config = ncba_config)
+```
+
+Test that non-EBD fields are dropped when drop is set to TRUE.  If this chunk returns FALSE, then the test is passed.
+```{r}
+# Reformat
+AC.obs.T.2 <- to_EBD_format(AC.obs.T, drop = TRUE)
+
+# Test if any non EBD fields are present
+print(unique(str_to_lower(nonEBD_fields()) %in% names(AC.obs.T.2)))
+```
+
+Also get records with EBD_fields_only set to FALSE and test that non EBD fields are dropped when drop is set to TRUE.  If this chunk returns FALSE, then the test is passed.
+```{r}
+# Get a data frame of AtlasCache records with ebd_fields_only set to false.
+AC.obs.F <- get_observations(species = "King Rail", database = "AtlasCache", 
+                             NCBA_only = TRUE, EBD_fields_only = FALSE, 
+                             fields = NULL, ncba_config = ncba_config)
+
+# Reformat
+AC.obs.F.2 <- to_EBD_format(AC.obs.F, drop = TRUE)
+
+# Test if any non EBD fields are present
+print(unique(str_to_lower(nonEBD_fields()) %in% names(AC.obs.F.2)))
+```
+
+Also make sure the test is passed with EBD records.  Failure of this test would indicate that something is very wrong.
+```{r}
+# Get observations from EBD
+EBD.obs <- get_observations(species = "King Rail", database = "EBD", 
+                            NCBA_only = TRUE, EBD_fields_only = FALSE, 
+                            fields = NULL, ncba_config = ncba_config)
+```
 
 Test that non EBD fields are dropped when drop is set to TRUE.  If this chunk returns FALSE, then the test is passed.
 ```{r}
-# Get observations
-observations <- get_observations(species = "King Rail", 
-                                 database = "AtlasCache", NCBA_only = TRUE,
-                                 EBD_fields_only = FALSE, fields = NULL,
-                                 ncba_config = ncba_config)
-
 # Reformat
-observations2 <- to_EBD_format(observations, drop = TRUE)
+EBD.obs.2 <- to_EBD_format(EBD.obs, drop = TRUE)
 
 # Test if any non EBD fields are present
-print(unique(str_to_lower(nonEBD_fields()) %in% names(observations2)))
+print(unique(str_to_lower(nonEBD_fields()) %in% names(EBD.obs.2)))
 ```
 
+
+The records from EBD should have all and only the EBD columns, so this chunk shouldn't return any column names.
+```{r}
+print(setdiff(EBD_fields(case = "lower"), names(EBD.obs)))
+
+print(setdiff(names(EBD.obs.2), EBD_fields(case = "lower")))
+```
+
+When the records from AtlasCache were requested with EBD_fields_only set to TRUE, the result should have only the EBD columns because we ran the to_EBD_format function, so this chunk shouldn't return any column names.
+```{r}
+print(setdiff(names(AC.obs.T.2), EBD_fields(case = "lower")))
+```
+
+When the records from AtlasCache were requested with EBD_fields_only set to TRUE, the result should have only the EBD columns because we ran the to_EBD_format function, so this chunk shouldn't return any column names.
+```{r}
+print(setdiff(names(AC.obs.F.2), EBD_fields(case = "lower")))
+```
+
+## Column Names
 Also print the column names to demonstrate that they were made lowercase.
 ```{r}
-print(names(observations))
-print("------------------------------------")
-print(names(observations2))
+# Print AtlasCache record names
+print(head(names(AC.obs.T.2)))
 ```
-!!!!!WHY ARE NAMES GETTING DROPPED?
 
-Examine the data types.  Compare the data types of the output data frame to those of a data frame from an EBD sample.  This chunk shouldn't return the names of any columns.
+Examine EBD record columns names.  The printed names should be lowercase.
 ```{r}
-# Get an EBD template to compare against.  One is available from auk
-input_file <- system.file("extdata/ebd-sample.txt", package = "auk")
-# output text file
-output_file <- "ebd_filtered_grja.txt"
-EBD <- input_file %>% 
-    # 1. reference file
-    auk_ebd() %>% 
-    # 2. define filters
-    auk_species(species = "Canada Jay") %>% 
-    auk_country(country = "Canada") %>% 
-    # 3. run filtering
-    auk_filter(file = output_file, overwrite = TRUE) %>% 
-    # 4. read text file into r data frame
-    read_ebd()
+print(head(names(EBD.obs.2)))
+```
 
-# Get the data types of the columns in records
-records.types <- sapply(observations2, class)
+## Data Types
+Examine the data types.  Compare the data types of the output data frame from a query of AtlasCache to that of a query of the EBD.  This chunk shouldn't return the names of any columns if the test is passed.
+```{r}
+# Get the data types of the columns
+record.types.EBD <- sapply(EBD.obs.2, class)
+record.types.AC.T <- sapply(AC.obs.T.2, class)
+record.types.AC.F <- sapply(AC.obs.F.2, class)
 
-# Get the data types of the columns in EBD
-EBD.types <- sapply(EBD, class)
+# Get the names of the columns in AtlasCache records that are also in EBD
+common.columns1T <- intersect(names(EBD.obs.2), names(AC.obs.T.2))
+common.columns1F <- intersect(names(EBD.obs.2), names(AC.obs.F.2))
 
-# Get the names of the columns in records that are also in EBD
-common.columns <- intersect(names(observations2), names(EBD))
-
+# With ebd_fields_only = TRUE
 # Go through common columns and look for data type mismatches.
-for (x in common.columns) {
-  if (records.types[x] != EBD.types[x]) {
+print("EBD versus AtlasCache w/ EBD only = TRUE")
+for (x in common.columns1T) {
+  if (record.types.EBD[x] != record.types.AC.T[x]) {
     print(x)
-    print(EBD.types[x])
-    print(records.types[x])
+    print(record.types.EBD[x])
+    print(record.types.AC.T[x])
+  }
+}
+
+# With ebd_fields_only = FALSE
+# Go through common columns and look for data type mismatches.
+print("EBD versus AtlasCache w/ EBD only = FALSE")
+for (x in common.columns1F) {
+  if (record.types.EBD[x] != record.types.AC.F[x]) {
+    print(x)
+    print(record.types.EBD[x])
+    print(record.types.AC.F[x])
   }
 }
 ```
 
 
+# Speed
+Describe runtimes for a data-poor species.
 ```{r}
-# po <- transform(observations2, 
-#                        bcr_code = as.integer(bcr_code),
-#                        duration_minutes = as.integer(duration_minutes),
-#                        effort_area_ha = as.numeric(effort_area_ha),
-#                        all_species_reported = as.logical(all_species_reported),
-#                        observation_date = as.Date(observation_date),
-#                        observation_count = as.character(observation_count),
-#                        has_media = as.logical(has_media),
-#                        taxonomic_order = as.numeric(taxonomic_order),
-#                        approved = as.logical(approved),
-#                        reviewed = as.logical(reviewed)
-#                        )
+# Get a data frame of AtlasCache records with ebd_fields_only set to false.
+df <- get_observations(species = "King Rail", database = "AtlasCache", 
+                               NCBA_only = TRUE, EBD_fields_only = FALSE, 
+                               fields = NULL, ncba_config = ncba_config)
+
+# Run the function 5 times and record the runtime
+time <- c()
+for (i in 1:5) {
+  time1 <- proc.time()
+  
+  # Reformat
+  to_EBD_format(df, drop = TRUE)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
+
+Describe runtimes for a data-rich species.
+```{r}
+# Get a data frame of AtlasCache records with ebd_fields_only set to false.
+  df <- get_observations(species = "Indigo Bunting", database = "AtlasCache", 
+                               NCBA_only = TRUE, EBD_fields_only = FALSE, 
+                               fields = NULL, ncba_config = ncba_config)
+
+# Run the function 5 times and record the runtime
+time <- c()
+for (i in 1:5) {
+  time1 <- proc.time()
+
+  # Reformat
+  to_EBD_format(df, drop = TRUE)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
 ```
 
 
+# Tests (Checklists)
+```{r}
+df <- get_checklists(database = "AtlasCache", EBD_fields_only = FALSE,
+                     NCBA_only = TRUE, fields = NULL, ncba_config = ncba_config)
+```
 
-# Speed
+
+```{r}
+# Reformat
+df <- to_EBD_format(df, drop = TRUE)
+```
+

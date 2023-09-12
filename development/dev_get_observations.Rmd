@@ -52,7 +52,8 @@ get_observations_dev <- function(species, database = "AtlasCache",
   
   library(tidyverse)
   library(auk)
-
+  source(ncba_config)
+  
   # Set the working directory
   if (is.null(work_dir) == FALSE) {
     setwd(work_dir)
@@ -73,7 +74,8 @@ get_observations_dev <- function(species, database = "AtlasCache",
     } 
     
     if (NCBA_only == TRUE) {
-      query <- str_interp('{"PROJECT_CODE" : "EBIRD_ATL_NC", "OBSERVATIONS.COMMON_NAME" : "${species}"}')
+      query <- str_interp('{"PROJECT_CODE" : "EBIRD_ATL_NC", 
+                          "OBSERVATIONS.COMMON_NAME" : "${species}"}')
     }
 
     # Define a fields filter for the desired columns...
@@ -123,7 +125,7 @@ get_observations_dev <- function(species, database = "AtlasCache",
       # Drop the unwanted columns
       records <- records %>% select(any_of(dropem))
     }
-    return(records)
+    return(data.frame(records))
   }
     
   
@@ -192,10 +194,8 @@ print(head(obs, 5))
 
 Retrieve observations from the EBD with the function.
 ```{r}
-obs <- get_observations_dev(species = "King Rail", 
-                            database = "EBD",
-                            NCBA_only = TRUE,
-                            ncba_config = ncba_config)
+obs <- get_observations_dev(species = "King Rail", database = "EBD",
+                            NCBA_only = TRUE, ncba_config = ncba_config)
 print(head(obs, 5))
 ```
 

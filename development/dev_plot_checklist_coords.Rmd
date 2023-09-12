@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 This document details a function that plots the geographic coordinates of records.
 
 ```{r}
-plot_recordss_coords <- function(records, codes = NULL){
+plot_records_coords <- function(records, codes = NULL){
   # Return a map of record locations, based on their reported coordinates
   #   
   # Note: points will be mapped in the CRS of the records data frame,

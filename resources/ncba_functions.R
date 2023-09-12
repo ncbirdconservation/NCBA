@@ -120,82 +120,104 @@ get_blocks <- function(ncba_config, spatial = FALSE, fields = NULL,
 }
 
 # ------------------------------------------------------------------------------
-get_observations <- function(species, dataset = "AtlasCache", 
-                                 drop_columns = TRUE) {
-  # Returns a data frame of species observations
-  # 
-  # Description:
-  #   Retrieves the observation records for a species from either the NCBA 
-  #   database or from a downloaded copy of the EBD.  If data is requested from
-  #   the Atlas Cache, then NCBA columns that are not found in the EBD datasets
-  #   can be dropped or retained.
-  # 
-  # Parameters:
-  # species -- common name of the species
-  # dataset -- either "EBD" for a downloaded eBird dataset or "AtlasCache" for
-  #   the NCBA mongodb.
-  # drop_columns -- whether to drop non-eBird columns from the output data frame
-  
-  if (dataset == "AtlasCache") {
-    # connect to a specific collection (table)
-    connection_ebd <- connect_ncba_db(ncba_config = config, 
-                                      database = "ebd_mgmt", 
-                                      collection = "ebd")
-    
-    # execute a query
-    query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
-    
-    nc_data <- connection_ebd$find(query) %>%
-      unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
-      filter(COMMON_NAME == species)
-    
-    # format columns to the standard analysis format (ebd format)
-    records <- to_ebd_format(nc_data, drop=drop_columns)
-    
-    if (dataset == "EBD") {
-      print("NOT AVAILABLE YET")
-    }
-  }
-}
+# get_observations <- function(species, dataset = "AtlasCache", 
+#                                  drop_columns = TRUE) {
+#   # Returns a data frame of species observations
+#   # 
+#   # Description:
+#   #   Retrieves the observation records for a species from either the NCBA 
+#   #   database or from a downloaded copy of the EBD.  If data is requested from
+#   #   the Atlas Cache, then NCBA columns that are not found in the EBD datasets
+#   #   can be dropped or retained.
+#   # 
+#   # Parameters:
+#   # species -- common name of the species
+#   # dataset -- either "EBD" for a downloaded eBird dataset or "AtlasCache" for
+#   #   the NCBA mongodb.
+#   # drop_columns -- whether to drop non-eBird columns from the output data frame
+#   
+#   if (dataset == "AtlasCache") {
+#     # connect to a specific collection (table)
+#     connection_ebd <- connect_ncba_db(ncba_config = config, 
+#                                       database = "ebd_mgmt", 
+#                                       collection = "ebd")
+#     
+#     # execute a query
+#     query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
+#     
+#     nc_data <- connection_ebd$find(query) %>%
+#       unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
+#       filter(COMMON_NAME == species)
+#     
+#     # format columns to the standard analysis format (ebd format)
+#     records <- to_ebd_format(nc_data, drop=drop_columns)
+#     
+#     if (dataset == "EBD") {
+#       print("NOT AVAILABLE YET")
+#     }
+#   }
+# }
 
 # ------------------------------------------------------------------------------
-to_EBD_format <- function(dataframe, drop){
-  # Reformat columns to match that of the EBD.
+to_EBD_format <- function(dataframe, drop = FALSE) {
+  # Reformat columns to match that of the EBD
   #
   # Description:
-  # Change the column names of a data frame retrieved from the NCBA mongo 
-  #   database to the format of tables retrieved from the eBird EBD.  This is to
-  #   facilitate the use and development of code for either the EBD or NCBA db. 
+  # Change the column names of a data frame retrieved from the NCBA Atlas Cache 
+  #   database to the format of tables retrieved from the eBird EBD.  Also 
+  #   assign data types of columns to match those of EBD as read in by the auk 
+  #   package.  This functions first assesses whether a data frame has the EBD
+  #   format.  If not, it then reformats the data frame to match the EBD.  It 
+  #   then checks again for compliance before returning output.
   # 
   # Parameters:
-  # dataframe -- a data frame retrieved from the NCBA mongo database.
+  # dataframe -- a data frame retrieved from the NCBA Atlas Cache.
   # drop -- TRUE or FALSE whether to drop columns not present in the EBD.
   
-  # Capitalize columns
+  # Column capitalization ------------------------------------------------------
   names(dataframe) <- str_to_lower(names(dataframe))
   
-  # Drop columns
-  ebd_columns <- c("last_edited_date", "county", "county_code",
-                   "iba_code", "bcr_code", "usfws_code", "atlas_block",
-                   "locality", "locality_id", "locality_type", "latitude",
-                   "longitude", "observation_date", "time_observations_started",
-                   "observer_id", "sampling_event_identifier", "protocol_type",
-                   "protocol_code", "project_code", "duration_minutes",
-                   "effort_distance_km", "effort_area_ha", "number_observers",
-                   "all_species_reported", "group_identifier", "trip_comments", 
-                   "breeding_code", "observation_count", "breeding_category", 
-                   "has_media", "subspecies_scientific_name",
-                   "subspecies_common_name") # Add in "behavior_category", ???
+  # Column exclusion (dropping) ------------------------------------------------
+  # Some names are in the EBD but not the example data set from auk, add them.
+  EBD_names <- EBD_fields(case = "lower")
+  
+  # Drop extra field
   if (drop == TRUE) {
-    x <- dataframe %>% select(all_of(ebd_columns))
+    dataframe <- dataframe %>% select(any_of(EBD_names))
   }
-  else {
-    x <- dataframe
+  
+  # Data types -----------------------------------------------------------------
+  # Transform the data types of the columns in records that are also in EBD and
+  #   have different data types.  However, this statement depends on whether the
+  #   dataframe is for observations or checklists
+  if ("observation_count" %in% names(dataframe)) {
+    df2 <- transform(dataframe, bcr_code = as.integer(bcr_code),
+                     duration_minutes = as.integer(duration_minutes),
+                     effort_area_ha = as.numeric(effort_area_ha),
+                     all_species_reported = as.logical(all_species_reported),
+                     exotic_code = as.logical(exotic_code),
+                     observation_date = as.Date(observation_date),
+                     observation_count = as.character(observation_count),
+                     has_media = as.logical(has_media),
+                     taxonomic_order = as.numeric(taxonomic_order),
+                     approved = as.logical(approved),
+                     reviewed = as.logical(reviewed)
+    )
+  } else {
+    df2 <- transform(dataframe, bcr_code = as.integer(bcr_code),
+                     duration_minutes = as.integer(duration_minutes),
+                     effort_area_ha = as.numeric(effort_area_ha),
+                     all_species_reported = as.logical(all_species_reported),
+                     exotic_code = as.logical(exotic_code),
+                     observation_date = as.Date(observation_date)
+    )
   }
+  
+  return(df2)
 }
 
 # ------------------------------------------------------------------------------
-breeding_boxplot <- function(species, data, interactive=TRUE, 
+breeding_boxplot <- function(species, data, type="interactive", 
                                  pallet="Paired", omit_codes=NULL,
                                  lump=NULL, drop=TRUE, cex.x.axis = 0.9, 
                                  cex.y.axis = 0.8, subtitle = NULL) {
@@ -208,8 +230,10 @@ breeding_boxplot <- function(species, data, interactive=TRUE,
   # Arguments:
   # species -- common name of the species
   # data -- data frame of ebird or NCBA data
-  # interactive -- whether to create an interactive plot that supports opening
-  #   checklist URLs by clicking on data points in the figure.
+  # type -- whether to create an interactive plot that supports opening
+  #   checklist URLs by clicking on data points in the figure, a non-interactive
+  #   plot with data from the entire state, or a plot separated out by 
+  #   ecoregions. Options are "interactive", "non-interactive", and "ecoregional".
   # pallet -- choose a named RColorBrewer pallet (multiple colors), or a single
   #   color (name or hex); see brewer.pal.info for list and 
   #   display.brewer.all() to view all pallets
@@ -222,6 +246,7 @@ breeding_boxplot <- function(species, data, interactive=TRUE,
   #   there.
   # drop -- TRUE or FALSE whether to include unreported codes in the plot
   # subtitle -- NULL or text that you wish to use as a subtitle.
+  
   library(lubridate)
   library(grid)
   library(gridBase)
@@ -342,7 +367,7 @@ breeding_boxplot <- function(species, data, interactive=TRUE,
   ebird$col <- codecolors[ebird$breeding_code]
   
   # Non-interactive plot -------------------------------------------------------
-  if (interactive == FALSE) {
+  if (type == "non-interactive") {
     # plot "empty" box plot
     boxplot(obsdate ~ breeding_code, horizontal = TRUE, 
             cex.axis = cex.y.axis, xaxt = "n", data = ebird, border = "white", 
@@ -406,8 +431,37 @@ breeding_boxplot <- function(species, data, interactive=TRUE,
             na.action = na.pass)
   }
   
+  # Ecoregional -----------------------------------------------------------------
+  if (type == "ecoregional") {
+    # Get the blocks data frame
+    fields <- c("ID_BLOCK", "ID_EBD_NAME", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
+    blocks <- get_blocks(ncba_config = config, spatial = FALSE, fields = fields, 
+                         crs = 4326)
+    
+    # Join the records to the blocks data frame to gain the ecoregion column
+    records2 <- left_join(ebird, blocks, by = c("ncba_block" = "ID_EBD_NAME")) %>%
+      filter(is.na(ECOREGION) == FALSE) 
+    
+    # Replace abbreviations
+    records2$ECOREGION[records2$ECOREGION == "CP"] <- "Coastal Plains"
+    records2$ECOREGION[records2$ECOREGION == "P"] <- "Piedmont"
+    records2$ECOREGION[records2$ECOREGION == "M"] <- "Mountains"
+    
+    # Get the values in desired order via making a factor
+    records2$ECOREGION <- factor(records2$ECOREGION, 
+                                 levels = c("Coastal Plains", "Piedmont",
+                                            "Mountains"))
+    
+    # Boxplot
+    result  <- ggplot(data = records2) +
+      geom_boxplot(aes(x = obsdate, y = breeding_code)) +
+      facet_wrap(~ ECOREGION, nrow=3) + 
+      labs(y="Breeding Code", x="Calendar Day")
+    plot(result)
+  }
+  
   # Interactive plot -----------------------------------------------------------
-  if (interactive == TRUE) {
+  if (type == "interactive") {
     ebird$front <- 'https://ebird.org/checklist/'
     ebird$ChecklistLink <- with(ebird, paste0(front, sampling_event_identifier))
     
@@ -448,7 +502,7 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
   #   is set to FALSE if the fields argument in not NULL.
   # fields -- a list of fields to return, excluding those not listed.  This 
   #   parameter offers no speed benefit with EBD sampling datasets.
-  # ncba_config -- config file with NCBA MongoDB username and password.f
+  # ncba_config -- config file with NCBA MongoDB username and password.
   #
   # Notes:
   # - Data frame output when setting database to "AtlasCache" may require 
@@ -633,6 +687,7 @@ get_observations <- function(species, database = "AtlasCache",
   
   library(tidyverse)
   library(auk)
+  source(ncba_config)
   
   # Set the working directory
   if (is.null(work_dir) == FALSE) {
@@ -654,7 +709,8 @@ get_observations <- function(species, database = "AtlasCache",
     } 
     
     if (NCBA_only == TRUE) {
-      query <- str_interp('{"PROJECT_CODE" : "EBIRD_ATL_NC", "OBSERVATIONS.COMMON_NAME" : "${species}"}')
+      query <- str_interp('{"PROJECT_CODE" : "EBIRD_ATL_NC", 
+                          "OBSERVATIONS.COMMON_NAME" : "${species}"}')
     }
     
     # Define a fields filter for the desired columns...
@@ -704,7 +760,7 @@ get_observations <- function(species, database = "AtlasCache",
       # Drop the unwanted columns
       records <- records %>% select(any_of(dropem))
     }
-    return(records)
+    return(data.frame(records))
   }
   
   
@@ -1228,7 +1284,7 @@ breeding_codes <- function(lumped = TRUE){
 }
   
 # ------------------------------------------------------------------------------
-nonEBD_fields <- function() {
+nonEBD_fields <- function(case = "upper") {
   # Returns a list of NCBA only fields that are in the Atlas Cache EBD 
   #   collection.
   fields <- c("GEOM", "NCBA_REVIEW_DATE", "NCBA_REVIEWED", "NCBA_APPROVED",
@@ -1236,9 +1292,37 @@ nonEBD_fields <- function() {
               "ID_NCBA_BLOCK", "PRIORITY_BLOCK", "EBD_NOCTURNAL", 
               "NCBA_NOCTURNAL", "NCBA_NOCTURNAL_DURATION", 
               "NCBA_NOCTURNAL_PARTIAL", "NCBA_OBSDT_UTC", "NCBA_SEASON",
-              "NCBA_QUARTER", "EXOTIC_CODE", "NCBA_INKIND", "NCBA_BLOCK_CODE",
-              "NOCTURNAL", "ID_NCBA_BLOCK_CODE" ) 
-  return(fields)
+              "NCBA_QUARTER", "NCBA_INKIND", "NCBA_BLOCK_CODE",
+              "NOCTURNAL", "ID_NCBA_BLOCK_CODE", "SUBSPECIES_SCIENTIFIC_NAME", 
+              "SUBSPECIES_COMMON_NAME")
+  if (case == "lower") {
+    return (str_to_lower((fields)))
+  } else {
+    return(fields)
+  }
+}
+
+EBD_fields <- function(case = "upper") {
+  # Returns a list of fields present in an EBD download
+  fields <- c("checklist_id", "global_unique_identifier", "last_edited_date",
+              "taxonomic_order", "category", "common_name", "scientific_name",
+              "observation_count", "breeding_code", "breeding_category", 
+              "age_sex", "country", "country_code", "state", "state_code",
+              "county", "county_code", "iba_code", "bcr_code", "usfws_code", 
+              "atlas_block", "locality", "locality_id", "locality_type", 
+              "latitude", "longitude", "observation_date", 
+              "time_observations_started", "observer_id", 
+              "sampling_event_identifier", "protocol_type", "protocol_code",
+              "project_code", "duration_minutes", "effort_distance_km", 
+              "effort_area_ha", "number_observers", "all_species_reported", 
+              "group_identifier", "has_media", "approved", "reviewed",
+              "reason", "trip_comments", "species_comments", "behavior_code",
+              "taxon_concept_id", "exotic_code", "year")
+  if (case == "upper") {
+    return (str_to_upper((fields)))
+  } else {
+    return(fields)
+  }
 }
   
   

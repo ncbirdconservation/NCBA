@@ -44,7 +44,7 @@ records_as_sf_dev <- function(records_df, kind, method, fill_na_km = 0.1) {
   #     replacement.  This argument is inconsequential for the point method.
   #   
   #   Results:
-  #   A spatial (simple features) data frame with columns for checklist_id or 
+  #   A spatial (simple features) data frame with columns for sampling_event_identifier or 
   #     sampling_event_identifier, atlas_block, protocol_type, 
   #     effort_distance_km, latitude, longitude and observation_count and
   #     breeding_code if the kind is observations.
@@ -52,7 +52,7 @@ records_as_sf_dev <- function(records_df, kind, method, fill_na_km = 0.1) {
   
   if (kind == "checklists"){
     records_df <- records_df %>%
-      select(checklist_id, atlas_block, protocol_type, effort_distance_km,
+      select(sampling_event_identifier, atlas_block, protocol_type, effort_distance_km,
              latitude, longitude)
   } else {
     records_df <- records_df %>%
@@ -125,22 +125,18 @@ counties <- counties_NC()
 ## Observations (species-level records)
 Identify a species to investigate.
 ```{r}
-species <- "Willow Flycatcher"
+species <- "Virginia Rail"
 ```
 
 Retrieve the records for the species from the Atlas Cache
 ```{r}
 time1 <- proc.time()
 
-# execute a query
-query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
-
-nc_data <- connection$find(query) %>%
-  unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
-  filter(COMMON_NAME == species)
+nc_data <- get_observations(species, database = "AtlasCache", NCBA_only = TRUE,
+                            EBD_fields_only = TRUE, ncba_config = config)
 
 # format columns to the standard analysis format (ebd format)
-records <- to_ebd_format(nc_data, drop=FALSE)
+records <- to_EBD_format(nc_data, drop=FALSE)
 
 # Calculate processing time
 mongotime <- proc.time() - time1
@@ -203,14 +199,14 @@ ggplot(data = counties) +
 ## Checklists
 Retrieve a dataframe of checklists.  Note that this use depends on connection code from above.
 ```{r}
-all_checklists <- get_all_checklists(ncba_config=config, drop_ncba_col=TRUE)
+checklists <- get_checklists(ncba_config = config) %>% 
+  to_EBD_format(drop=TRUE)
 ```
 
 Plot the coordinates for all of the checklists from the Atlas Cache.
 ```{r}
 # Make the data frame spatial
-footprints <- records_as_sf_dev(all_checklists, kind="checklists", 
-                                method="points")
+footprints <- records_as_sf_dev(checklists, kind="checklists", method="points")
 
 # Make a simple map
 ggplot(data = counties) +

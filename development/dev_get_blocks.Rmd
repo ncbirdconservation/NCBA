@@ -195,7 +195,7 @@ Describe runtimes for subset queries with geometries (spatial set to TRUE)
 ```{r}
 fields <- c("ID_BLOCK", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
 
-#Run the function 30 times and record the runtime
+# Run the function 30 times and record the runtime
 time <- c()
 for (i in 1:30) {
   time1 <- proc.time()
@@ -209,17 +209,15 @@ print(summary(time))
 
 Describe runtimes for query of all fields
 ```{r}
-# fields <- c("ID_BLOCK", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
-# 
-# #Run the function 30 times and record the runtime
-# time <- c()
-# for (i in 1:30) {
-#   time1 <- proc.time()
-#   get_blocks_dev(ncba_config = ncba_config, fields = NULL)
-#   time[i] <- proc.time() - time1
-# }
-# 
-# # Print the descriptive statistics
-# print(summary(time))
+# Run the function 5 times and record the runtime
+time <- c()
+for (i in 1:5) {
+  time1 <- proc.time()
+  get_blocks_dev(ncba_config = ncba_config, fields = NULL)
+  time[i] <- proc.time() - time1
+}
+
+# Print the descriptive statistics
+print(summary(time))
 ```
 

@@ -226,15 +226,11 @@ Retrieve the records for the species from the Atlas Cache
 ```{r}
 time1 <- proc.time()
 
-# execute a query
-query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
+records <- get_observations(species, database = "AtlasCache", NCBA_only = TRUE,
+                            EBD_fields_only = FALSE, fields = NULL, 
+                            ncba_config = config)
 
-nc_data <- connection$find(query) %>%
-  unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
-  filter(COMMON_NAME == species)
-
-# format columns to the standard analysis format (ebd format)
-records <- to_ebd_format(nc_data, drop=TRUE)
+records <- to_EBD_format(records, drop = TRUE)
 
 # Calculate processing time
 mongotime <- proc.time() - time1

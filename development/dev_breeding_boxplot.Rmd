@@ -27,7 +27,7 @@ drop -- TRUE or FALSE whether to include unreported codes in the plot
 
 # Function Definition
 ```{r}
-breeding_boxplot_dev <- function(species, data, interactive=TRUE, 
+breeding_boxplot_dev <- function(species, data, type="interactive", 
                                  pallet="Paired", omit_codes=NULL,
                                  lump=NULL, drop=TRUE, cex.x.axis = 0.9, 
                                  cex.y.axis = 0.8, subtitle = NULL) {
@@ -40,8 +40,10 @@ breeding_boxplot_dev <- function(species, data, interactive=TRUE,
   # Arguments:
   # species -- common name of the species
   # data -- data frame of ebird or NCBA data
-  # interactive -- whether to create an interactive plot that supports opening
-  #   checklist URLs by clicking on data points in the figure.
+  # type -- whether to create an interactive plot that supports opening
+  #   checklist URLs by clicking on data points in the figure, a non-interactive
+  #   plot with data from the entire state, or a plot separated out by 
+  #   ecoregions. Options are "interactive", "non-interactive", and "ecoregional".
   # pallet -- choose a named RColorBrewer pallet (multiple colors), or a single
   #   color (name or hex); see brewer.pal.info for list and 
   #   display.brewer.all() to view all pallets
@@ -175,7 +177,7 @@ breeding_boxplot_dev <- function(species, data, interactive=TRUE,
   ebird$col <- codecolors[ebird$breeding_code]
 
   # Non-interactive plot -------------------------------------------------------
-  if (interactive == FALSE) {
+  if (type == "non-interactive") {
     # plot "empty" box plot
     boxplot(obsdate ~ breeding_code, horizontal = TRUE, 
             cex.axis = cex.y.axis, xaxt = "n", data = ebird, border = "white", 
@@ -239,8 +241,37 @@ breeding_boxplot_dev <- function(species, data, interactive=TRUE,
            na.action = na.pass)
   }
   
+  # Ecoregional -----------------------------------------------------------------
+  if (type == "ecoregional") {
+    # Get the blocks data frame
+    fields <- c("ID_BLOCK", "ID_EBD_NAME", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
+    blocks <- get_blocks(ncba_config = config, spatial = FALSE, fields = fields, 
+                         crs = 4326)
+    
+    # Join the records to the blocks data frame to gain the ecoregion column
+    records2 <- left_join(ebird, blocks, by = c("ncba_block" = "ID_EBD_NAME")) %>%
+      filter(is.na(ECOREGION) == FALSE) 
+    
+    # Replace abbreviations
+    records2$ECOREGION[records2$ECOREGION == "CP"] <- "Coastal Plains"
+    records2$ECOREGION[records2$ECOREGION == "P"] <- "Piedmont"
+    records2$ECOREGION[records2$ECOREGION == "M"] <- "Mountains"
+    
+    # Get the values in desired order via making a factor
+    records2$ECOREGION <- factor(records2$ECOREGION, 
+                                 levels = c("Coastal Plains", "Piedmont",
+                                            "Mountains"))
+  
+    # Boxplot
+   result  <- ggplot(data = records2) +
+      geom_boxplot(aes(x = obsdate, y = breeding_code)) +
+      facet_wrap(~ ECOREGION, nrow=3) + 
+      labs(y="Breeding Code", x="Calendar Day")
+  plot(result)
+  }
+  
   # Interactive plot -----------------------------------------------------------
-  if (interactive == TRUE) {
+  if (type == "interactive") {
     ebird$front <- 'https://ebird.org/checklist/'
     ebird$ChecklistLink <- with(ebird, paste0(front, sampling_event_identifier))
 
@@ -290,7 +321,7 @@ connection_ebd <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt",
 
 Identify a species to investigate.
 ```{r}
-species <- "Black-and-white Warbler"
+species <- "Scarlet Tanager"
 print(species)
 ```
 
@@ -298,15 +329,11 @@ Retrieve the records for the species from the Atlas Cache
 ```{r}
 time1 <- proc.time()
 
-# execute a query
-query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
-
-nc_data <- connection$find(query) %>%
-  unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
-  filter(COMMON_NAME == species)
+nc_data <- get_observations(species, NCBA_only = TRUE, EBD_fields_only = FALSE,
+                            ncba_config = config)
 
 # format columns to the standard analysis format (ebd format)
-records <- to_ebd_format(nc_data, drop=FALSE)
+records <- to_EBD_format(nc_data, drop=FALSE)
 
 # Calculate processing time
 mongotime <- proc.time() - time1
@@ -318,7 +345,7 @@ print(paste("Runtime: ", mongotime[["elapsed"]]))
 
 Make a non-interactive boxplot without lumping codes together
 ```{r}
-breeding_boxplot_dev(species, records, interactive=FALSE)
+breeding_boxplot_dev(species, records, type = "non-interactive")
 ```
 
 Make an interactive boxplot without lumping codes together
@@ -337,37 +364,14 @@ Create an interactive boxplot that omits some codes and uses a different colorma
 ```{r}
 omit <- c("S7", "M", "NC", "H", "T", "P", "C", "CN", "N", "A", "NB", 
           "FS")
-breeding_boxplot_dev(species, records, interactive=TRUE, pallet="Set3",
-                 omit_codes=omit, lump=NULL, drop=TRUE)
+breeding_boxplot_dev(species, records, type = "interactive", pallet="Set3",
+                     omit_codes=omit, lump=NULL, drop=TRUE)
 ```
 
 Make a figure that has a boxplot for each ecoregion.
 ```{r}
-# Connect to the blocks collection (table)
-connection_blocks <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt", 
-                              collection = "blocks")
-
-# Get the blocks data frame with an ecoregion column.
-blocks <- connection_blocks$find()
-
-# Join the records to the blocks data frame to gain the ecoregion column
-records2 <- left_join(records, blocks, by = c("ncba_block" = "ID_EBD_NAME"))
-
-# Split into data frames for each ecoregion
-coastal <- subset(records2, ECOREGION == "CP")
-piedmont <- subset(records2, ECOREGION == "P")
-mountain <- subset(records2, ECOREGION == "M")
-
-# Make a three panel figure of boxplots
-par(mfrow=c(3,1))
-
-# Use the basic breeding code categories
-lumped_codes <- breeding_codes()
-
-# Make the boxplots
-breeding_boxplot_dev(c(species," CP"), coastal, interactive=FALSE, lump=lumped_codes)
-breeding_boxplot_dev(c(species," P"), piedmont, interactive=FALSE, lump=lumped_codes)
-breeding_boxplot_dev(c(species," M"), mountain, interactive=FALSE, lump=lumped_codes)
+breeding_boxplot_dev(species = species, data = records, type = "ecoregional",
+                     lump = breeding_codes(lumped = TRUE))
 ```
 
 
@@ -376,52 +380,61 @@ Fully programmed tests are not feasible because the function returns a figure, b
 
 1. Lump all codes into two categories as an extreme example to make it clear that they work. Use category names that aren't breeding codes in order to show they can be handled.
 ```{r}
-lump <- list(X = c("S", "S7", "M", "H", "NULL", "P"), Z = c("A", "N", "CN", "T", 
-                                                        "NB","FS", "FL", "CF",
-                                                        "FY", "C"))
+lump <- list(X = c("S", "S7", "M", "H", "NULL", "P", "F", "UN", "PE", "NY"), 
+             Z = c("A", "N", "CN", "T", "NB","FS", "FL", "CF", "FY", "C",
+                   "ON", "NE", "B"))
 
-breeding_boxplot_dev(species, records, interactive=FALSE, lump=lump)
+breeding_boxplot_dev(species, records, type = "non-interactive", lump=lump)
 
-breeding_boxplot_dev(species, records, interactive=TRUE, lump=lump)
+breeding_boxplot_dev(species, records, type = "interactive", lump=lump)
+
+breeding_boxplot_dev(species, records, type = "ecoregional", lump=lump)
+
 
 ```
 
 A standard lumping list is available for the primary categories.
 ```{r}
 lumped_codes <- breeding_codes()
-breeding_boxplot_dev(species, records, interactive=TRUE, lump=lumped_codes)
+breeding_boxplot_dev(species, records, type = "interactive", lump=lumped_codes)
 ```
 
 2. Omit all but three codes as an extreme example to make sure things work.  
 ```{r}
 omit <- c("S", "M", "H", "NULL", "P", "A", "N", "CN", "T", "NB","FS", "CF", "C")
 
-breeding_boxplot_dev(species, records, interactive=FALSE, omit_codes = omit)
+breeding_boxplot_dev(species, records, type = "non-interactive", omit_codes = omit)
 
-breeding_boxplot_dev(species, records, interactive=TRUE, omit_codes = omit)
+breeding_boxplot_dev(species, records, type = "interactive", omit_codes = omit)
+
+breeding_boxplot_dev(species, records, type = "ecoregional", omit_codes = omit)
+
 ```
 
 3. Check that the pallet argument works by assigning a non-default value.
 ```{r}
-breeding_boxplot_dev(species, records, interactive=TRUE, pallet="Spectral")
-breeding_boxplot_dev(species, records, interactive=TRUE, pallet="Paired")
+breeding_boxplot_dev(species, records, pallet="Spectral")
+breeding_boxplot_dev(species, records, pallet="Paired")
 
-breeding_boxplot_dev(species, records, interactive=FALSE, pallet="Spectral")
-breeding_boxplot_dev(species, records, interactive=FALSE, pallet="Paired")
+breeding_boxplot_dev(species, records, type="non-interactive", pallet="Spectral")
+breeding_boxplot_dev(species, records, type="non-interactive", pallet="Paired")
 ```
 
 4. Check that all breeding codes that are present in the figure when drop is set to "FALSE".
 ```{r}
-breeding_boxplot_dev(species, records, interactive=FALSE, drop=FALSE)
-breeding_boxplot_dev(species, records, interactive=TRUE, drop=FALSE)
+breeding_boxplot_dev(species, records, type="non-interactive", drop=FALSE)
+breeding_boxplot_dev(species, records, drop=FALSE)
+breeding_boxplot_dev(species, records, type="ecoregional", drop=FALSE)
 ```
 
 5. Check that all breeding codes that are present in records are included in the y-axis, when drop is set to "TRUE".  Note that "" is replaced with "NULL" by the function.
 ```{r}
 # Print the unique breeding codes in records and the figure
 print(unique(records$breeding_code))
-breeding_boxplot_dev(species, records, interactive=FALSE, drop=TRUE)
-breeding_boxplot_dev(species, records, interactive=TRUE, drop=TRUE)
+breeding_boxplot_dev(species, records, type="interactive", drop=TRUE)
+breeding_boxplot_dev(species, records, type="non-interactive", drop=TRUE)
+breeding_boxplot_dev(species, records, type="ecoregional", drop=TRUE)
+
 ```
 
 # Speed Test
