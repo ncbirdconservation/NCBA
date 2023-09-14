@@ -16,151 +16,7 @@ knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
 # Function
 Retrieves the observation records for a species from either the NCBA database or from a downloaded copy of the EBD.  If data is requested from the Atlas Cache, then NCBA columns that are not found in the EBD databases can be dropped or retained.  Additionally, a customized list of fields can be specified to limit the columns that are included in the output data frame.
 ```{r}
-get_observations_dev <- function(species, database = "AtlasCache", 
-                                 NCBA_only = FALSE,
-                                 EBD_fields_only = FALSE,
-                                 fields = NULL,
-                                 ncba_config) {
-  # Returns a data frame of species observations
-  # 
-  # Description:
-  #   Retrieves the observation records for a species from either the NCBA 
-  #   database or from a downloaded copy of the EBD.  If data is requested from
-  #   the Atlas Cache, then NCBA columns that are not found in the EBD databases
-  #   can be dropped or retained. Additionally, a customized list of fields can 
-  #   be specified to limit the columns that are included in the output data 
-  #   frame.
-  # 
-  # Parameters:
-  # species -- common name of the species
-  # database -- either "EBD" for a downloaded eBird database or "AtlasCache" for
-  #   the NCBA mongodb.
-  # EBD_fields_only -- whether to include non-EBD, Atlas Cache fields in the output 
-  #   data frame. TRUE or FALSE and defaults to FALSE. This argument is set to 
-  #   FALSE if the fields argument in not NULL. When database is set to EBD,
-  #   this parameter is obsolete.
-  # NCBA_only -- whether to exclude non-NCBA project records.  This argument 
-  #   is set to FALSE if the fields argument in not NULL.
-  # fields -- a list of fields to return, excluding those not listed.  This 
-  #   parameter offers no speed benefit with EBD sampling datasets.
-  # ncba_config -- config file with NCBA MongoDB username and password.
-  #
-  # Notes:
-  # - Data frame output when setting database to "AtlasCache" may require 
-  #     additional wrangling with the to_EBD_format function before subsequent
-  #     functions can be used.
-  
-  library(tidyverse)
-  library(auk)
-  source(ncba_config)
-  
-  # Set the working directory
-  if (is.null(work_dir) == FALSE) {
-    setwd(work_dir)
-  }
-  
-  # If a list of fields is provided, set EBD_fields_only to FALSE
-  if (is.null(fields) == FALSE) {
-    EBD_fields_only = FALSE
-  }
-  
-  if (database == "AtlasCache") {
-    # Connect to the NCBA database
-    connection <- connect_ncba_db(ncba_config, "ebd_mgmt", "ebd")
-    
-    # Define a query
-    if (NCBA_only == FALSE) {
-      query <- str_interp('{"OBSERVATIONS.COMMON_NAME" : "${species}"}')
-    } 
-    
-    if (NCBA_only == TRUE) {
-      query <- str_interp('{"PROJECT_CODE" : "EBIRD_ATL_NC", 
-                          "OBSERVATIONS.COMMON_NAME" : "${species}"}')
-    }
-
-    # Define a fields filter for the desired columns...
-    if (is.null(fields) == TRUE) {
-      if (EBD_fields_only == TRUE) {
-        # Identify AC fields for omission
-        AC.fields <- nonEBD_fields()
-      
-        # Convert the list of field names to a mongolite filter string
-        #   this will allow observations field through which then gets unnested
-        #   but that is OK because all fields nested within OBSERVATIONS are 
-        #   EBD fields
-        fields2 <- paste0('{', paste0('"', AC.fields, '" : false', 
-                                          collapse = ', '), '}')
-      } 
-      
-      if (EBD_fields_only == FALSE) {
-        fields2 <- "{}"
-      }
-    }
-    
-    # ... but if fields are provided, use those as a filter
-    if (is.null(fields) == FALSE) {
-      # Convert the list of field names to a mongolite filter string
-      fields_string <- paste0('{', paste0('"', fields, '" : true', 
-                                          collapse = ', '))
-      
-      # Redefine fields so that it can be pasted with the filter string
-      fields2 <- ', "OBSERVATIONS" : true}'
-        
-      # Combine with the existing fields string
-      fields2 <- paste0(fields_string, fields2)
-    }
-      
-    # Retrieve the checklists
-    records <- connection$find(fields = fields2, query = query) %>%
-      unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
-      filter(COMMON_NAME == species) # Rows for non-target species detected along
-                                    # with target species exist and need to be
-                                    # dropped.
-    
-    # Second pass at dropping unwanted fields (needed because of nested fields).
-    if (is.null(fields) == FALSE) {
-      # Get a list of names from fields that are still in the columns of records
-      dropem <- intersect(names(records), fields)
-
-      # Drop the unwanted columns
-      records <- records %>% select(any_of(dropem))
-    }
-    return(data.frame(records))
-  }
-    
-  
-  if (database == "EBD") {
-    library(auk)
-    
-    # Condition next action on whether NCBA records only are desired.
-    if (NCBA_only == TRUE) {
-      # Read in sampling data frame with auk
-      ebd <- EBD_observations %>%
-        auk_ebd() %>%
-        auk_project("EBIRD_ATL_NC") %>%
-        auk_species(species = species) %>%
-        auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
-        read_ebd() %>%
-        data.frame()
-    } 
-    
-    if (NCBA_only == FALSE) {
-      ebd <- EBD_observations %>%
-        auk_ebd() %>%
-        auk_species(species = species) %>% 
-        auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
-        read_ebd() %>%
-        data.frame()
-    }
-    
-    # Subset the columns
-    if (is.null(fields) == FALSE) {
-      checklists <- select(ebd, fields)
-    } else {
-      checklists <- ebd
-    }
-  }
-}
+get_observations
 ```
 
 # Usage
@@ -183,7 +39,7 @@ Retrieve observations from the Atlas Cache with the function.
 ```{r}
 fields <- c("SAMPLING_EVENT_IDENTIFIER", "PROJECT_CODE", "GLOBAL_UNIQUE_IDENTIFIER")
 
-obs <- get_observations_dev(species = "King Rail", 
+obs <- get_observations(species = "King Rail", 
                             database = "AtlasCache",
                             NCBA_only = TRUE,
                             EBD_fields_only = TRUE,
@@ -194,7 +50,7 @@ print(head(obs, 5))
 
 Retrieve observations from the EBD with the function.
 ```{r}
-obs <- get_observations_dev(species = "King Rail", database = "EBD",
+obs <- get_observations(species = "King Rail", database = "EBD",
                             NCBA_only = TRUE, ncba_config = ncba_config)
 print(head(obs, 5))
 ```
@@ -204,7 +60,7 @@ print(head(obs, 5))
 ## From the Atlas Cache
 There should only be one species name in the data frame. If the species' name alone is returned from this chunk, then the test is passed.
 ```{r}
-obs <- get_observations_dev(species = "King Rail", 
+obs <- get_observations(species = "King Rail", 
                             database = "AtlasCache",
                             NCBA_only = FALSE,
                             EBD_fields_only = FALSE,
@@ -215,7 +71,7 @@ print(unique(obs$COMMON_NAME))
 
 If NCBA_only was set to TRUE, then the PROJECT_CODE field should only contain "EBIRD_ATL_NC".  This chunk returns "EBIRD_ATL_NC" if the test was passed.
 ```{r}
-obs <- get_observations_dev(species = "King Rail", 
+obs <- get_observations(species = "King Rail", 
                             database = "AtlasCache",
                             NCBA_only = TRUE,
                             EBD_fields_only = FALSE,
@@ -228,7 +84,7 @@ If a list of fields is provided, then the output data frame should only include 
 ```{r}
 fields <- c("SAMPLING_EVENT_IDENTIFIER", "PROJECT_CODE", "GLOBAL_UNIQUE_IDENTIFIER")
 
-obs <- get_observations_dev(species = "King Rail", 
+obs <- get_observations(species = "King Rail", 
                             database = "AtlasCache",
                             NCBA_only = TRUE,
                             EBD_fields_only = TRUE,
@@ -283,7 +139,7 @@ print(setdiff(EBD.columns, our.columns))
 ## eBird Basic Dataset
 There should only be one species name in the data frame. If the species' name alone is returned from this chunk, then the test is passed.
 ```{r}
-obs <- get_observations_dev(species = "King Rail", 
+obs <- get_observations(species = "King Rail", 
                             database = "EBD",
                             NCBA_only = FALSE,
                             ncba_config = ncba_config)
@@ -293,7 +149,7 @@ print(unique(obs$common_name))
 
 If NCBA_only was set to TRUE, then the PROJECT_CODE field should only contain "EBIRD_ATL_NC".  This chunk returns "EBIRD_ATL_NC" if the test was passed.
 ```{r}
-obs <- get_observations_dev(species = "King Rail", 
+obs <- get_observations(species = "King Rail", 
                             database = "EBD",
                             NCBA_only = TRUE,
                             EBD_fields_only = FALSE,
@@ -306,7 +162,7 @@ If a list of fields is provided, then the output data frame should only include 
 ```{r}
 fields <- c("sampling_event_identifier", "project_code", "global_unique_identifier")
 
-obs <- get_observations_dev(species = "King Rail", 
+obs <- get_observations(species = "King Rail", 
                             database = "EBD",
                             NCBA_only = TRUE,
                             fields = fields,

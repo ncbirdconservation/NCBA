@@ -119,44 +119,6 @@ get_blocks <- function(ncba_config, spatial = FALSE, fields = NULL,
   }
 }
 
-# ------------------------------------------------------------------------------
-# get_observations <- function(species, dataset = "AtlasCache", 
-#                                  drop_columns = TRUE) {
-#   # Returns a data frame of species observations
-#   # 
-#   # Description:
-#   #   Retrieves the observation records for a species from either the NCBA 
-#   #   database or from a downloaded copy of the EBD.  If data is requested from
-#   #   the Atlas Cache, then NCBA columns that are not found in the EBD datasets
-#   #   can be dropped or retained.
-#   # 
-#   # Parameters:
-#   # species -- common name of the species
-#   # dataset -- either "EBD" for a downloaded eBird dataset or "AtlasCache" for
-#   #   the NCBA mongodb.
-#   # drop_columns -- whether to drop non-eBird columns from the output data frame
-#   
-#   if (dataset == "AtlasCache") {
-#     # connect to a specific collection (table)
-#     connection_ebd <- connect_ncba_db(ncba_config = config, 
-#                                       database = "ebd_mgmt", 
-#                                       collection = "ebd")
-#     
-#     # execute a query
-#     query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${species}"}')
-#     
-#     nc_data <- connection_ebd$find(query) %>%
-#       unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
-#       filter(COMMON_NAME == species)
-#     
-#     # format columns to the standard analysis format (ebd format)
-#     records <- to_ebd_format(nc_data, drop=drop_columns)
-#     
-#     if (dataset == "EBD") {
-#       print("NOT AVAILABLE YET")
-#     }
-#   }
-# }
 
 # ------------------------------------------------------------------------------
 to_EBD_format <- function(dataframe, drop = FALSE) {
@@ -215,6 +177,119 @@ to_EBD_format <- function(dataframe, drop = FALSE) {
   
   return(df2)
 }
+
+# ------------------------------------------------------------------------------
+breeding_dates <- function(species, basis, quantiles, year, ncba_config){
+  # Calculates start and end dates for breeding in North Carolina.
+  #
+  # Description:
+  # Returns a nested list of start and end dates for breeding based upon NCBA 
+  #   data.  Provides dates for each ecoregion and statewide.  The basis for 
+  #   determining dates can be controlled with the parameters.
+  #
+  # Notes:
+  # The nature of the calculations with dates creates challenges that users 
+  #   should keep in mind.  Quantiles cannot be calculated on date data types,
+  #   so the dates must first be converted to a day of year (number).  Leap
+  #   years throw this conversion off, and the atlas includes one (2024).  
+  #   Furthermore, converting the start and end dates back to a date is affected
+  #   by the leap year and requires specification of a start date (the first 
+  #   day of a particular year).  The result of these issues is that reported
+  #   start and end dates may be "off" by a day.  However, this is not a
+  #   significant amount of error for the intended applications of this function.
+  #
+  # Parameters:
+  # species -- common name of the species
+  # basis -- the types of breeding categories to bass calculations upon as a 
+  #   vector.  For example, c("confirmed", "probable", "possible").
+  # quantiles -- vector of lower and upper quantiles to use as the bounds.  For
+  #   example, c(0.1, 0.9) for the 10th and 90th quantiles.
+  # year -- the year to use for calculations from day of year back to calendar 
+  #   year.  Should be an integer.
+  # ncba_config -- path to your ncba_config file.
+  
+  library(lubridate)
+  
+  # GET DATA
+  # Observations of the species
+  obs <- get_observations(species, NCBA_only = TRUE, EBD_fields_only = FALSE,
+                          ncba_config = config)
+  
+  # Format columns to the standard analysis format (ebd format)
+  obs2 <- to_EBD_format(obs, drop=FALSE)
+  
+  # Get the blocks data frame
+  fields <- c("ID_BLOCK", "ID_EBD_NAME", "ECOREGION")
+  blocks <- get_blocks(ncba_config = config, spatial = FALSE, fields = fields)
+  
+  # GAIN ECOREGION COLUMN 
+  # Join the records to the blocks data frame to gain the ecoregion column
+  obs3 <- left_join(obs2, blocks, by = c("ncba_block" = "ID_EBD_NAME")) %>%
+    filter(is.na(ECOREGION) == FALSE) 
+  
+  # Replace abbreviations
+  obs3$ECOREGION[obs3$ECOREGION == "CP"] <- "Coastal Plains"
+  obs3$ECOREGION[obs3$ECOREGION == "P"] <- "Piedmont"
+  obs3$ECOREGION[obs3$ECOREGION == "M"] <- "Mountains"
+  
+  # WRANGLE BREEDING CODES
+  # replace breeding code entries "" with NULL
+  obs3["breeding_code"][obs3["breeding_code"] == ""] <- "NULL"
+  
+  # remove white space from evidence codes
+  obs3$breeding_code <- trimws(obs3$breeding_code)
+  
+  # lump evidence codes to broad categories
+  lump <- breeding_codes(lumped = TRUE)
+  for (i in seq_along(lump)) {
+    indx <- obs3$breeding_code %in% lump[[i]]
+    obs3[indx, "breeding_code"] <- names(lump)[i]
+  }
+  
+  # drop records with breeding categories not in basis
+  records <- filter(obs3, breeding_code %in% basis)
+  
+  # GET DATES
+  # Make a column with date as day of year
+  records$day_of_year <- yday(records$observation_date)
+  
+  # Define a function for calculating dates and putting into a list.
+  get_bounds <- function(records) {
+    # Get the bounds (start and end dates)
+    bounds <- quantile(records$day_of_year, quantiles)
+    #bounds3 <- quantile(records$observation_date, quantiles, type=1)
+    
+    # Convert to a date, but adjust origin back one day to ensure jan 1 is day 1.  
+    #   Otherwise it will be day 0.
+    year <- as.integer(year - 1)
+    bounds2 <- c(as.Date(bounds[[1]], origin = paste0(year, "-12-31")),
+                 as.Date(bounds[[2]], origin = paste0(year, "-12-31")))
+    
+    result <- format(bounds2, "%m-%d")
+    return(result)
+  }
+  
+  # Get statewide dates
+  S <- list("statewide" = get_bounds(records))
+  
+  # Get coastal plains dates
+  records.cp <- filter(records, ECOREGION == "Coastal Plains")
+  CP <- list("coastal_plains" = get_bounds(records.cp))
+  
+  # Get piedmont dates
+  records.p <- filter(records, ECOREGION == "Piedmont")
+  P <- list("piedmont" = get_bounds(records.p))
+  
+  # Get mountains dates
+  records.m <- filter(records, ECOREGION == "Mountains")
+  M <- list("mountains" = get_bounds(records.m))
+  
+  # Combine lists
+  result <- c(S, CP, P, M)
+  
+  return(result)
+}
+
 
 # ------------------------------------------------------------------------------
 breeding_boxplot <- function(species, data, type="interactive", 
@@ -651,37 +726,37 @@ get_all_checklists <- function(ncba_config, drop_ncba_col=TRUE){
 
 
 # ------------------------------------------------------------------------------
-get_observations <- function(species, database = "AtlasCache", 
+get_observations <- function(species, database = "AtlasCache",
                                  NCBA_only = FALSE,
                                  EBD_fields_only = FALSE,
                                  fields = NULL,
                                  ncba_config) {
   # Returns a data frame of species observations
-  # 
+  #
   # Description:
-  #   Retrieves the observation records for a species from either the NCBA 
+  #   Retrieves the observation records for a species from either the NCBA
   #   database or from a downloaded copy of the EBD.  If data is requested from
   #   the Atlas Cache, then NCBA columns that are not found in the EBD databases
-  #   can be dropped or retained. Additionally, a customized list of fields can 
-  #   be specified to limit the columns that are included in the output data 
+  #   can be dropped or retained. Additionally, a customized list of fields can
+  #   be specified to limit the columns that are included in the output data
   #   frame.
-  # 
+  #
   # Parameters:
   # species -- common name of the species
   # database -- either "EBD" for a downloaded eBird database or "AtlasCache" for
   #   the NCBA mongodb.
-  # EBD_fields_only -- whether to include non-EBD, Atlas Cache fields in the output 
-  #   data frame. TRUE or FALSE and defaults to FALSE. This argument is set to 
+  # EBD_fields_only -- whether to include non-EBD, Atlas Cache fields in the output
+  #   data frame. TRUE or FALSE and defaults to FALSE. This argument is set to
   #   FALSE if the fields argument in not NULL. When database is set to EBD,
   #   this parameter is obsolete.
-  # NCBA_only -- whether to exclude non-NCBA project records.  This argument 
+  # NCBA_only -- whether to exclude non-NCBA project records.  This argument
   #   is set to FALSE if the fields argument in not NULL.
-  # fields -- a list of fields to return, excluding those not listed.  This 
+  # fields -- a list of fields to return, excluding those not listed.  This
   #   parameter offers no speed benefit with EBD sampling datasets.
   # ncba_config -- config file with NCBA MongoDB username and password.
   #
   # Notes:
-  # - Data frame output when setting database to "AtlasCache" may require 
+  # - Data frame output when setting database to "AtlasCache" may require
   #     additional wrangling with the to_EBD_format function before subsequent
   #     functions can be used.
   
@@ -706,10 +781,10 @@ get_observations <- function(species, database = "AtlasCache",
     # Define a query
     if (NCBA_only == FALSE) {
       query <- str_interp('{"OBSERVATIONS.COMMON_NAME" : "${species}"}')
-    } 
+    }
     
     if (NCBA_only == TRUE) {
-      query <- str_interp('{"PROJECT_CODE" : "EBIRD_ATL_NC", 
+      query <- str_interp('{"PROJECT_CODE" : "EBIRD_ATL_NC",
                           "OBSERVATIONS.COMMON_NAME" : "${species}"}')
     }
     
@@ -721,11 +796,11 @@ get_observations <- function(species, database = "AtlasCache",
         
         # Convert the list of field names to a mongolite filter string
         #   this will allow observations field through which then gets unnested
-        #   but that is OK because all fields nested within OBSERVATIONS are 
+        #   but that is OK because all fields nested within OBSERVATIONS are
         #   EBD fields
-        fields2 <- paste0('{', paste0('"', AC.fields, '" : false', 
+        fields2 <- paste0('{', paste0('"', AC.fields, '" : false',
                                       collapse = ', '), '}')
-      } 
+      }
       
       if (EBD_fields_only == FALSE) {
         fields2 <- "{}"
@@ -735,7 +810,7 @@ get_observations <- function(species, database = "AtlasCache",
     # ... but if fields are provided, use those as a filter
     if (is.null(fields) == FALSE) {
       # Convert the list of field names to a mongolite filter string
-      fields_string <- paste0('{', paste0('"', fields, '" : true', 
+      fields_string <- paste0('{', paste0('"', fields, '" : true',
                                           collapse = ', '))
       
       # Redefine fields so that it can be pasted with the filter string
@@ -777,12 +852,12 @@ get_observations <- function(species, database = "AtlasCache",
         auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
         read_ebd() %>%
         data.frame()
-    } 
+    }
     
     if (NCBA_only == FALSE) {
       ebd <- EBD_observations %>%
         auk_ebd() %>%
-        auk_species(species = species) %>% 
+        auk_species(species = species) %>%
         auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
         read_ebd() %>%
         data.frame()

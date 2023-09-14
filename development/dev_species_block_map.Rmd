@@ -1,1 +1,150 @@
-Map of blocks where the species has been predicted to occur, but has not yet been reported, including highest coded observation per species in block and distinguished by breeding/non-breeding season based on best available safe dates, GAP predictions, or other appropriate metrics. 
+---
+title: "dev_species_block_map"
+author: "N.M. Tarr"
+date: "2023-09-12"
+output: html_document
+---
+
+```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
+```
+
+
+# Purpose
+This document defines and demonstrates a function that supports the following data contract task:
+
+"Map of blocks where the species has been predicted to occur, but has not yet been reported, including highest coded observation per species in block and distinguished by breeding/non-breeding season based on best available safe dates, GAP predictions, or other appropriate metrics."
+
+# Function
+```{r}
+library(tidyverse)
+
+# Setup
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+```
+
+```{r}
+fields <- c("ID_BLOCK", "ID_EBD_NAME")
+blocks_sf <- get_blocks(ncba_config = config, spatial = TRUE, fields = fields)
+```
+
+
+```{r}
+season <- "summer" # SUMMER, WINTER or BREEDING, WINTERING
+species <- "Dark-eyed Junco"
+source <- "GAP" # "eBird"
+```
+
+
+```{r}
+get_predicted_presence <- function(species, source, season, ncba_config) { 
+  # Returns a dataframe of blocks where the species was predicted to occur.
+  #
+  # Description:
+  # The AtlasCache blocks document contains fields that report species lists 
+  #   for each block in summer and winter.  Those lists are derived from 
+  #   predictions by the USGS GAP Analysis Program and eBird.  This function
+  #   retrieves a dataframe of blocks that were predicted to be occupied by a
+  #   species of interested, during a season of interest, and from a source
+  #   of interest.
+  #
+  # Parameters:
+  # species -- the common name of the species of interest.
+  # source -- who's prediction you want: "GAP" or "eBird"
+  # season -- "summer" or "winter" for GAP; "breeding" or "wintering" for eBird
+  # ncba_config -- path to your ncba_config file.
+  
+  season <- str_to_upper(season)
+  source_lookup <- list("GAP" = "GAP_SPP", "eBird" = "EBD_SPP")
+  source <- source_lookup[[source]]
+  
+  # Connect to the blocks collection (table)
+  connection_blocks <- connect_ncba_db(ncba_config = ncba_config, 
+                                       database = "ebd_mgmt", 
+                                       collection = "blocks")
+  
+  # Define and execute a query (with fields) for blocks of predicted presence.
+  fields <- '{"ID_EBD_NAME": true}'
+  query <- str_interp('{"${source}.PRIMARY_COM_NAME": "${species}", "${source}.${season}": 1}')
+  pres <- connection_blocks$find(fields = fields, query = query)
+  
+  # Add a presence column for the source
+  pres$present <- TRUE
+  new_name <- paste0(source, "_", season)
+  rename(pres, !!new_name:= present)
+  
+  return(pres)
+}
+```
+
+
+```{r}
+# GAP summer
+GAP.summer <- get_predicted_presence(species = species, source = "GAP",
+                                     season = "summer", 
+                                     ncba_config = config)
+GAP.summer <- right_join(blocks_sf, GAP.summer)
+
+print(GAP.summer)
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = GAP.summer, aes(fill = 'blue'))
+```
+
+
+```{r}
+# eBird summer
+EBD.summer <- get_predicted_presence(species = species, source = "eBird",
+                                     season = "breeding", 
+                                     ncba_config = config)
+EBD.summer <- right_join(blocks_sf, EBD.summer) 
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = EBD.summer, aes(fill = 'blue'))
+```
+
+```{r}
+# GAP winter
+GAP.winter <- get_predicted_presence(species = species, source = "GAP",
+                                     season = "winter", 
+                                     ncba_config = config)
+GAP.winter <- right_join(blocks_sf, GAP.winter)
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = GAP.winter, aes(fill = 'blue'))
+```
+
+```{r}
+# eBird wintering
+eBird.wintering <- get_predicted_presence(species = species, source = "eBird",
+                                     season = "wintering", 
+                                     ncba_config = config)
+eBird.wintering <- right_join(blocks_sf, eBird.wintering)
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = eBird.wintering, aes(fill = 'blue'))
+```
+
+
+# Usage
+
+# Tests
+
+# Speed
+
+# Bugs
+present column isn't being renamed appropriately.

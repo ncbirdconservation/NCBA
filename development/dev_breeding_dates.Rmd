@@ -1,0 +1,131 @@
+---
+title: "dev_breeding_dates"
+author: "N.M. Tarr"
+date: "2023-09-13"
+output: html_document
+---
+
+```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
+```
+
+
+# Purpose
+This document defines and demonstrates a function that computes breeding season start and end dates based upon NCBA data.  Results are computed statewide, as well as by ecoregion.
+
+# Function
+
+Notes about error in day of year -> date calculation and leap year means off by a day or two sometimes.
+quantiles demand non-date data type, so day of year must be used.
+day of year depends on the year because of leap years.
+atlas includes a leap year (2024)
+thus, calculations could be off by a day.
+Insignificant.
+```{r}
+breeding_dates
+```
+
+# Usage
+```{r}
+# Setup
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+```
+
+
+```{r}
+# Identify species
+species <- "Orchard Oriole"
+```
+
+List the breeding categories to use. The options are "confirmed", "probable", "possible", and "observed".
+```{r}
+basis <- c("confirmed", "probable")
+```
+
+Identify the lower and upper quantiles to use like c(0.05, 0.95).
+```{r}
+quantiles <- c(0.1, 0.9)
+```
+
+# Identify a year to use for start date in the day of year to date conversion.
+```{r}
+year <- 2023
+```
+
+# Get the dates
+```{r}
+# Compute the dates
+dates <- breeding_dates(species = species, basis = basis, quantiles = quantiles,
+                        year = year)
+print(dates)
+```
+
+
+# Tests
+
+Visually inspect whether the provided dates generally align with the breeding boxplot.
+```{r}
+species <- "Least Tern"
+quantiles <- c(0.25, 0.75)
+observations <- get_observations(species, database = "AtlasCache", 
+                                 NCBA_only = TRUE, 
+                                 EBD_fields_only = FALSE,
+                                 fields = NULL,
+                                 ncba_config = config) %>%
+  to_EBD_format(drop=FALSE)
+
+breeding_boxplot(species = species, data = observations, type = "ecoregional",
+                 lump = breeding_codes(lumped = TRUE))
+```
+
+```{r}
+breeding_boxplot(species = species, data = observations, type = "interactive",
+                 lump = breeding_codes(lumped = TRUE))
+```
+
+
+```{r}
+print(breeding_dates(species = species, basis = ("confirmed"), quantiles = quantiles,
+                        year = year))
+```
+
+
+# Speed
+Test a data-poor species
+```{r}
+# Run the function 5 times and record the runtime
+time <- c()
+for (i in 1:5) {
+  time1 <- proc.time()
+  breeding_dates(species = "Willow Flycatcher", basis = basis, 
+                 quantiles = quantiles, year = year)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
+
+
+Test a data-rich species
+```{r}
+# Run the function 5 times and record the runtime
+time <- c()
+for (i in 1:5) {
+  time1 <- proc.time()
+  breeding_dates(species = "Tufted Titmouse", basis = basis, 
+                 quantiles = quantiles, year = year)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
