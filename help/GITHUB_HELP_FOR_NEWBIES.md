@@ -1,5 +1,37 @@
 # Git functions
 
+# Git Flow
+Development of the shiny app (in the shinyapp folder), and the "development"
+folder requires us to keep better branch organization.
+
+master -- develop -- species-stats
+                  -- shiny-dev
+
+"species-stats": Development of rmarkdown scripts and updating the ncba_functions. These edits should be merged with the develop branch. Workflow:
+
+    git checkout shiny-dev
+    git merge develop
+    # do editing
+    git add .
+    git commit -m "making changes to species-stats"
+    checkout develop
+    merge species-stats
+
+
+"shiny-dev": Development of the shiny app and incorporating species-stats changes. Workflow:
+ 
+    git checkout shiny-dev
+    git merge develop
+    # do editing
+    git add .
+    git commit -m "making changes to shiny-dev"
+    checkout develop
+    merge shiny-dev
+
+    
+
+
+
 ## Resources
 
 - Helpful website: [Oh Sh!t, Git!] (https://ohshitgit.com)
