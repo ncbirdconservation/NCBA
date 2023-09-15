@@ -18,8 +18,8 @@ master -- develop -- species-stats
     # do editing
     git add .
     git commit -m "making changes to species-stats"
-    checkout develop
-    merge species-stats
+    git checkout develop
+    git merge species-stats
 
 
 "shiny-dev": Development of the shiny app and incorporating species-stats changes. Workflow:
@@ -29,5 +29,5 @@ master -- develop -- species-stats
     # do editing
     git add .
     git commit -m "making changes to shiny-dev"
-    checkout develop
-    merge shiny-dev
+    git checkout develop
+    git merge shiny-dev
