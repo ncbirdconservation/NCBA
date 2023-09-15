@@ -12,86 +12,6 @@ knitr::opts_chunk$set(
   message = FALSE)
 ```
 
-# Purpose
-This document details a function that creates a spatial representation of checklists or observations.  SHOULD A MAX EFFORT DISTANCE PARAMETER BE ADDED?
-```{r}
-records_as_sf_dev <- function(records_df, kind, method, fill_na_km = 0.1) {
-  # Create new simple features (spatial data frame) of records (checklists or 
-  #   observations)  Output can be plotted or used as input for other functions.
-  # 
-  #   Description: 
-  #   Checklist records often need to be assigned geometries for visualization
-  #   and spatial analyses, and different methods could be used.  Checklists
-  #   can be represented as points or polygons, and polygons could be drawn as 
-  #   buffers around the checklist coordinates (circles) or buffers drawn around
-  #   checklist tracks.  Buffer length is meant to represent locational
-  #   uncertainty (spatial precision) and can be approximated in different ways.
-  #   Stationary or short lists should likely be buffered 100 m or more to 
-  #   at least partially account for area surveyed.  Null effort_distance_km 
-  #   values are filled with zero, which assumes those records are stationary 
-  #   counts.
-  #
-  #   Parameters:
-  #   records_df -- data frame of records with latitude, longitude, 
-  #     checklists_id or sampling_event_identifier, atlas_block, protocol_type,
-  #     and effort_distance_km columns.
-  #   kind -- "checklists" or "observations" to identify what type of records are
-  #     in the data frame.  Individual species data will be observations.
-  #   method -- how to represent each record spatially.  Options are "points",
-  #     "point-radius", and "buffered-tracks".
-  #   fill_na_km -- NA values may exist in some records, which precludes creating
-  #     a point-radius polygon for them. Enter a km distance to use as a 
-  #     replacement.  This argument is inconsequential for the point method.
-  #   
-  #   Results:
-  #   A spatial (simple features) data frame with columns for sampling_event_identifier or 
-  #     sampling_event_identifier, atlas_block, protocol_type, 
-  #     effort_distance_km, latitude, longitude and observation_count and
-  #     breeding_code if the kind is observations.
-  library(sf)
-  
-  if (kind == "checklists"){
-    records_df <- records_df %>%
-      select(sampling_event_identifier, atlas_block, protocol_type, effort_distance_km,
-             latitude, longitude)
-  } else {
-    records_df <- records_df %>%
-      select(sampling_event_identifier, atlas_block, protocol_type, 
-             effort_distance_km, latitude, longitude, observation_count, 
-             breeding_code)
-  }
-  
-  # Make spatial frame
-  checklists_sf <- records_df %>%
-    st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
-    st_transform(6542)
-  
-  # Apply method
-  if (method == "points") {
-    checklists_sf <- checklists_sf
-  }
-    
-  if (method == "point-radius") {
-    checklists_sf <- checklists_sf %>%
-      # Buffer coordinates
-      replace_na(list(effort_distance_km=fill_na_km)) %>%
-      mutate(buffer_length = (effort_distance_km)*1000) %>%
-      mutate(footprint = st_buffer(geometry, buffer_length)) %>%
-      select(-c(geometry)) %>%
-      mutate(geometry = footprint) %>%
-      st_set_geometry("geometry")
-  }
-    
-  if (method == "buffer-tracks") {
-    print("This method is currently unavailable until we get checklist tracks.")
-  }
-  
-  return(checklists_sf)
-}
-```
-
-
-# Usage
 This demo requires the tidyverse packages.
 ```{r}
 library(tidyverse)
@@ -104,6 +24,15 @@ source("ncba_functions.R")
 config <- "~/Documents/NCBA/Scripts/ncba_config.R"
 ```
 
+
+# Purpose
+This document details a function that creates a spatial representation of checklists or observations.  SHOULD A MAX EFFORT DISTANCE PARAMETER BE ADDED?
+```{r}
+records_as_sf
+```
+
+
+# Usage
 Set the working directory to somewhere outside of the NCBA repository so that results are not saved in the repository.
 ```{r}
 setwd("~/Documents/NCBA/species/")

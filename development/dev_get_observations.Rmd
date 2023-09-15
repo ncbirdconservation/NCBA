@@ -1,8 +1,10 @@
 ---
-title: "get_observations_dev"
+title: "dev_get_observations"
 author: "N.M. Tarr"
 date: "2023-08-28"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 ```{r setup, include=TRUE, message=TRUE, warning=TRUE}
@@ -13,20 +15,10 @@ knitr::opts_chunk$set(
 knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
 ```
 
-# Function
-Retrieves the observation records for a species from either the NCBA database or from a downloaded copy of the EBD.  If data is requested from the Atlas Cache, then NCBA columns that are not found in the EBD databases can be dropped or retained.  Additionally, a customized list of fields can be specified to limit the columns that are included in the output data frame.
-```{r}
-get_observations
-```
-
-# Usage
-This demo requires the tidyverse packages.
+This demo requires the tidyverse packages and some NCBA functions.
 ```{r}
 library(tidyverse)
-```
 
-Load the NCBA functions because this function relies upon the output from some of them.
-```{r}
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
 
@@ -35,16 +27,23 @@ ncba_config <- "~/Documents/NCBA/Scripts/ncba_config.R"
 source(ncba_config)
 ```
 
-Retrieve observations from the Atlas Cache with the function.
+# Function
+Retrieves the observation records for a species from either the NCBA database or from a downloaded copy of the EBD.  If data is requested from the Atlas Cache, then NCBA columns that are not found in the EBD databases can be dropped or retained.  Additionally, a customized list of fields can be specified to limit the columns that are included in the output data frame.
+```{r}
+get_observations
+```
+
+# Usage
+Retrieve observations from the Atlas Cache with the function, but only certain fields.
 ```{r}
 fields <- c("SAMPLING_EVENT_IDENTIFIER", "PROJECT_CODE", "GLOBAL_UNIQUE_IDENTIFIER")
 
 obs <- get_observations(species = "King Rail", 
-                            database = "AtlasCache",
-                            NCBA_only = TRUE,
-                            EBD_fields_only = TRUE,
-                            fields = fields,
-                            ncba_config = ncba_config)
+                        database = "AtlasCache",
+                        NCBA_only = TRUE,
+                        EBD_fields_only = TRUE,
+                        fields = fields,
+                        ncba_config = ncba_config)
 print(head(obs, 5))
 ```
 
@@ -93,13 +92,15 @@ obs <- get_observations(species = "King Rail",
 print(unique(names(obs) == fields))
 ```
 
-If only fields that are found in the eBird Basic Dataset are wanted, then no NCBA derived columns should be present.  If this chunk returns FALSE, then the test is passed.
+If only fields that are found in the eBird Basic Dataset are wanted, then no NCBA derived columns should be present.  If this chunk returns FALSE, then the test is passed. 
+
+THIS TEST FAILS because of the fields "SUBSPECIES_COMMON_NAME" and    "SUBSPECIES_SCIENTIFIC_NAME".  What is their origin?
 ```{r}
 # Get the list of NCBA columns
 NCBA.columns <- nonEBD_fields() 
 
 # Get observations
-obs <- get_observations_dev(species = "King Rail", 
+obs <- get_observations(species = "King Rail", 
                             database = "AtlasCache",
                             EBD_fields_only = TRUE,
                             ncba_config = ncba_config)
@@ -108,7 +109,7 @@ obs <- get_observations_dev(species = "King Rail",
 print(unique(NCBA.columns %in% names(obs)))
 ```
 
-Identify any columns found in an EBD data set that are absent from the output data frame.
+Identify any columns found in an EBD data set that are absent from the output data frame.  "checklist_id" and "age_sex" are expected to be absent because "checklist_id" is not present in observation records and "age_sex" is included in the AtlasCache as "age/sex".
 ```{r}
 # Get an example EBD data frame
 input_file <- system.file("extdata/ebd-sample.txt", package = "auk")
@@ -176,65 +177,65 @@ print(unique(names(obs) == fields))
 ## Atlas Cache
 For a data-poor species
 ```{r}
-# # Run the function 5 times and record the runtime
-# time <- c()
-# for (i in 1:5) {
-#   time1 <- proc.time()
-#   get_observations_dev(species = "King Rail", database = "AtlasCache",
-#                        ncba_config = ncba_config)
-#   t <- proc.time() - time1
-#   time[i] <- t["elapsed"]
-# }
-# 
-# # Print the descriptive statistics
-# print(summary(time))
+# Run the function 5 times and record the runtime
+time <- c()
+for (i in 1:5) {
+  time1 <- proc.time()
+  get_observations_dev(species = "King Rail", database = "AtlasCache",
+                       ncba_config = ncba_config)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
 ```
 
 For a data-rich species
 ```{r}
-# # Run the function 5 times and record the runtime
-# time <- c()
-# for (i in 1:5) {
-#   time1 <- proc.time()
-#   get_observations_dev(species = "Indigo Bunting", database = "AtlasCache",
-#                        ncba_config = ncba_config)
-#   t <- proc.time() - time1
-#   time[i] <- t["elapsed"]
-# }
-# 
-# # Print the descriptive statistics
-# print(summary(time))
+# Run the function 5 times and record the runtime
+time <- c()
+for (i in 1:5) {
+  time1 <- proc.time()
+  get_observations_dev(species = "Indigo Bunting", database = "AtlasCache",
+                       ncba_config = ncba_config)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
 ```
 
 ## EBD
 For a data-poor species
 ```{r}
-# # Run the function 5 times and record the runtime
-# time <- c()
-# for (i in 1:5) {
-#   time1 <- proc.time()
-#   get_observations_dev(species = "King Rail", database = "EBD",
-#                        ncba_config = ncba_config)
-#   t <- proc.time() - time1
-#   time[i] <- t["elapsed"]
-# }
-# 
-# # Print the descriptive statistics
-# print(summary(time))
+# Run the function 5 times and record the runtime
+time <- c()
+for (i in 1:5) {
+  time1 <- proc.time()
+  get_observations_dev(species = "King Rail", database = "EBD",
+                       ncba_config = ncba_config)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
 ```
 
 For a data-rich species
 ```{r}
-# # Run the function 5 times and record the runtime
-# time <- c()
-# for (i in 1:5) {
-#   time1 <- proc.time()
-#   get_observations_dev(species = "Indigo Bunting", database = "EBD",
-#                        ncba_config = ncba_config)
-#   t <- proc.time() - time1
-#   time[i] <- t["elapsed"]
-# }
-# 
-# # Print the descriptive statistics
-# print(summary(time))
+# Run the function 5 times and record the runtime
+time <- c()
+for (i in 1:5) {
+  time1 <- proc.time()
+  get_observations_dev(species = "Indigo Bunting", database = "EBD",
+                       ncba_config = ncba_config)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
 ```

@@ -13,18 +13,6 @@ knitr::opts_chunk$set(
 knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
 ```
 
-
-# Purpose
-This document details a function to retrieve information about NCBA blocks in the form of a data frame or a spatial data frame (simple feature).  The function also allows the user to pass a list of fields to return if they do not want all of the available fields.  Restricting the fields returned can drastically speed up the query because some fields are nested with a large amount of data.
-
-
-# Function
-```{r}
-get_blocks
-```
-
-
-# Usage
 This demo requires the tidyverse packages.
 ```{r}
 library(tidyverse)
@@ -37,6 +25,18 @@ source("ncba_functions.R")
 ncba_config <- "~/Documents/NCBA/Scripts/ncba_config.R"
 ```
 
+
+# Purpose
+This document details a function to retrieve information about NCBA blocks in the form of a dataframe or a spatial dataframe (simple feature).  The function also allows the user to pass a list of fields to return if they do not want all of the available fields.  Restricting the fields returned can drastically speed up the query because some fields are nested with a large amount of data.
+
+
+# Function
+```{r}
+get_blocks
+```
+
+
+# Usage
 Retrieve a blocks data frame with all columns
 ```{r}
 blocks <- get_blocks(ncba_config = ncba_config, spatial = FALSE)

@@ -188,15 +188,15 @@ breeding_dates <- function(species, basis, quantiles, year, ncba_config){
   #   determining dates can be controlled with the parameters.
   #
   # Notes:
-  # The nature of the calculations with dates creates challenges that users 
-  #   should keep in mind.  Quantiles cannot be calculated on date data types,
-  #   so the dates must first be converted to a day of year (number).  Leap
-  #   years throw this conversion off, and the atlas includes one (2024).  
-  #   Furthermore, converting the start and end dates back to a date is affected
-  #   by the leap year and requires specification of a start date (the first 
-  #   day of a particular year).  The result of these issues is that reported
-  #   start and end dates may be "off" by a day.  However, this is not a
-  #   significant amount of error for the intended applications of this function.
+  # The nature of the calculations with dates creates things that users 
+  #   should keep in mind.  Here, quantiles are calculated by first converting 
+  #   dates to a day of year (number).  Leap years throw this conversion off, 
+  #   and the atlas includes one (2024).  Furthermore, converting the start and 
+  #   end dates back to a date is affected by the leap year and requires 
+  #   specification of a start date (the first day of a particular year).  The 
+  #   result of these issues is that reported start and end dates may be "off" 
+  #   by a day.  However, this is not a significant amount of error for the 
+  #   intended applications of this function.
   #
   # Parameters:
   # species -- common name of the species
@@ -228,7 +228,7 @@ breeding_dates <- function(species, basis, quantiles, year, ncba_config){
     filter(is.na(ECOREGION) == FALSE) 
   
   # Replace abbreviations
-  obs3$ECOREGION[obs3$ECOREGION == "CP"] <- "Coastal Plains"
+  obs3$ECOREGION[obs3$ECOREGION == "CP"] <- "Coastal Plain"
   obs3$ECOREGION[obs3$ECOREGION == "P"] <- "Piedmont"
   obs3$ECOREGION[obs3$ECOREGION == "M"] <- "Mountains"
   
@@ -272,9 +272,9 @@ breeding_dates <- function(species, basis, quantiles, year, ncba_config){
   # Get statewide dates
   S <- list("statewide" = get_bounds(records))
   
-  # Get coastal plains dates
-  records.cp <- filter(records, ECOREGION == "Coastal Plains")
-  CP <- list("coastal_plains" = get_bounds(records.cp))
+  # Get coastal Plain dates
+  records.cp <- filter(records, ECOREGION == "Coastal Plain")
+  CP <- list("coastal_Plain" = get_bounds(records.cp))
   
   # Get piedmont dates
   records.p <- filter(records, ECOREGION == "Piedmont")
@@ -518,13 +518,13 @@ breeding_boxplot <- function(species, data, type="interactive",
       filter(is.na(ECOREGION) == FALSE) 
     
     # Replace abbreviations
-    records2$ECOREGION[records2$ECOREGION == "CP"] <- "Coastal Plains"
+    records2$ECOREGION[records2$ECOREGION == "CP"] <- "Coastal Plain"
     records2$ECOREGION[records2$ECOREGION == "P"] <- "Piedmont"
     records2$ECOREGION[records2$ECOREGION == "M"] <- "Mountains"
     
     # Get the values in desired order via making a factor
     records2$ECOREGION <- factor(records2$ECOREGION, 
-                                 levels = c("Coastal Plains", "Piedmont",
+                                 levels = c("Coastal Plain", "Piedmont",
                                             "Mountains"))
     
     # Boxplot
@@ -1038,47 +1038,50 @@ locality_type_pie <- function(checklists){
 }
 
 # ------------------------------------------------------------------------------
-records_as_sf <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
-  # Create new simple features (spatial data frame) of checklists.  Output can
-  #   be plotted, but the primary use will be as input for other functions.
+records_as_sf <- function(records_df, kind, method, fill_na_km = 0.1) {
+  # Create new simple features (spatial data frame) of records (checklists or 
+  #   observations)  Output can be plotted or used as input for other functions.
   # 
   #   Description: 
   #   Checklist records often need to be assigned geometries for visualization
   #   and spatial analyses, and different methods could be used.  Checklists
-  #   can be represented as points or polygons and polygons could be drawn as 
+  #   can be represented as points or polygons, and polygons could be drawn as 
   #   buffers around the checklist coordinates (circles) or buffers drawn around
   #   checklist tracks.  Buffer length is meant to represent locational
-  #   uncertainty and can be approximated in different ways that are currently
-  #   supported.  Stationary or short lists should likely be buffered 100 m or
-  #   more to account for area surveyed.  Lists traveling > 5 km are
-  #   problematic so removed here.  Null effort_distance_km
-  #   values are filled with zero, which assumes those records are stationary
+  #   uncertainty (spatial precision) and can be approximated in different ways.
+  #   Stationary or short lists should likely be buffered 100 m or more to 
+  #   at least partially account for area surveyed.  Null effort_distance_km 
+  #   values are filled with zero, which assumes those records are stationary 
   #   counts.
   #
   #   Parameters:
-  #   records_df -- data frame of checklists with latitude, longitude, 
+  #   records_df -- data frame of records with latitude, longitude, 
   #     checklists_id or sampling_event_identifier, atlas_block, protocol_type,
   #     and effort_distance_km columns.
   #   kind -- "checklists" or "observations" to identify what type of records are
   #     in the data frame.  Individual species data will be observations.
   #   method -- how to represent each record spatially.  Options are "points",
   #     "point-radius", and "buffered-tracks".
+  #   fill_na_km -- NA values may exist in some records, which precludes creating
+  #     a point-radius polygon for them. Enter a km distance to use as a 
+  #     replacement.  This argument is inconsequential for the point method.
   #   
   #   Results:
-  #   A spatial (simple features) data frame with columns for checklist_id or 
+  #   A spatial (simple features) data frame with columns for sampling_event_identifier or 
   #     sampling_event_identifier, atlas_block, protocol_type, 
-  #     effort_distance_km, latitude, longitude.
-  
+  #     effort_distance_km, latitude, longitude and observation_count and
+  #     breeding_code if the kind is observations.
   library(sf)
   
   if (kind == "checklists"){
     records_df <- records_df %>%
-      select(checklist_id, atlas_block, protocol_type, effort_distance_km,
+      select(sampling_event_identifier, atlas_block, protocol_type, effort_distance_km,
              latitude, longitude)
   } else {
     records_df <- records_df %>%
       select(sampling_event_identifier, atlas_block, protocol_type, 
-             effort_distance_km, latitude, longitude, observation_count)
+             effort_distance_km, latitude, longitude, observation_count, 
+             breeding_code)
   }
   
   # Make spatial frame
@@ -1090,17 +1093,18 @@ records_as_sf <- function(records_df, kind, method){# DRAFT DRAFT DRAFT
   if (method == "points") {
     checklists_sf <- checklists_sf
   }
+  
   if (method == "point-radius") {
     checklists_sf <- checklists_sf %>%
       # Buffer coordinates
-      replace_na(list(effort_distance_km=0)) %>%
-      filter(effort_distance_km <= 5) %>%
-      mutate(buffer_length = (effort_distance_km + 0.1)*1000) %>%
+      replace_na(list(effort_distance_km=fill_na_km)) %>%
+      mutate(buffer_length = (effort_distance_km)*1000) %>%
       mutate(footprint = st_buffer(geometry, buffer_length)) %>%
       select(-c(geometry)) %>%
       mutate(geometry = footprint) %>%
       st_set_geometry("geometry")
   }
+  
   if (method == "buffer-tracks") {
     print("This method is currently unavailable until we get checklist tracks.")
   }

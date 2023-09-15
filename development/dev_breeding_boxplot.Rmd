@@ -15,23 +15,6 @@ knitr::opts_chunk$set(
 knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
 ```
 
-# Purpose
-This document details a function that generates a boxplot of breeding codes with some customization options and supports the ability to view the checklist behind individual data points by clicking on them in the figure.  The function offers several options as parameters.
-
-interactive -- whether to create an interactive plot that supports opening
-   checklist URLs by clicking on data points in the figure.
-pallet -- specify an RColorBrewer pallet (multiple colors), or a single
-   color (name or hex) for the figure.
-omit_codes -- specify evidence codes not be plotted.
-lump -- an option to lump breeding codes into fewer categories.
-drop -- TRUE or FALSE whether to include unreported codes in the plot
-
-# Function Definition
-```{r}
-breeding_boxplot
-```
-
-# Usage
 This demo requires the tidyverse packages.
 ```{r}
 library(tidyverse)
@@ -44,6 +27,25 @@ source("ncba_functions.R")
 config <- "~/Documents/NCBA/Scripts/ncba_config.R"
 ```
 
+# Purpose
+This document details a function that generates a boxplot of breeding codes with some customization options and supports the ability to view the checklist behind individual data points by clicking on them in the figure.  The function offers several options as parameters.
+
+species -- common name of the species
+data -- data frame of ebird or NCBA data
+type -- whether to create an interactive plot that supports opening
+   checklist URLs by clicking on data points in the figure, a non-interactive plot, or a non-interactive plot separated by ecoregion.
+pallet -- specify an RColorBrewer pallet (multiple colors), or a single
+   color (name or hex) for the figure.
+omit_codes -- specify evidence codes not be plotted.
+lump -- an option to lump breeding codes into fewer categories.
+drop -- TRUE or FALSE whether to include unreported codes in the plot
+
+# Function Definition
+```{r}
+breeding_boxplot
+```
+
+# Usage
 Identify a species to investigate.
 ```{r}
 species <- "Loggerhead Shrike"
@@ -165,17 +167,17 @@ breeding_boxplot(species, records, type="ecoregional", drop=TRUE)
 # Speed Test
 Run the function several times to get descriptive statistics.
 ```{r}
-# # Run the function 100 times and record the runtime
-# time <- c()
-# for (i in 1:100) {
-#   time1 <- proc.time()
-#   breeding_boxplot_dev(species, records, interactive=FALSE)
-#   t <- proc.time() - time1
-#   time[i] <- t["elapsed"]
-# }
-# 
-# # Print the descriptive statistics
-# print(summary(time))
+# Run the function 10 times and record the runtime
+time <- c()
+for (i in 1:10) {
+  time1 <- proc.time()
+  breeding_boxplot(species, records, type = "non-interactive")
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
 ```
 
 Results of the speed test were...
