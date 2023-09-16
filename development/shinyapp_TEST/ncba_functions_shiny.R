@@ -6,14 +6,6 @@
 # this file is stored, then replace "ncba_functions.R" with the path to the file
 # For example, 'source("C:/Code/NCBA/ncba_functions.R").  The functions can
 # then be called by their names.
-library(tidyverse)
-
-# Load the config file
-source("ncba_config.r")
-
-# Set the working directory to the work_dir variable from the config file.
-#   This may not always work (rmarkdown).....
-setwd(work_dir)
 
 # ------------------------------------------------------------------------------
 connect_ncba_db <- function(ncba_config="ncba_config.R", database, collection){
