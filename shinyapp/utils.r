@@ -12,8 +12,8 @@ source("ncba_config.r")
 URI = sprintf(
   paste0("mongodb://%s:%s@%s/%s?authSource=admin&replicaSet=",
     "atlas-3olgg1-shard-0&readPreference=primary&ssl=true"),
-  USER,
-  PASS,
+  ncba_db_user,
+  ncba_db_pass,
   HOST,
   DB)
 
