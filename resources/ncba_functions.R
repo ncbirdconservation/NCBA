@@ -298,9 +298,9 @@ breeding_dates <- function(species, basis, quantiles, year){
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 breeding_boxplot <- function(species, data, type="interactive", 
-                                 pallet="Paired", omit_codes=NULL,
-                                 lump=NULL, drop=TRUE, cex.x.axis = 0.9, 
-                                 cex.y.axis = 0.8, subtitle = NULL) {
+                             pallet="Paired", omit_codes=NULL,
+                             lump=NULL, drop=TRUE, cex.x.axis = 0.9, 
+                             cex.y.axis = 0.8, subtitle = NULL) {
   # Produces a boxplot of breeding codes over calendar day.
   #
   # Description:
@@ -340,11 +340,12 @@ breeding_boxplot <- function(species, data, type="interactive",
   # replace breeding code entries "" with NULL
   ebird["breeding_code"][ebird["breeding_code"] == ""] <- "NULL"
   
-  # put all dates within the same year -- ignores leap year
-  ebird$observation_date <- sub("^20\\d\\d", "2050", ebird$observation_date)
-  
   # remove white space from evidence codes
   ebird$breeding_code <- trimws(ebird$breeding_code)
+  
+  # put all dates within the same year -- ignores leap year
+  ebird$observation_date <- sub("^20\\d\\d", year(now()) - 1, 
+                                ebird$observation_date)
   
   # make obsdate a date object
   ebird$obsdate <- as.Date(ebird$observation_date, "%Y-%m-%d")
@@ -532,11 +533,14 @@ breeding_boxplot <- function(species, data, type="interactive",
                                  levels = c("Coastal Plain", "Piedmont",
                                             "Mountains"))
     
+    # make a column with suitable x tick values
+    ebird$xtick <- as.Date(ebird$observation_date, "%m-%d")
+    
     # Boxplot
     result  <- ggplot(data = records2) +
       geom_boxplot(aes(x = obsdate, y = breeding_code)) +
       facet_wrap(~ ECOREGION, nrow=3) + 
-      labs(y="Breeding Code", x="Calendar Day")
+      labs(y="Breeding Code", x="Calendar Day", title = species)
     plot(result)
   }
   

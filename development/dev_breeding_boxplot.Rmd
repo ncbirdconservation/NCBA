@@ -18,11 +18,6 @@ knitr::opts_chunk$set(
   message = FALSE)
 ```
 
-This demo requires the tidyverse packages.
-```{r}
-#library(tidyverse)
-```
-
 
 # Purpose
 This document details a function that generates a boxplot of breeding codes with some customization options and supports the ability to view the checklist behind individual data points by clicking on them in the figure.  The function offers several options as parameters.
@@ -42,28 +37,20 @@ drop -- TRUE or FALSE whether to include unreported codes in the plot
 breeding_boxplot
 ```
 
+
 # Usage
 Identify a species to investigate.
 ```{r}
-species <- "Loggerhead Shrike"
+species <- "Red-breasted Nuthatch"
 print(species)
 ```
 
 Retrieve the records for the species from the Atlas Cache
 ```{r}
-time1 <- proc.time()
-
-nc_data <- get_observations(species, NCBA_only = TRUE, EBD_fields_only = FALSE)
-
-# format columns to the standard analysis format (ebd format)
-records <- to_EBD_format(nc_data, drop=FALSE)
-
-# Calculate processing time
-mongotime <- proc.time() - time1
-
-# Print number of records returned
-print(paste("Records returned:", nrow(records)))
-print(paste("Runtime: ", mongotime[["elapsed"]]))
+records <- get_observations(species, 
+                            NCBA_only = TRUE, 
+                            EBD_fields_only = FALSE) %>% 
+  to_EBD_format(drop=FALSE)
 ```
 
 Make a non-interactive boxplot without lumping codes together
