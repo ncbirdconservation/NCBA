@@ -6,23 +6,14 @@ output: word_document
 ---
 
 ```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
 knitr::opts_chunk$set(
   echo = TRUE,
   warning = FALSE,
   message = FALSE)
-knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
-```
-
-This demo requires the tidyverse packages.
-```{r}
-library(tidyverse)
-```
-
-Load the NCBA functions because this function relies upon the output from some of them.
-```{r}
-setwd("~/Code/NCBA/resources")
-source("ncba_functions.R")
-ncba_config <- "~/Documents/NCBA/Scripts/ncba_config.R"
 ```
 
 
@@ -39,23 +30,21 @@ get_blocks
 # Usage
 Retrieve a blocks data frame with all columns
 ```{r}
-blocks <- get_blocks(ncba_config = ncba_config, spatial = FALSE)
+blocks <- get_blocks(spatial = FALSE)
 print(head(blocks, 3))
 ```
 
 Retrieve a blocks data frame with a subset of columns
 ```{r}
 fields <- c("ID_BLOCK", "ECOREGION", "COUNTY")
-blocks <- get_blocks(ncba_config = ncba_config, spatial = FALSE,
-                         fields = fields)
-print(head(blocks))
+blocks <- get_blocks(spatial = FALSE, fields = fields)
+print(head(blocks, 5))
 ```
 
 Retrieve a spatial data frame with a few columns
 ```{r}
 fields <- c("ID_BLOCK", "ECOREGION")
-blocks_sf <- get_blocks(ncba_config = ncba_config, spatial = TRUE,
-                         fields = fields)
+blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
 print(head(blocks_sf, 5))
 ```
 
@@ -64,8 +53,7 @@ print(head(blocks_sf, 5))
 Plot a blocks spatial data frame.
 ```{r}
 fields <- c("ID_BLOCK", "TYPE")
-blocks_sf <- get_blocks(ncba_config = ncba_config, spatial = TRUE,
-                         fields = fields)
+blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
 
 # Plot the spatial data frame
 ggplot(blocks_sf) +
@@ -75,24 +63,21 @@ ggplot(blocks_sf) +
 Get a data frame with a subset of fields
 ```{r}
 fields <- c("ID_BLOCK", "ECOREGION")
-blocks <- get_blocks(ncba_config = ncba_config, spatial = FALSE,
-                         fields = fields)
+blocks <- get_blocks(spatial = FALSE, fields = fields)
 print(names(blocks))
 ```
 
 Confirm that the default CRS of output is 4326
 ```{r}
 fields <- c("ID_BLOCK")
-blocks_sf <- get_blocks(ncba_config = ncba_config, spatial = TRUE,
-                            fields = fields)
+blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
 st_crs(blocks_sf)
 ```
 
 Confirm that the CRS changes appropriately when requested.
 ```{r}
 fields <- c("ID_BLOCK")
-blocks_sf <- get_blocks(ncba_config = ncba_config, spatial = TRUE,
-                            fields = fields, crs = 5070)
+blocks_sf <- get_blocks(spatial = TRUE, fields = fields, crs = 5070)
 st_crs(blocks_sf)
 ```
 
@@ -102,11 +87,11 @@ Describe runtimes for queries of a subset of fields
 ```{r}
 fields <- c("ID_BLOCK", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
 
-#Run the function 30 times and record the runtime
+#Run the function 10 times and record the runtime
 time <- c()
-for (i in 1:30) {
+for (i in 1:10) {
   time1 <- proc.time()
-  get_blocks(ncba_config = ncba_config, fields = fields)
+  get_blocks(fields = fields)
   time[i] <- proc.time() - time1
 }
 
@@ -118,11 +103,11 @@ Describe runtimes for subset queries with geometries (spatial set to TRUE)
 ```{r}
 fields <- c("ID_BLOCK", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
 
-# Run the function 30 times and record the runtime
+# Run the function 10 times and record the runtime
 time <- c()
-for (i in 1:30) {
+for (i in 1:10) {
   time1 <- proc.time()
-  get_blocks(ncba_config = ncba_config, fields = fields, spatial = TRUE)
+  get_blocks(fields = fields, spatial = TRUE)
   time[i] <- proc.time() - time1
 }
 
@@ -136,7 +121,7 @@ Describe runtimes for query of all fields
 time <- c()
 for (i in 1:5) {
   time1 <- proc.time()
-  get_blocks(ncba_config = ncba_config, fields = NULL)
+  get_blocks(fields = NULL)
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }

@@ -6,13 +6,17 @@ output: html_document
 ---
 
 ```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
 knitr::opts_chunk$set(
   echo = TRUE,
   warning = FALSE,
   message = FALSE)
-knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
 ```
 
+# IN PROGRESS
 
 # Purpose
 This document defines and demonstrates a function that supports the following data contract task:
@@ -20,14 +24,6 @@ This document defines and demonstrates a function that supports the following da
 "Map of blocks where the species has been predicted to occur, but has not yet been reported, including highest coded observation per species in block and distinguished by breeding/non-breeding season based on best available safe dates, GAP predictions, or other appropriate metrics."
 
 # Function
-```{r}
-library(tidyverse)
-
-# Setup
-setwd("~/Code/NCBA/resources")
-source("ncba_functions.R")
-config <- "~/Documents/NCBA/Scripts/ncba_config.R"
-```
 
 ```{r}
 fields <- c("ID_BLOCK", "ID_EBD_NAME")

@@ -8,18 +8,16 @@ output:
 ---
 
 ```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
 knitr::opts_chunk$set(
   echo = TRUE,
   warning = FALSE,
   message = FALSE)
-knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
-```
 
-```{r}
-# Setup
-setwd("~/Code/NCBA/resources")
-source("ncba_functions.R")
-config <- "~/Documents/NCBA/Scripts/ncba_config.R"
+print(paste("The document working directory is: ", getwd()))
 ```
 
 # Purpose
@@ -72,8 +70,7 @@ quantiles <- c(0.25, 0.75)
 observations <- get_observations(species, database = "AtlasCache", 
                                  NCBA_only = TRUE, 
                                  EBD_fields_only = FALSE,
-                                 fields = NULL,
-                                 ncba_config = config) %>%
+                                 fields = NULL) %>%
   to_EBD_format(drop=FALSE)
 
 breeding_boxplot(species = species, data = observations, type = "ecoregional",

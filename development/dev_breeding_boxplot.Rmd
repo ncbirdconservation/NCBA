@@ -53,8 +53,7 @@ Retrieve the records for the species from the Atlas Cache
 ```{r}
 time1 <- proc.time()
 
-nc_data <- get_observations(species, NCBA_only = TRUE, EBD_fields_only = FALSE,
-                            ncba_config = config)
+nc_data <- get_observations(species, NCBA_only = TRUE, EBD_fields_only = FALSE)
 
 # format columns to the standard analysis format (ebd format)
 records <- to_EBD_format(nc_data, drop=FALSE)
