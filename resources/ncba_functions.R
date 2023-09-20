@@ -218,6 +218,60 @@ get_breeding_dates <- function(species, day_year = FALSE){
   return(result)
 }
 
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+highest_category <- function(species, dataframe = NULL) {
+  # Returns a data frame of the highest breeding code reported in each block.
+  #
+  # Description:
+  # Creates a data frame with one row for every atlas block that contains the 
+  #   highest breeding category reported (C4, C3, C2, or C1). If dataframe is 
+  #   set to NULL, then the get_observations() and to_EBD_format() functions
+  #   are used to acquire a data frame of all NCBA observations for the species 
+  #   from the Atlas Cache.  The output of this function is a simple features
+  #   data frame that can be used in maps or table applications.
+  #
+  # Parameters:
+  # species -- the common name of the species of interest.
+  # dataframe -- the name of a data frame to use as input.  NULL prompts the use
+  #   of get_observations() to access a data frame from the Atlas Cache.
+  #
+  #
+  if (is.null(dataframe) == TRUE) {
+    obs <- get_observations(species, NCBA_only = TRUE, fields = NULL) %>%
+      to_EBD_format()
+  } else {
+    obs <- dataframe
+  }
+  
+  # Make the breeding_category values a factor to set a rank.  First, check that
+  #   the column is present.
+  if ("breeding_category" %in% names(obs)) {
+    obs$breeding_category <- factor(obs$breeding_categor, 
+                                    levels = c("C4", "C3", "C2", "C1"))
+    
+    # Use summarise to pull out the records with the highest code
+    highest <- obs %>%
+      filter(is.na(breeding_category) == FALSE, breeding_category != "C1") %>%
+      arrange(atlas_block, breeding_category) %>%
+      group_by(atlas_block) %>%
+      summarise(highest_category = first(breeding_category))
+    
+    # Get a blocks data frame
+    fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
+    blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
+    
+    # Join to add NA rows and block geometries.
+    highest_sf <- left_join(blocks_sf, highest, 
+                            by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+    
+    return(highest_sf)
+    
+  } else {
+    print("The provided data frame does not contain a breeding_category column.")
+  }
+}
+
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
@@ -1221,6 +1275,46 @@ records_as_sf <- function(records_df, kind, method, fill_na_km = 0.1) {
   
   return(checklists_sf)
 }
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+get_predicted_presence <- function(species, source, season) { 
+  # Returns a dataframe of blocks where the species was predicted to occur.
+  #
+  # Description:
+  # The AtlasCache blocks document contains fields that report species lists 
+  #   for each block in summer and winter.  Those lists are derived from 
+  #   predictions by the USGS GAP Analysis Program and eBird.  This function
+  #   retrieves a dataframe of blocks that were predicted to be occupied by a
+  #   species of interested, during a season of interest, and from a source
+  #   of interest.
+  #
+  # Parameters:
+  # species -- the common name of the species of interest.
+  # source -- who's prediction you want: "GAP" or "eBird"
+  # season -- "summer" or "winter" for GAP; "breeding" or "wintering" for eBird
+  
+  season <- str_to_upper(season)
+  source_lookup <- list("GAP" = "GAP_SPP", "eBird" = "EBD_SPP")
+  source <- source_lookup[[source]]
+  
+  # Connect to the blocks collection (table)
+  connection_blocks <- connect_ncba_db(database = "ebd_mgmt", 
+                                       collection = "blocks")
+  
+  # Define and execute a query (with fields) for blocks of predicted presence.
+  fields <- '{"ID_EBD_NAME": true}'
+  query <- str_interp('{"${source}.PRIMARY_COM_NAME": "${species}", "${source}.${season}": 1}')
+  pres <- connection_blocks$find(fields = fields, query = query)
+  
+  # Add a presence column for the source
+  pres$present <- TRUE
+  new_name <- paste0(source, "_", season)
+  pres <- rename(pres, !!new_name:= present)
+  
+  return(pres)
+}
+
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------

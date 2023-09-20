@@ -5,7 +5,7 @@ date: "2023-09-12"
 output: html_document
 ---
 
-```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
 
@@ -23,8 +23,7 @@ This document defines and demonstrates a function that supports the following da
 
 "Map of blocks where the species has been predicted to occur, but has not yet been reported, including highest coded observation per species in block and distinguished by breeding/non-breeding season based on best available safe dates, GAP predictions, or other appropriate metrics."
 
-# Function
-
+# Definition
 ```{r}
 fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
 blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
@@ -39,106 +38,13 @@ source <- "GAP" # "eBird"
 
 
 ```{r}
-get_predicted_presence <- function(species, source, season) { 
-  # Returns a dataframe of blocks where the species was predicted to occur.
-  #
-  # Description:
-  # The AtlasCache blocks document contains fields that report species lists 
-  #   for each block in summer and winter.  Those lists are derived from 
-  #   predictions by the USGS GAP Analysis Program and eBird.  This function
-  #   retrieves a dataframe of blocks that were predicted to be occupied by a
-  #   species of interested, during a season of interest, and from a source
-  #   of interest.
-  #
-  # Parameters:
-  # species -- the common name of the species of interest.
-  # source -- who's prediction you want: "GAP" or "eBird"
-  # season -- "summer" or "winter" for GAP; "breeding" or "wintering" for eBird
-  
-  season <- str_to_upper(season)
-  source_lookup <- list("GAP" = "GAP_SPP", "eBird" = "EBD_SPP")
-  source <- source_lookup[[source]]
-  
-  # Connect to the blocks collection (table)
-  connection_blocks <- connect_ncba_db(database = "ebd_mgmt", 
-                                       collection = "blocks")
-  
-  # Define and execute a query (with fields) for blocks of predicted presence.
-  fields <- '{"ID_EBD_NAME": true}'
-  query <- str_interp('{"${source}.PRIMARY_COM_NAME": "${species}", "${source}.${season}": 1}')
-  pres <- connection_blocks$find(fields = fields, query = query)
-  
-  # Add a presence column for the source
-  pres$present <- TRUE
-  new_name <- paste0(source, "_", season)
-  rename(pres, !!new_name:= present)
-  
-  return(pres)
-}
-```
-
-
-```{r}
-# GAP summer
-GAP.summer <- get_predicted_presence(species = species, source = "GAP",
-                                     season = "summer")
-GAP.summer <- right_join(blocks_sf, GAP.summer)
-
-# Plot the spatial data frame
-ggplot() +
-  geom_sf(data = blocks_sf) +
-  geom_sf(data = GAP.summer, aes(fill = 'blue')) + 
-  ggtitle("GAP Summer Range")
-```
-
-
-```{r}
-# eBird summer
-EBD.summer <- get_predicted_presence(species = species, source = "eBird",
-                                     season = "breeding")
-EBD.summer <- right_join(blocks_sf, EBD.summer) 
-
-# Plot the spatial data frame
-ggplot() +
-  geom_sf(data = blocks_sf) +
-  geom_sf(data = EBD.summer, aes(fill = 'blue')) +
-  ggtitle("eBird Summer Range")
-```
-
-```{r}
-# GAP winter
-GAP.winter <- get_predicted_presence(species = species, source = "GAP",
-                                     season = "winter")
-GAP.winter <- right_join(blocks_sf, GAP.winter)
-
-# Plot the spatial data frame
-ggplot() +
-  geom_sf(data = blocks_sf) +
-  geom_sf(data = GAP.winter, aes(fill = 'blue')) +
-  ggtitle("GAP Winter Range")
-```
-
-```{r}
-# eBird wintering
-eBird.wintering <- get_predicted_presence(species = species, source = "eBird",
-                                     season = "wintering")
-eBird.wintering <- right_join(blocks_sf, eBird.wintering)
-
-# Plot the spatial data frame
-ggplot() +
-  geom_sf(data = blocks_sf) +
-  geom_sf(data = eBird.wintering, aes(fill = 'blue')) +
-  ggtitle("eBird Winter Range")
-```
-
-```{r}
 fields <- c("atlas_block", "observation_count")
 
-# # Get all the observations for the species
-# obs <- get_observations(species = species, database = "AtlasCache", 
-#                         NCBA_only = TRUE, fields = NULL) %>%
-#   to_EBD_format() %>%
-#   filter(observation_count != 0)
+# Get all the observations for the species
+obs <- get_observations(species = species, database = "AtlasCache",
+                        NCBA_only = TRUE, fields = NULL) %>%
+  to_EBD_format() %>%
+  filter(observation_count != 0)
 
 # Pull out the blocks with observations
 pres.blocks <- obs %>%
@@ -179,16 +85,12 @@ blocks_observed_in <- function(what_weeks, breeding_categories)
 
 ```{r}
 # Pull out breeding season records
-breedates <- breeding_dates(species, basis = c("confirmed", "probable"),
-                            quantiles = c(0.1, 0.9), year = 2023,
-                            year_day = TRUE)
-
-statewide_breedates <- breedates[["statewide"]]
+breedates <- get_breeding_dates(species, day_year = TRUE)
 ```
 
 ```{r}
 nonbreeding.obs <- obs %>%
-  filter(yday(observation_date) < statewide_breedates[[1]] | yday(observation_date) > statewide_breedates[[2]])
+  filter(yday(observation_date) < breedates[[1]] | yday(observation_date) > breedates[[2]])
 
 nonbreeding_sf <- right_join(blocks_sf, nonbreeding.obs, 
                    by = join_by("ID_BLOCK_CODE" == "atlas_block"))
@@ -204,7 +106,7 @@ ggplot() +
 
 ```{r}
 breeding.obs <- obs %>%
-  filter(yday(observation_date) > statewide_breedates[[1]] & yday(observation_date) < statewide_breedates[[2]])
+  filter(yday(observation_date) > breedates[[1]] & yday(observation_date) < breedates[[2]])
 
 breeding_sf <- right_join(blocks_sf, breeding.obs, 
                    by = join_by("ID_BLOCK_CODE" == "atlas_block"))
@@ -220,7 +122,7 @@ ggplot() +
 ```{r}
 # Confirmed
 confirmed <- obs %>%
-  filter(yday(observation_date) > statewide_breedates[[1]] & yday(observation_date) < statewide_breedates[[2]]) %>%
+  filter(yday(observation_date) > breedates[[1]] & yday(observation_date) < breedates[[2]]) %>%
   filter(breeding_category == "C4")
 
 confirmed_sf <- right_join(blocks_sf, confirmed, 
@@ -236,7 +138,7 @@ ggplot() +
 ```{r}
 # Probable
 probable <- obs %>%
-  filter(yday(observation_date) > statewide_breedates[[1]] & yday(observation_date) < statewide_breedates[[2]]) %>%
+  filter(yday(observation_date) > breedates[[1]] & yday(observation_date) < breedates[[2]]) %>%
   filter(breeding_category == "C3")
 
 probable_sf <- right_join(blocks_sf, probable, 
@@ -252,10 +154,10 @@ ggplot() +
 ```{r}
 # Possible
 possible <- obs %>%
-  filter(yday(observation_date) > statewide_breedates[[1]] & yday(observation_date) < statewide_breedates[[2]]) %>%
+  filter(yday(observation_date) > breedates[[1]] & yday(observation_date) < breedates[[2]]) %>%
   filter(breeding_category == "C2")
 
-possible_sf <- right_join(blocks_sf, possible, 
+possible_sf <- right_join(blocks_sf, possible,
                    by = join_by("ID_BLOCK_CODE" == "atlas_block"))
 
 # Plot the spatial data frame
@@ -268,26 +170,14 @@ ggplot() +
 
 ```{r}
 # FIND THE HIGHEST CODE PER BLOCK
-obs$breeding_category <- factor(obs$breeding_categor, 
-                                levels = c("C4", "C3", "C2", "C1"))
-
-
-# start with obs
-highest <- obs %>%
-  filter(is.na(breeding_category) == FALSE, breeding_category != "C1") %>%
-  arrange(atlas_block, breeding_category) %>%
-  group_by(atlas_block) %>%
-  summarise(highest_code = first(breeding_category))
-
-highest_sf <- right_join(blocks_sf, highest, 
-                   by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+highest_sf <- highest_category(species, dataframe = obs)
 
 # Plot the spatial data frame
 ggplot() +
   geom_sf(data = blocks_sf) +
   geom_sf(data = GAP.summer, aes(fill = present)) + 
-  geom_sf(data = highest_sf, aes(fill = highest_code)) + 
-  ggtitle("Highest Reported Breeding Code and GAP Summer")
+  geom_sf(data = highest_sf, aes(fill = highest_category)) + 
+  ggtitle("Highest Reported Breeding Category and GAP Summer")
 ```
 
 

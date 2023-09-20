@@ -1,0 +1,137 @@
+---
+title: "dev_get_predicted_presence"
+author: "N.M. Tarr"
+date: "2023-09-20"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+
+# Purpose
+This document details a function that returns GAP and eBird-based predictions regarding whether a species is present or absent within blocks during summer/breeding and winter/wintering seasons. Predictions were previously loaded into nested columns in the blocks collection located in the Atlas Cache, and thus this function merely queries those fields.  The output of this function can be joined with a block simple features data frame in order to map the predictions.
+
+# Function
+```{r}
+get_predicted_presence
+```
+
+
+# Usage
+Get a data frame of blocks where the species was predicted to occur by the USGS National Gap Analysis Project (2001).
+```{r}
+GAP.summer <- get_predicted_presence(species = "Brown Creeper", 
+                                     source = "GAP",
+                                     season = "summer")
+
+print(head(GAP.summer))
+```
+
+Map the blocks where the species was predicted to occur by the USGS National Gap Analysis Project (2001).
+```{r}
+# Get a blocks data frame with simple features
+fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
+blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
+
+# Join blocks with GAP summer block prediction
+GAP.summer <- right_join(blocks_sf, GAP.summer)
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = GAP.summer, aes(fill = GAP_SPP_SUMMER)) + 
+  ggtitle("GAP Summer Range")
+```
+
+
+# Tests
+Make sure the function runs for all sources and season combinations.
+```{r}
+GAP.summer <- get_predicted_presence(species = "Brown Creeper", 
+                                     source = "GAP",
+                                     season = "summer")
+
+# Get a blocks data frame with simple features
+fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
+blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
+
+# Join blocks with GAP summer block prediction
+GAP.summer <- right_join(blocks_sf, GAP.summer)
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = GAP.summer, aes(fill = GAP_SPP_SUMMER)) +
+  ggtitle("GAP Summer Range")
+```
+
+```{r}
+GAP.winter <- get_predicted_presence(species = "Brown Creeper", 
+                                     source = "GAP",
+                                     season = "winter")
+
+# Join blocks with GAP summer block prediction
+GAP.winter <- right_join(blocks_sf, GAP.winter)
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = GAP.winter, aes(fill = GAP_SPP_WINTER)) +
+  ggtitle("GAP Winter Range")
+```
+
+```{r}
+eBird.summer <- get_predicted_presence(species = "Brown Creeper", 
+                                     source = "eBird",
+                                     season = "breeding")
+
+# Join blocks with GAP summer block prediction
+eBird.summer <- right_join(blocks_sf, eBird.summer)
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = eBird.summer, aes(fill = EBD_SPP_BREEDING)) +
+  ggtitle("eBird Breeding")
+```
+
+```{r}
+eBird.winter <- get_predicted_presence(species = "Brown Creeper", 
+                                     source = "eBird",
+                                     season = "wintering")
+
+# Join blocks with GAP summer block prediction
+eBird.winter <- right_join(blocks_sf, eBird.winter)
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = eBird.winter, aes(fill = EBD_SPP_WINTERING)) +
+  ggtitle("eBird wintering")
+```
+
+# Speed
+```{r}
+# Run the function 5 times and record the runtime
+time <- c()
+for (i in 1:5) {
+  time1 <- proc.time()
+  get_predicted_presence(species = "Brown Creeper", 
+                                     source = "eBird",
+                                     season = "wintering")
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
