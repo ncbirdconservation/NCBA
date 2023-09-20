@@ -27,45 +27,43 @@ This document defines and demonstrates a function that computes breeding season 
 # Function
 Note: I explored using the quantiles function to calculate directly from date type values, but the results did not seem correct and were possible biased by over a month.
 ```{r}
-breeding_dates
+calculate_breeding_dates
 ```
 
 
 # Usage
-Pick a species
+Running the function returns a list of dates.
 ```{r}
-species <- "Orchard Oriole"
+species <- "Yellow-throated Vireo"
+quantiles <- c(.05, .95)
+
+dates <- calculate_breeding_dates(species = species, basis = ("confirmed"), 
+                                  quantiles = quantiles, year = 2023,
+                                  year_day = FALSE)
+print(dates)
 ```
 
-List the breeding categories to use. The options are "confirmed", "probable", "possible", and "observed".
+Running the function with year_day set to TRUE returns a list of days of the year.
 ```{r}
-basis <- c("confirmed", "probable")
-```
-
-Identify the lower and upper quantiles to use like c(0.05, 0.95).
-```{r}
-quantiles <- c(0.1, 0.9)
-```
-
-# Identify a year to use for start date in the day of year to date conversion.
-```{r}
-year <- 2023
-```
-
-# Get the dates
-```{r}
-# Compute the dates
-dates <- breeding_dates(species = species, basis = basis, quantiles = quantiles,
-                        year = year)
+dates <- calculate_breeding_dates(species = species, basis = ("confirmed"), 
+                                  quantiles = quantiles, year = 2023,
+                                  year_day = TRUE)
 print(dates)
 ```
 
 
 # Tests
-
 Visually inspect whether the provided dates generally align with the breeding boxplot.
 ```{r}
 species <- "Least Tern"
+
+print(calculate_breeding_dates(species = species, basis = ("confirmed"), 
+                               quantiles = quantiles, year = 2023,
+                               year_day = FALSE))
+```
+
+
+```{r}
 quantiles <- c(0.25, 0.75)
 observations <- get_observations(species, database = "AtlasCache", 
                                  NCBA_only = TRUE, 
@@ -83,21 +81,17 @@ breeding_boxplot(species = species, data = observations, type = "interactive",
 ```
 
 
-```{r}
-print(breeding_dates(species = species, basis = ("confirmed"), quantiles = quantiles,
-                        year = year))
-```
-
-
 # Speed
-Test a data-poor species
+The calculations performed by the function require the retrieval of all records for a species, thus the runtime depends upon the rarity of the species.  Test a data-poor species.
 ```{r}
+basis = c("confirmed", "probable")
+
 # Run the function 5 times and record the runtime
 time <- c()
 for (i in 1:5) {
   time1 <- proc.time()
-  breeding_dates(species = "Willow Flycatcher", basis = basis, 
-                 quantiles = quantiles, year = year)
+  calculate_breeding_dates(species = "Willow Flycatcher", basis = basis, 
+                 quantiles = quantiles, year = 2023)
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }
@@ -107,14 +101,14 @@ print(summary(time))
 ```
 
 
-Test a data-rich species
+Test a data-rich species.
 ```{r}
 # Run the function 5 times and record the runtime
 time <- c()
 for (i in 1:5) {
   time1 <- proc.time()
-  breeding_dates(species = "Tufted Titmouse", basis = basis, 
-                 quantiles = quantiles, year = year)
+  calculate_breeding_dates(species = "Tufted Titmouse", basis = basis, 
+                 quantiles = quantiles, year = 2023)
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }

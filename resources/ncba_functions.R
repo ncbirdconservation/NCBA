@@ -183,13 +183,50 @@ to_EBD_format <- function(dataframe, drop = FALSE) {
   return(df2)
 }
 
+
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-breeding_dates <- function(species, basis, quantiles, year){
-  # Calculates start and end dates for breeding in North Carolina.
+get_breeding_dates <- function(species, day_year = FALSE){
+  # Gets the start and end day of year for breeding from the Atlas Cache.
   #
   # Description:
-  # Returns a nested list of start and end dates for breeding based upon NCBA 
+  # Returns a list of start and end days of year for breeding.
+  #
+  # Parameters:
+  # species -- common name of the species
+  
+  # Connect to the blocks collection (table)
+  connection <- connect_ncba_db(database = "ebd_mgmt", 
+                                collection = "safe_dates")
+  
+  # Define query
+  query <- str_interp('{"COMMON_NAME" : "${species}"}')
+  
+  # Run query for data frame
+  df <- connection$find(query = query)
+  
+  result <- c(format(ymd(df[["B_SAFE_START_DATE"]]), "%m-%d"),
+              format(ymd(df[["B_SAFE_END_DATE"]]), "%m-%d"))
+  
+  # Convert to day of year
+  if (day_year == TRUE) {
+    result <- c(ymd(df[["B_SAFE_START_DATE"]]),
+                ymd(df[["B_SAFE_END_DATE"]]))
+    result <- yday(result)
+  }
+  
+  return(result)
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+calculate_breeding_dates <- function(species, basis, quantiles, year = 2023, 
+                                     year_day = FALSE){
+  # Calculates start and end day of year for breeding in North Carolina.
+  #
+  # Description:
+  # Returns a nested list of start and end day of year for breeding based upon NCBA 
   #   data.  Provides dates for each ecoregion and statewide.  The basis for 
   #   determining dates can be controlled with the parameters.
   #
@@ -212,7 +249,8 @@ breeding_dates <- function(species, basis, quantiles, year){
   #   example, c(0.1, 0.9) for the 10th and 90th quantiles.
   # year -- the year to use for calculations from day of year back to calendar 
   #   year.  Should be an integer.
-
+  # year_day -- whether to return results as day of the year.
+  
   library(lubridate)
   
   # GET DATA
@@ -261,15 +299,17 @@ breeding_dates <- function(species, basis, quantiles, year){
   get_bounds <- function(records) {
     # Get the bounds (start and end dates)
     bounds <- quantile(records$day_of_year, quantiles)
-    #bounds3 <- quantile(records$observation_date, quantiles, type=1)
     
-    # Convert to a date, but adjust origin back one day to ensure jan 1 is day 1.  
-    #   Otherwise it will be day 0.
-    year <- as.integer(year - 1)
-    bounds2 <- c(as.Date(bounds[[1]], origin = paste0(year, "-12-31")),
-                 as.Date(bounds[[2]], origin = paste0(year, "-12-31")))
-    
-    result <- format(bounds2, "%m-%d")
+    if (year_day == TRUE) {
+      result <- bounds
+    } else {
+      # Convert to a date, but adjust origin back one day to ensure jan 1 is day 1.  
+      #   Otherwise it will be day 0.
+      year <- as.integer(year - 1)
+      bounds2 <- c(as.Date(bounds[[1]], origin = paste0(year, "-12-31")),
+                   as.Date(bounds[[2]], origin = paste0(year, "-12-31")))
+      result <- format(bounds2, "%m-%d")
+    }
     return(result)
   }
   

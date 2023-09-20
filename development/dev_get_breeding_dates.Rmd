@@ -1,0 +1,79 @@
+---
+title: "dev_get_breeding_dates"
+author: "N.M. Tarr"
+date: "2023-09-19"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+
+print(paste("The document working directory is: ", getwd()))
+```
+
+# Purpose
+This document defines and demonstrates a function that gets breeding season start and end dates from the AtlasCache.
+
+
+# Function
+Note: I explored using the quantiles function to calculate directly from date type values, but the results did not seem correct and were possible biased by over a month.
+```{r}
+get_breeding_dates
+```
+
+
+# Usage
+Pick a species
+```{r}
+species <- "Orchard Oriole"
+```
+
+# Get the dates in month-day format
+```{r}
+dates <- get_breeding_dates(species = species)
+print(dates)
+```
+
+# Get the dates in day of year format
+```{r}
+dates <- get_breeding_dates(species = species, day_year = TRUE)
+print(dates)
+```
+
+# Tests
+If this chunk returns TRUE, then it passes the test.
+```{r}
+# Enter Black Vulture dates after viewing them in MondoDB Compass
+B_SAFE_START_DATE_BLVU <- "05-01"
+B_SAFE_END_DATE_BLVU <- "07-31"
+
+# Retrieve the dates with the function
+dates <- get_breeding_dates(species = "Black Vulture")
+print(dates[1] == B_SAFE_START_DATE_BLVU)
+print(dates[2] == B_SAFE_END_DATE_BLVU)
+```
+
+
+# Speed
+Run the function 30 times and record the runtime
+```{r}
+time <- c()
+for (i in 1:30) {
+  time1 <- proc.time()
+  get_breeding_dates(species = "Willow Flycatcher")
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
