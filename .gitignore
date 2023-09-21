@@ -117,3 +117,6 @@ venv.bak/
 
 #shiny app deployment info
 rsconnect
+shinyapp/ncba_config.r
+development/ncba_config.r
+resources/ncba_config.r
