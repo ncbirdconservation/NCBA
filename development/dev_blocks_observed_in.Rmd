@@ -35,7 +35,7 @@ blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
 
 ```{r}
 # Species
-species <- "Warbling Vireo"
+species <- "Philadelphia Vireo"
 
 # Pull out breeding season records
 breedates <- get_breeding_dates(species, day_year = TRUE)
