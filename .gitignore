@@ -2,9 +2,9 @@
 
 # NCBA config files
 ncba_config.r
-/shinyapp/ncba_config.r
-/development/ncba_config.r
-/resources/ncba_config.r
+shinyapp/ncba_config.r
+development/ncba_config.r
+resources/ncba_config.r
 
 # R stuff
 .RHistory
