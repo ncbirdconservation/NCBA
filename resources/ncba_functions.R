@@ -974,6 +974,54 @@ get_observations <- function(species, database = "AtlasCache",
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+blocks_observed_in <- function(observations, start_day = 1, end_day = 365, 
+                               within = TRUE,
+                               breeding_categories = c("C4", "C3", "C2", "C1")) 
+{
+  # Returns a data frame of blocks where the species was observed
+  #
+  # Description:
+  # 
+  #
+  # Parameters:
+  # observations -- data frame of observation records obtained with 
+  #   get_observations() and to_EBD_format().
+  # start_day -- a numbered day of the year for the start of a period.  Can be 
+  #   obtained with yday().
+  # end_day -- a numbered day of the year for the end of a period
+  # within -- TRUE or FALSE whether to exclude records from outside of the
+  #   period.  TRUE keeps records within the period and FALSE keeps records 
+  #   from outside of the period.
+  # breeding_categories -- breeding categories to include.  Defaults to c("C4",
+  #   "C3", "C2", "C1")
+  obs <- observations
+  
+  # Filter on day period
+  if (within == TRUE) {
+    obs <- obs %>%
+      filter(yday(observation_date) > breedates[[1]] & yday(observation_date) < breedates[[2]])
+  }
+  
+  if (within == FALSE) {
+    obs <- obs %>%
+      filter(yday(observation_date) < breedates[[1]] | yday(observation_date) > breedates[[2]])
+  }
+  
+  # Filter on breeding categories
+  obs <- filter(obs, breeding_category %in% breeding_categories)
+  
+  # Collapse away duplicates
+  fields <- c("atlas_block", "common_name")
+  obs <- obs %>%
+    select(fields) %>%
+    distinct()
+  
+  return(obs)
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 lists_by_week <- function(checklists){
   # Return a figure of checklists per week
   # 

@@ -25,8 +25,23 @@ This document defines and demonstrates a function that supports the following da
 
 # Definition
 ```{r}
-fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
-blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
+blocks_observed_in <- function(what_weeks, breeding_categories) 
+  {
+  # Returns a dataframe of blocks where the species was observed.
+  #
+  # Description:
+  # 
+  #
+  # Parameters:
+  # species -- the common name of the species of interest.
+  # source -- who's prediction you want: "GAP" or "eBird"
+  # which_weeks -- 
+  # breeding_categories -- 
+  df <- NULL
+
+  
+  return(df)
+}
 ```
 
 
@@ -36,11 +51,15 @@ species <- "Red-breasted Nuthatch"
 source <- "GAP" # "eBird"
 ```
 
+```{r}
+# Get a blocks data frame with simple features
+fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
+blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
+```
 
 ```{r}
-fields <- c("atlas_block", "observation_count")
-
 # Get all the observations for the species
+fields <- c("atlas_block", "observation_count")
 obs <- get_observations(species = species, database = "AtlasCache",
                         NCBA_only = TRUE, fields = NULL) %>%
   to_EBD_format() %>%
@@ -61,26 +80,6 @@ ggplot() +
   geom_sf(data = blocks_sf) +
   geom_sf(data = pres.blocks_sf, aes(fill = "blue")) +
   ggtitle("Blocks With Observations")
-  
-
-
-blocks_observed_in <- function(what_weeks, breeding_categories) 
-  {
-  # Returns a dataframe of blocks where the species was observed.
-  #
-  # Description:
-  # 
-  #
-  # Parameters:
-  # species -- the common name of the species of interest.
-  # source -- who's prediction you want: "GAP" or "eBird"
-  # which_weeks -- 
-  # breeding_categories -- 
-  df <- NULL
-
-  
-  return(df)
-}
 ```
 
 ```{r}
@@ -98,7 +97,7 @@ nonbreeding_sf <- right_join(blocks_sf, nonbreeding.obs,
 # Plot the spatial data frame
 ggplot() +
   geom_sf(data = blocks_sf) +
-  geom_sf(data = GAP.winter, aes(fill = present)) +
+  geom_sf(data = GAP.winter, aes(fill = GAP_SPP_WINTER)) +
   geom_sf(data = nonbreeding_sf, aes(fill = common_name)) +
   ggtitle("GAP Winter Range and Winter NCBA Observations")
 ```
@@ -182,8 +181,133 @@ ggplot() +
 
 
 
-# Usage
 
+
+# Usage
+Map the blocks with any type of observation.
+```{r}
+pres.blocks <- blocks_observed_in(observations, start_day = 1, end_day = 365, 
+                                  within = TRUE,
+                                  breeding_categories = c("C4", "C3", "C2", 
+                                                          "C1", ""))
+
+pres.blocks_sf <- right_join(blocks_sf, pres.blocks, by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = pres.blocks_sf, aes(fill = common_name)) +
+  ggtitle("Blocks With Observations")
+```
+
+Map the blocks with breeding season observations
+```{r}
+# Pull out breeding season dates
+breedates <- get_breeding_dates(species, day_year = TRUE)
+
+summer.blocks <- blocks_observed_in(observations, start_day = breedates[1], 
+                                    end_day = breedates[2], 
+                                    within = TRUE,
+                                    breeding_categories = c("C4", "C3", "C2", 
+                                                            "C1", ""))
+
+summer.blocks_sf <- right_join(blocks_sf, summer.blocks, 
+                               by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = summer.blocks_sf, aes(fill = common_name)) +
+  ggtitle("Blocks With Breeding Season Observations")
+```
+
+Map blocks with nonbreeding season observations
+```{r}
+winter.blocks <- blocks_observed_in(observations, start_day = breedates[1], 
+                                    end_day = breedates[2], 
+                                    within = FALSE,
+                                    breeding_categories = c("C4", "C3", "C2", 
+                                                            "C1", ""))
+
+winter.blocks_sf <- right_join(blocks_sf, winter.blocks, 
+                               by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = winter.blocks_sf, aes(fill = common_name)) +
+  ggtitle("Blocks With Nonbreeding Season Observations")
+```
+
+Map blocks with confirmed or probable breeding observations from any day of the year.
+```{r}
+confirmed <- blocks_observed_in(observations, start_day = 1, 
+                                end_day = 365, 
+                                within = TRUE,
+                                breeding_categories = c("C3", "C4"))
+
+confirmed_sf <- right_join(blocks_sf, confirmed, 
+                   by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = confirmed_sf, aes(fill = common_name)) +
+  ggtitle("Blocks with Confirmed or Probable Breeding Records")
+```
+
+Map blocks with confirmed or probable breeding observations from within breeding safe dates.
+```{r}
+conf.prob <- blocks_observed_in(observations, start_day = breedates[1], 
+                                end_day = breedates[2], 
+                                within = TRUE,
+                                breeding_categories = c("C3", "C4"))
+
+conf.prob_sf <- right_join(blocks_sf, conf.prob, 
+                           by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = confirmed_sf, aes(fill = common_name)) +
+  ggtitle("Blocks with Confirmed or Probable Breeding Records Within Safe Dates")
+```
+
+Map blocks with confirmed or probable breeding observations from outside of breeding safe dates.
+```{r}
+conf.prob <- blocks_observed_in(observations, start_day = breedates[1], 
+                                end_day = breedates[2], 
+                                within = FALSE,
+                                breeding_categories = c("C3", "C4"))
+
+conf.prob_sf <- right_join(blocks_sf, conf.prob, 
+                           by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = confirmed_sf, aes(fill = common_name)) +
+  ggtitle("Blocks with Confirmed or Probable Breeding Records Outside Safe Dates")
+```
+
+
+
+```{r}
+# Probable
+probable <- blocks_observed_in(observations, start_day = breedates[1], 
+                                    end_day = breedates[2],
+                                    within = TRUE,
+                                    breeding_categories = c("C3"))
+
+probable_sf <- right_join(blocks_sf, probable, 
+                   by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = probable_sf, aes(fill = common_name)) +
+  ggtitle("Blocks with Probable Breeding")
+```
 # Tests
 
 # Speed
