@@ -1,7 +1,7 @@
 # Notes on Development Folder
 
 Scott Anderson
-Nate M. Tarr
+Nate Tarr
 Elsa Chen
 
 # Git workflow
