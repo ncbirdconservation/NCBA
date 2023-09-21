@@ -6,9 +6,19 @@
 # this file is stored, then replace "ncba_functions.R" with the path to the file
 # For example, 'source("C:/Code/NCBA/ncba_functions.R").  The functions can
 # then be called by their names.
+library(tidyverse)
+
+# Load the config file
+source("ncba_config.r")
+
+# Set the working directory to the work_dir variable from the config file.
+#   This may not always work (rmarkdown).....
+setwd(work_dir)
+
 
 # ------------------------------------------------------------------------------
-connect_ncba_db <- function(ncba_config="ncba_config.R", database, collection){
+# ------------------------------------------------------------------------------
+connect_ncba_db <- function(database, collection){
   # Connect to the NCBA MongoDB database
   #
   # Description:
@@ -17,18 +27,13 @@ connect_ncba_db <- function(ncba_config="ncba_config.R", database, collection){
   # retrieved from the working directory (default) or a user-specified location.
   # 
   # Parameters:
-  # ncba_config -- Config file with NCBA MongoDB username and password
   # database -- the database (within MongoDB) to query, likely "ebd_management"
   # collection -- collection name (e.g., "ebd")
   #
   # Example:
-  # conn <- connect_ncba_db("~/Documents/NCBA/Scripts/ncba_config.R",
-  #                       database = "ebd_mgmt",
-  #                       collection = "ebd")
+  # conn <- connect_ncba_db(database = "ebd_mgmt", collection = "ebd")
   # mongodata <- conn$find({})
   library(mongolite)
-  # Retrieve credentials
-  source(ncba_config)
   
   # Database info
   host <- "cluster0-shard-00-00.rzpx8.mongodb.net:27017"
@@ -39,8 +44,10 @@ connect_ncba_db <- function(ncba_config="ncba_config.R", database, collection){
   m <- mongo(collection=collection, db=database, url=uri)
 }
 
+
 # ------------------------------------------------------------------------------
-get_blocks <- function(ncba_config, spatial = FALSE, fields = NULL,
+# ------------------------------------------------------------------------------
+get_blocks <- function(spatial = FALSE, fields = NULL,
                            crs = 4326) {
   # Returns a data frame of blocks with or without geometries
   # 
@@ -50,7 +57,6 @@ get_blocks <- function(ncba_config, spatial = FALSE, fields = NULL,
   #   to speed up the query.
   # 
   # Parameters:
-  # ncba_config -- config file with NCBA MongoDB username and password
   # spatial -- TRUE or FALSE whether to return a spatially enabled data frame
   #     TRUE yields a data frame whereas FALSE returns a simple features data 
   #     frame.
@@ -71,8 +77,7 @@ get_blocks <- function(ncba_config, spatial = FALSE, fields = NULL,
   library(sf)
   
   # Connect to the blocks collection (table)
-  connection_blocks <- connect_ncba_db(ncba_config = ncba_config, 
-                                       database = "ebd_mgmt", 
+  connection_blocks <- connect_ncba_db(database = "ebd_mgmt", 
                                        collection = "blocks")
   
   # Condition on whether fields were provided
@@ -178,12 +183,104 @@ to_EBD_format <- function(dataframe, drop = FALSE) {
   return(df2)
 }
 
+
 # ------------------------------------------------------------------------------
-breeding_dates <- function(species, basis, quantiles, year, ncba_config){
-  # Calculates start and end dates for breeding in North Carolina.
+# ------------------------------------------------------------------------------
+get_breeding_dates <- function(species, day_year = FALSE){
+  # Gets the start and end day of year for breeding from the Atlas Cache.
   #
   # Description:
-  # Returns a nested list of start and end dates for breeding based upon NCBA 
+  # Returns a list of start and end days of year for breeding.
+  #
+  # Parameters:
+  # species -- common name of the species
+  
+  # Connect to the blocks collection (table)
+  connection <- connect_ncba_db(database = "ebd_mgmt", 
+                                collection = "safe_dates")
+  
+  # Define query
+  query <- str_interp('{"COMMON_NAME" : "${species}"}')
+  
+  # Run query for data frame
+  df <- connection$find(query = query)
+  
+  result <- c(format(ymd(df[["B_SAFE_START_DATE"]]), "%m-%d"),
+              format(ymd(df[["B_SAFE_END_DATE"]]), "%m-%d"))
+  
+  # Convert to day of year
+  if (day_year == TRUE) {
+    result <- c(ymd(df[["B_SAFE_START_DATE"]]),
+                ymd(df[["B_SAFE_END_DATE"]]))
+    result <- yday(result)
+  }
+  
+  return(result)
+}
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+highest_category <- function(species, dataframe = NULL) {
+  # Returns a data frame of the highest breeding code reported in each block.
+  #
+  # Description:
+  # Creates a data frame with one row for every atlas block that contains the 
+  #   highest breeding category reported (C4, C3, C2, or C1). If dataframe is 
+  #   set to NULL, then the get_observations() and to_EBD_format() functions
+  #   are used to acquire a data frame of all NCBA observations for the species 
+  #   from the Atlas Cache.  The output of this function is a simple features
+  #   data frame that can be used in maps or table applications.
+  #
+  # Parameters:
+  # species -- the common name of the species of interest.
+  # dataframe -- the name of a data frame to use as input.  NULL prompts the use
+  #   of get_observations() to access a data frame from the Atlas Cache.
+  #
+  #
+  if (is.null(dataframe) == TRUE) {
+    obs <- get_observations(species, NCBA_only = TRUE, fields = NULL) %>%
+      to_EBD_format()
+  } else {
+    obs <- dataframe
+  }
+  
+  # Make the breeding_category values a factor to set a rank.  First, check that
+  #   the column is present.
+  if ("breeding_category" %in% names(obs)) {
+    obs$breeding_category <- factor(obs$breeding_categor, 
+                                    levels = c("C4", "C3", "C2", "C1"))
+    
+    # Use summarise to pull out the records with the highest code
+    highest <- obs %>%
+      filter(is.na(breeding_category) == FALSE, breeding_category != "C1") %>%
+      arrange(atlas_block, breeding_category) %>%
+      group_by(atlas_block) %>%
+      summarise(highest_category = first(breeding_category))
+    
+    # Get a blocks data frame
+    fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
+    blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
+    
+    # Join to add NA rows and block geometries.
+    highest_sf <- left_join(blocks_sf, highest, 
+                            by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+    
+    return(highest_sf)
+    
+  } else {
+    print("The provided data frame does not contain a breeding_category column.")
+  }
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+calculate_breeding_dates <- function(species, basis, quantiles, year = 2023, 
+                                     year_day = FALSE){
+  # Calculates start and end day of year for breeding in North Carolina.
+  #
+  # Description:
+  # Returns a nested list of start and end day of year for breeding based upon NCBA 
   #   data.  Provides dates for each ecoregion and statewide.  The basis for 
   #   determining dates can be controlled with the parameters.
   #
@@ -206,21 +303,20 @@ breeding_dates <- function(species, basis, quantiles, year, ncba_config){
   #   example, c(0.1, 0.9) for the 10th and 90th quantiles.
   # year -- the year to use for calculations from day of year back to calendar 
   #   year.  Should be an integer.
-  # ncba_config -- path to your ncba_config file.
+  # year_day -- whether to return results as day of the year.
   
   library(lubridate)
   
   # GET DATA
   # Observations of the species
-  obs <- get_observations(species, NCBA_only = TRUE, EBD_fields_only = FALSE,
-                          ncba_config = config)
+  obs <- get_observations(species, NCBA_only = TRUE, EBD_fields_only = FALSE)
   
   # Format columns to the standard analysis format (ebd format)
   obs2 <- to_EBD_format(obs, drop=FALSE)
   
   # Get the blocks data frame
   fields <- c("ID_BLOCK", "ID_EBD_NAME", "ECOREGION")
-  blocks <- get_blocks(ncba_config = config, spatial = FALSE, fields = fields)
+  blocks <- get_blocks(spatial = FALSE, fields = fields)
   
   # GAIN ECOREGION COLUMN 
   # Join the records to the blocks data frame to gain the ecoregion column
@@ -257,15 +353,17 @@ breeding_dates <- function(species, basis, quantiles, year, ncba_config){
   get_bounds <- function(records) {
     # Get the bounds (start and end dates)
     bounds <- quantile(records$day_of_year, quantiles)
-    #bounds3 <- quantile(records$observation_date, quantiles, type=1)
     
-    # Convert to a date, but adjust origin back one day to ensure jan 1 is day 1.  
-    #   Otherwise it will be day 0.
-    year <- as.integer(year - 1)
-    bounds2 <- c(as.Date(bounds[[1]], origin = paste0(year, "-12-31")),
-                 as.Date(bounds[[2]], origin = paste0(year, "-12-31")))
-    
-    result <- format(bounds2, "%m-%d")
+    if (year_day == TRUE) {
+      result <- bounds
+    } else {
+      # Convert to a date, but adjust origin back one day to ensure jan 1 is day 1.  
+      #   Otherwise it will be day 0.
+      year <- as.integer(year - 1)
+      bounds2 <- c(as.Date(bounds[[1]], origin = paste0(year, "-12-31")),
+                   as.Date(bounds[[2]], origin = paste0(year, "-12-31")))
+      result <- format(bounds2, "%m-%d")
+    }
     return(result)
   }
   
@@ -292,10 +390,11 @@ breeding_dates <- function(species, basis, quantiles, year, ncba_config){
 
 
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 breeding_boxplot <- function(species, data, type="interactive", 
-                                 pallet="Paired", omit_codes=NULL,
-                                 lump=NULL, drop=TRUE, cex.x.axis = 0.9, 
-                                 cex.y.axis = 0.8, subtitle = NULL) {
+                             pallet="Paired", omit_codes=NULL,
+                             lump=NULL, drop=TRUE, cex.x.axis = 0.9, 
+                             cex.y.axis = 0.8, subtitle = NULL) {
   # Produces a boxplot of breeding codes over calendar day.
   #
   # Description:
@@ -335,11 +434,12 @@ breeding_boxplot <- function(species, data, type="interactive",
   # replace breeding code entries "" with NULL
   ebird["breeding_code"][ebird["breeding_code"] == ""] <- "NULL"
   
-  # put all dates within the same year -- ignores leap year
-  ebird$observation_date <- sub("^20\\d\\d", "2050", ebird$observation_date)
-  
   # remove white space from evidence codes
   ebird$breeding_code <- trimws(ebird$breeding_code)
+  
+  # put all dates within the same year -- ignores leap year
+  ebird$observation_date <- sub("^20\\d\\d", year(now()) - 1, 
+                                ebird$observation_date)
   
   # make obsdate a date object
   ebird$obsdate <- as.Date(ebird$observation_date, "%Y-%m-%d")
@@ -510,7 +610,7 @@ breeding_boxplot <- function(species, data, type="interactive",
   if (type == "ecoregional") {
     # Get the blocks data frame
     fields <- c("ID_BLOCK", "ID_EBD_NAME", "ECOREGION", "COUNTY", "ID_WEB_BLOCKMAP")
-    blocks <- get_blocks(ncba_config = config, spatial = FALSE, fields = fields, 
+    blocks <- get_blocks(spatial = FALSE, fields = fields, 
                          crs = 4326)
     
     # Join the records to the blocks data frame to gain the ecoregion column
@@ -527,11 +627,14 @@ breeding_boxplot <- function(species, data, type="interactive",
                                  levels = c("Coastal Plain", "Piedmont",
                                             "Mountains"))
     
+    # make a column with suitable x tick values
+    ebird$xtick <- as.Date(ebird$observation_date, "%m-%d")
+    
     # Boxplot
     result  <- ggplot(data = records2) +
       geom_boxplot(aes(x = obsdate, y = breeding_code)) +
       facet_wrap(~ ECOREGION, nrow=3) + 
-      labs(y="Breeding Code", x="Calendar Day")
+      labs(y="Breeding Code", x="Calendar Day", title = species)
     plot(result)
   }
   
@@ -560,9 +663,9 @@ breeding_boxplot <- function(species, data, type="interactive",
 
 
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
-                               NCBA_only = TRUE, fields = NULL,
-                               ncba_config){
+                               NCBA_only = TRUE, fields = NULL){
   # Get a data frame of checklists from the AtlasCache.  Use get_observations()
   #   instead if you want species observation records.
   # 
@@ -577,7 +680,6 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
   #   is set to FALSE if the fields argument in not NULL.
   # fields -- a list of fields to return, excluding those not listed.  This 
   #   parameter offers no speed benefit with EBD sampling datasets.
-  # ncba_config -- config file with NCBA MongoDB username and password.
   #
   # Notes:
   # - Data frame output when setting database to "AtlasCache" may require 
@@ -599,7 +701,7 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
   
   if (database == "AtlasCache") {
     # Connect to the NCBA database
-    connection <- connect_ncba_db(ncba_config, "ebd_mgmt", "ebd")
+    connection <- connect_ncba_db("ebd_mgmt", "ebd")
     
     # Define a query
     if (NCBA_only == FALSE) {
@@ -674,22 +776,21 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
 
 
 # ------------------------------------------------------------------------------
-get_all_checklists <- function(ncba_config, drop_ncba_col=TRUE){
+# ------------------------------------------------------------------------------
+get_all_checklists <- function(drop_ncba_col=TRUE){
   # Get a data frame of checklists from the AtlasCache
   # 
   # Parameters:
-  # ncba_config -- Config file with NCBA MongoDB username and password
   # drop_ncba_col -- Setting to TRUE will drop columns from the NCBA database
   #   that are not provided by eBird. List of columns found in eBird Sampling 
   #   Dataset on 2/18/2022. 
   #
   # Example:
-  # lists <- get_all_checklists("~/Documents/NCBA/Scripts/ncba_config.R",
-  #                             drop_ncba_col=FALSE)
+  # lists <- get_all_checklists(drop_ncba_col=FALSE)
   library(tidyverse)
   
   # Connect to the NCBA database
-  connection <- connect_ncba_db(ncba_config, "ebd_mgmt", "ebd")
+  connection <- connect_ncba_db("ebd_mgmt", "ebd")
   
   # Define a query
   query <- '{}'
@@ -726,11 +827,11 @@ get_all_checklists <- function(ncba_config, drop_ncba_col=TRUE){
 
 
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 get_observations <- function(species, database = "AtlasCache",
                                  NCBA_only = FALSE,
                                  EBD_fields_only = FALSE,
-                                 fields = NULL,
-                                 ncba_config) {
+                                 fields = NULL) {
   # Returns a data frame of species observations
   #
   # Description:
@@ -753,7 +854,6 @@ get_observations <- function(species, database = "AtlasCache",
   #   is set to FALSE if the fields argument in not NULL.
   # fields -- a list of fields to return, excluding those not listed.  This
   #   parameter offers no speed benefit with EBD sampling datasets.
-  # ncba_config -- config file with NCBA MongoDB username and password.
   #
   # Notes:
   # - Data frame output when setting database to "AtlasCache" may require
@@ -762,8 +862,7 @@ get_observations <- function(species, database = "AtlasCache",
   
   library(tidyverse)
   library(auk)
-  source(ncba_config)
-  
+
   # Set the working directory
   if (is.null(work_dir) == FALSE) {
     setwd(work_dir)
@@ -776,7 +875,7 @@ get_observations <- function(species, database = "AtlasCache",
   
   if (database == "AtlasCache") {
     # Connect to the NCBA database
-    connection <- connect_ncba_db(ncba_config, "ebd_mgmt", "ebd")
+    connection <- connect_ncba_db("ebd_mgmt", "ebd")
     
     # Define a query
     if (NCBA_only == FALSE) {
@@ -874,6 +973,55 @@ get_observations <- function(species, database = "AtlasCache",
 
 
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+blocks_observed_in <- function(observations, start_day = 1, end_day = 365, 
+                               within = TRUE,
+                               breeding_categories = c("C4", "C3", "C2", "C1")) 
+{
+  # Returns a data frame of blocks where the species was observed
+  #
+  # Description:
+  # 
+  #
+  # Parameters:
+  # observations -- data frame of observation records obtained with 
+  #   get_observations() and to_EBD_format().
+  # start_day -- a numbered day of the year for the start of a period.  Can be 
+  #   obtained with yday().
+  # end_day -- a numbered day of the year for the end of a period
+  # within -- TRUE or FALSE whether to exclude records from outside of the
+  #   period.  TRUE keeps records within the period and FALSE keeps records 
+  #   from outside of the period.
+  # breeding_categories -- breeding categories to include.  Defaults to c("C4",
+  #   "C3", "C2", "C1")
+  obs <- observations
+  
+  # Filter on day period
+  if (within == TRUE) {
+    obs <- obs %>%
+      filter(yday(observation_date) > breedates[[1]] & yday(observation_date) < breedates[[2]])
+  }
+  
+  if (within == FALSE) {
+    obs <- obs %>%
+      filter(yday(observation_date) < breedates[[1]] | yday(observation_date) > breedates[[2]])
+  }
+  
+  # Filter on breeding categories
+  obs <- filter(obs, breeding_category %in% breeding_categories)
+  
+  # Collapse away duplicates
+  fields <- c("atlas_block", "common_name")
+  obs <- obs %>%
+    select(fields) %>%
+    distinct()
+  
+  return(obs)
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 lists_by_week <- function(checklists){
   # Return a figure of checklists per week
   # 
@@ -881,7 +1029,7 @@ lists_by_week <- function(checklists){
   # checklists -- data frame of checklists w/ observation_date field
   #
   # Example:
-  # week.figure <- lists_by_week(get_all_checklists(config, drop_ncba_col=TRUE))
+  # week.figure <- lists_by_week(get_all_checklists(drop_ncba_col=TRUE))
   # plot(week.figure)
   
   by_week <- checklists %>%
@@ -898,7 +1046,7 @@ lists_by_week <- function(checklists){
     scale_y_continuous(breaks=seq(0,30000,5000))
 }
 
-
+# ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 counties_NC <- function(){
   library(maps)
@@ -913,6 +1061,7 @@ counties_NC <- function(){
 
 
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 plot_checklists_coords <- function(checklists){
   # Return a map of checklist locations, based on their reported coordinates
   #   
@@ -924,10 +1073,8 @@ plot_checklists_coords <- function(checklists){
   #   "longitude".
   #
   # Example:
-  # coords.map <- plot_checklists_coords(get_all_checklists(config, 
-  #                                                        drop_ncba_col=TRUE))
+  # coords.map <- plot_checklists_coords(get_checklists())
   # plot(coords.map)
-  library(tidyverse)
   ggplot(data=checklists) +
     geom_point(mapping=aes(y=latitude, x=longitude), color="darkgreen",
                shape=3) + 
@@ -938,6 +1085,7 @@ plot_checklists_coords <- function(checklists){
 }
 
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 effort_distance_boxplot <- function(checklists){
   # Describe the distribution of effort_distance_km values as a boxplot
   # 
@@ -945,20 +1093,22 @@ effort_distance_boxplot <- function(checklists){
   # checklists -- data frame of checklists w/ effort_distance_km.
   #
   # Example:
-  # coord.plot <- plot_checklists_coords(get_all_checklists(config, 
-  #                                                        drop_ncba_col=TRUE))
-  # plot(coord.plot)
+  # effort.dist <- effort_distance_boxplot(get_all_checklists(config, 
+  #                                                         drop_ncba_col=TRUE))
+  # plot(effort.dist)
   boxplot <- ggplot(data=checklists) +
     geom_boxplot(mapping=aes(y=effort_distance_km, x=""), 
                  color="darkgreen", 
                  outlier.colour="blue", show.legend=TRUE) + 
     coord_flip() + 
     labs(title="",
-         caption="Checklists from before 2021 are not included") +
+         caption=" ") +
     ylab("Kilometers") + 
+    xlab("Checklist Travel Distances") +
     scale_y_continuous(n.breaks=12)
 }
 
+# ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 duration_minutes_boxplot <- function(checklists){
   # Describe the distribution of effort_minutes values as a box plot.
@@ -967,9 +1117,9 @@ duration_minutes_boxplot <- function(checklists){
   # checklists -- data frame of checklists w/ effort_minutes.
   #
   # Example:
-  # effort_distance_boxplot <- plot_checklists_coords(get_all_checklists(config, 
+  # duration.min <- plot_checklists_coords(get_all_checklists(config, 
   #                                                        drop_ncba_col=TRUE))
-  # plot(cords.map)
+  # plot(duration.min)
   boxplot <- ggplot(data=checklists) +
     geom_boxplot(mapping=aes(y=duration_minutes, x=""), 
                  color="darkblue", 
@@ -977,10 +1127,11 @@ duration_minutes_boxplot <- function(checklists){
     coord_flip() + 
     labs(title="", caption="") +
     ylab("Minutes") + 
-    xlab("") +
+    xlab("Checklist Durations ") +
     scale_y_continuous(n.breaks=12)
 }
 
+# ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 start_time_boxplot <- function(checklists){
   # Describe the distribution of checklist start times as a box plot.
@@ -990,23 +1141,28 @@ start_time_boxplot <- function(checklists){
   #
   # Example:
   # start.box <- start_time_boxplot(get_all_checklists(config, 
-  #                                                        drop_ncba_col=TRUE))
+  #                                                    drop_ncba_col=TRUE))
   # plot(start.box)
+  # make a vector of plottable start times.
   library(hms)
-  start_df <- checklists %>%
+  times <- checklists %>%
+    filter(time_observations_started != "") %>% # empty strings cause probs.
     select(time_observations_started) %>%
     mutate(time=hour(as_hms(time_observations_started)))
   
-  boxplot <- ggplot(data=start_df) +
-    geom_boxplot(mapping=aes(y=time, x=""), color="darkblue", 
-                 outlier.colour="magenta", show.legend=TRUE) + 
+  # make graph
+  boxplot <- ggplot(data=times) + 
+    geom_boxplot(mapping=aes(y=time, x=""), 
+                 color="darkblue", outlier.colour="magenta", show.legend=TRUE) + 
     coord_flip() + 
     labs(title="",
-         caption="Checklists from before 2021 are not included") +
-    ylab("Start Hour") + 
+         caption="") + 
+    ylab("Time of Day") +
+    xlab("Checklist Start Time") +
     scale_y_continuous(n.breaks=12)
 }
 
+# ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 locality_type_pie <- function(checklists){
   # Describe the locality types present as a pie chart: whether checklists are 
@@ -1034,9 +1190,65 @@ locality_type_pie <- function(checklists){
     coord_polar("y", start=0) +
     scale_fill_viridis_d(alpha = 1, option="D") +
     theme_void() + 
-    labs(title="", caption="")
+    #theme(legend.title = "Locality Type") +
+    labs(title="", caption="") +
+    guides(fill=guide_legend(title="Locality Type"))
 }
 
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+protocol_type_pie <- function(checklists){
+  # Describe the protocol types present as a pie chart: whether checklists are 
+  #   traveling, stationary, etc.
+  # 
+  # Parameters:
+  # checklists -- data frame of checklists w/ protocol_type.
+  #
+  # Example:
+  # protocol.pie <- protocol_type_pie(get_all_checklists(config, 
+  #                                                        drop_ncba_col=TRUE))
+  # plot(protocol.pie)
+  
+  by_protocol_type <- checklists %>%
+    group_by(protocol_type) %>%
+    summarize(count = n())
+  
+  ## Print table
+  #knitr::kable(by_protocol_type,
+  #             caption="Count of checklists per protocol type")
+  
+  # Pie chart
+  pie <- ggplot(data=by_protocol_type, aes(x="", y=count, fill=protocol_type)) +
+    geom_bar(stat="identity", width=1) +
+    coord_polar("y", start=0) +
+    scale_fill_viridis_d(alpha = 1, option="D") +
+    theme_void() + 
+    labs(title="", caption="") +
+    guides(fill=guide_legend(title="Protocol Type"))
+}
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+year_bar <- function(checklists){
+  # Summarize how many checklists were reported each year.
+  # 
+  # Parameters:
+  # checklists -- data frame of checklists w/ year.
+  #
+  # Example:
+  # year.bar <- year_bar(get_all_checklists(config, drop_ncba_col=TRUE))
+  # plot(year.bar)
+  
+  barchart <- ggplot(data=checklists) +
+    geom_bar(mapping=aes(x=year), 
+             show.legend=FALSE) + 
+    labs(title="",
+         caption=" ") +
+    ylab("Checklists") + 
+    xlab("Year") 
+}
+
+# ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 records_as_sf <- function(records_df, kind, method, fill_na_km = 0.1) {
   # Create new simple features (spatial data frame) of records (checklists or 
@@ -1112,6 +1324,47 @@ records_as_sf <- function(records_df, kind, method, fill_na_km = 0.1) {
   return(checklists_sf)
 }
 
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+get_predicted_presence <- function(species, source, season) { 
+  # Returns a dataframe of blocks where the species was predicted to occur.
+  #
+  # Description:
+  # The AtlasCache blocks document contains fields that report species lists 
+  #   for each block in summer and winter.  Those lists are derived from 
+  #   predictions by the USGS GAP Analysis Program and eBird.  This function
+  #   retrieves a dataframe of blocks that were predicted to be occupied by a
+  #   species of interested, during a season of interest, and from a source
+  #   of interest.
+  #
+  # Parameters:
+  # species -- the common name of the species of interest.
+  # source -- who's prediction you want: "GAP" or "eBird"
+  # season -- "summer" or "winter" for GAP; "breeding" or "wintering" for eBird
+  
+  season <- str_to_upper(season)
+  source_lookup <- list("GAP" = "GAP_SPP", "eBird" = "EBD_SPP")
+  source <- source_lookup[[source]]
+  
+  # Connect to the blocks collection (table)
+  connection_blocks <- connect_ncba_db(database = "ebd_mgmt", 
+                                       collection = "blocks")
+  
+  # Define and execute a query (with fields) for blocks of predicted presence.
+  fields <- '{"ID_EBD_NAME": true}'
+  query <- str_interp('{"${source}.PRIMARY_COM_NAME": "${species}", "${source}.${season}": 1}')
+  pres <- connection_blocks$find(fields = fields, query = query)
+  
+  # Add a presence column for the source
+  pres$present <- TRUE
+  new_name <- paste0(source, "_", season)
+  pres <- rename(pres, !!new_name:= present)
+  
+  return(pres)
+}
+
+
+# ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 checklists_per_block <- function(records_df, blocks_sf, attribute, method){ # DRAFT DRAFT DRAFT
   # Tallies the number of checklists per block.  Records_as_sf() produces
@@ -1227,6 +1480,7 @@ checklists_per_block <- function(records_df, blocks_sf, attribute, method){ # DR
 }
 
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 observations_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT DRAFT
   # Tallies the number of observations per block.  Records_as_sf() produces
   #   input for this function.
@@ -1340,6 +1594,7 @@ observations_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT
 }
 
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 breeding_codes <- function(lumped = TRUE){
   # Returns either a full or nested list of all breeding codes.
   
@@ -1361,7 +1616,8 @@ breeding_codes <- function(lumped = TRUE){
                   )
   }
 }
-  
+
+# ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 nonEBD_fields <- function(case = "upper") {
   # Returns a list of NCBA only fields that are in the Atlas Cache EBD 

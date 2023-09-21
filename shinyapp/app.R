@@ -45,6 +45,7 @@ source("blocks.r")
 source("utils.r") #utilities file
 source("spp.r") #species function file
 source("blkcumhrfunc.r") #block hour graph
+source("ncba_functions_shiny.r")
 
 # MAP CONSTANTS
 nc_center_lat = 35.5
@@ -980,50 +981,6 @@ server <- function(input, output, session) {
   out_pdf <- NULL
   spp <- input$spp_select
   print(spp)
-
-  ##### SPP DATA RETRIEVAL WORKS, BUT IS SLOW
-  # query <- str_interp('{"OBSERVATIONS.COMMON_NAME":"${spp}"}')
-  # filter <- str_interp(c('{"OBSERVATION_DATE":1,',
-  # ' "OBSERVATIONS.BREEDING_CODE":1,',
-  # '"OBSERVATIONS.COMMON_NAME":1}'))
-  # print("get ebd records")
-  # ebird <- get_spp_obs(spp, filter)
-  # print(ebird)
-  # print("get ebd records completed")
-  ##### END WORKING SPP DATA RETRIEVAL
-
-  ##### EXPERIMENT TO RETRIEVE VIA AGGREGATION STRING
-  #faster, but still slow
-  # pipeline <- 
-  #   str_interp(c('[{ "$match": { "OBSERVATIONS.COMMON_NAME": "${spp}" } },',
-  #   ' { "$unwind": { "path": "$OBSERVATIONS" } }, ',
-  #   '{ "$project": { "COMMON_NAME": "$OBSERVATIONS.COMMON_NAME", ',
-  #   '"BREEDING_CODE": "$OBSERVATIONS.BREEDING_CODE", ',
-  #   '"OBSERVATION_DATE": 1 } }, { "$match" : { "COMMON_NAME": "${spp}"}}, ',
-  #   '{ "$lookup": { "from": "safe_dates", "localField": "COMMON_NAME", ',
-  #   '"foreignField": "COMMON_NAME", "as": "SPP_SAFE_DATES" } }, ',
-  #   '{ "$unwind": { "path": "$SPP_SAFE_DATES" } }, ',
-  #   '{ "$project": { "COMMON_NAME": 1, "BREEDING_CODE": 1, ',
-  #     '"OBSERVATION_DATE": 1, "SEASON": { "$cond": { "if": ',
-  #     '{ "$and": [ { "$gte": [ "$OBSERVATION_DATE", ',
-  #     '"$SPP_SAFE_DATES.B_SAFE_START_DATE" ] }, ',
-  #     '{ "$lte": [ "$OBSERVATION_DATE", ',
-  #     '"$SPP_SAFE_DATES.B_SAFE_END_DATE" ] } ] }, ',
-  #     '"then": "Breeding", "else": "Non-Breeding" } } } }]'))
-  # print(pipeline)
-  # ebird <- aggregate_ebd_data(pipeline)
-
-  # pipeline  <- sprintf(
-  #   '[{"$match":{"COMMON_NAME": "%s"}},
-  #     {"$unwind":{"path": "$bcList"}},
-  #     {"$project":{"_id": "$COMMON_NAME",
-  #                 "COMMON_NAME": 1,
-  #                 "SAMPLING_EVENT_IDENTIFIER" : 1,
-  #                 "OBSERVATION_DATE":"$bcList.OBSERVATION_DATE",
-  #                 "BREEDING_CODE": "$bcList.BREEDING_CODE"
-  #               }
-  #     }]',
-  #     spp)
 
   #this pipeline pulls from the ebd_observations collection
   # slower, but needs less pre-compilation (like spp_summaries)

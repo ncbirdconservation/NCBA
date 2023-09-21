@@ -1,0 +1,126 @@
+---
+title: "dev_highest_category"
+author: "N.M. Tarr"
+date: "2023-09-20"
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+
+# Function
+This function creates and returns a data frame of the highest breeding code reported for in each atlas block for a species.
+```{r}
+highest_category
+```
+
+# Usage
+Get a data frame of blocks with the highest reported code for the species.
+```{r}
+species <- "Yellow-breasted Chat"
+
+highest.sf.1 <- highest_category(species, dataframe = NULL)
+```
+
+Plot the spatial data frame.
+```{r}
+ggplot() +
+  geom_sf(data = highest.sf.1, aes(fill = highest_category)) + 
+  ggtitle("Highest Reported Breeding Category")
+```
+
+Preview the output data frame.
+```{r}
+print(head(highest.sf.1))
+```
+
+
+Run the function utilizing the data frame parameter.
+```{r}
+# Get an observations data frame
+observations <- get_observations(species = "Magnolia Warbler", 
+                        database = "AtlasCache",
+                        NCBA_only = TRUE,
+                        EBD_fields_only = TRUE,
+                        fields = NULL) %>%
+  to_EBD_format(drop = TRUE)
+
+# Get the highest codes
+highest.sf.2 <- highest_category(species, dataframe = observations)
+```
+
+Plot the spatial data frame
+```{r}
+ggplot() +
+  geom_sf(data = highest.sf.2, aes(fill = highest_category)) + 
+  ggtitle("Highest Reported Breeding Code")
+```
+
+Preview the output data frame.
+```{r}
+print(head(highest.sf.2))
+```
+
+# Tests
+How should this function be tested?
+
+
+# Speed (in seconds)
+With the acquisition of a data frame as part of the process, for a data-poor species.
+```{r}
+species <- "Willow Flycatcher"
+
+# Run the function 3 times and record the runtime
+time <- c()
+for (i in 1:3) {
+  time1 <- proc.time()
+  highest_category(species, dataframe = NULL)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
+
+With the acquisition of a data frame as part of the process, for a data-rich species.
+```{r}
+species <- "Red-eyed Vireo"
+
+# Run the function 2 times and record the runtime
+time <- c()
+for (i in 1:2) {
+  time1 <- proc.time()
+  highest_category(species, dataframe = NULL)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
+
+Without the acquisition of a data frame as part of the process.
+```{r}
+# Run the function 3 times and record the runtime
+time <- c()
+for (i in 1:3) {
+  time1 <- proc.time()
+  highest_category(species, dataframe = observations)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```

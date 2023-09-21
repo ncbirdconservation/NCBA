@@ -8,24 +8,16 @@ output:
 ---
 
 ```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
 knitr::opts_chunk$set(
   echo = TRUE,
   warning = FALSE,
   message = FALSE)
-knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
 ```
 
-This demo requires the tidyverse packages and some NCBA functions.
-```{r}
-library(tidyverse)
-
-setwd("~/Code/NCBA/resources")
-source("ncba_functions.R")
-
-# Read in ncba_config to get access to the EBD paths.
-ncba_config <- "~/Documents/NCBA/Scripts/ncba_config.R"
-source(ncba_config)
-```
 
 # Function
 Retrieves the observation records for a species from either the NCBA database or from a downloaded copy of the EBD.  If data is requested from the Atlas Cache, then NCBA columns that are not found in the EBD databases can be dropped or retained.  Additionally, a customized list of fields can be specified to limit the columns that are included in the output data frame.
@@ -42,15 +34,14 @@ obs <- get_observations(species = "King Rail",
                         database = "AtlasCache",
                         NCBA_only = TRUE,
                         EBD_fields_only = TRUE,
-                        fields = fields,
-                        ncba_config = ncba_config)
+                        fields = fields)
 print(head(obs, 5))
 ```
 
 Retrieve observations from the EBD with the function.
 ```{r}
 obs <- get_observations(species = "King Rail", database = "EBD",
-                            NCBA_only = TRUE, ncba_config = ncba_config)
+                            NCBA_only = TRUE)
 print(head(obs, 5))
 ```
 
@@ -63,8 +54,7 @@ obs <- get_observations(species = "King Rail",
                             database = "AtlasCache",
                             NCBA_only = FALSE,
                             EBD_fields_only = FALSE,
-                            fields = NULL,
-                            ncba_config = ncba_config)
+                            fields = NULL)
 print(unique(obs$COMMON_NAME))
 ```
 
@@ -74,8 +64,7 @@ obs <- get_observations(species = "King Rail",
                             database = "AtlasCache",
                             NCBA_only = TRUE,
                             EBD_fields_only = FALSE,
-                            fields = NULL,
-                            ncba_config = ncba_config)
+                            fields = NULL)
 print(unique(obs$PROJECT_CODE))
 ```
 
@@ -87,14 +76,13 @@ obs <- get_observations(species = "King Rail",
                             database = "AtlasCache",
                             NCBA_only = TRUE,
                             EBD_fields_only = TRUE,
-                            fields = fields,
-                            ncba_config = ncba_config)
+                            fields = fields)
 print(unique(names(obs) == fields))
 ```
 
 If only fields that are found in the eBird Basic Dataset are wanted, then no NCBA derived columns should be present.  If this chunk returns FALSE, then the test is passed. 
 
-THIS TEST FAILS because of the fields "SUBSPECIES_COMMON_NAME" and    "SUBSPECIES_SCIENTIFIC_NAME".  What is their origin?
+THIS TEST FAILS because of the fields "SUBSPECIES_COMMON_NAME" and "SUBSPECIES_SCIENTIFIC_NAME".  What is their origin?
 ```{r}
 # Get the list of NCBA columns
 NCBA.columns <- nonEBD_fields() 
@@ -102,8 +90,7 @@ NCBA.columns <- nonEBD_fields()
 # Get observations
 obs <- get_observations(species = "King Rail", 
                             database = "AtlasCache",
-                            EBD_fields_only = TRUE,
-                            ncba_config = ncba_config)
+                            EBD_fields_only = TRUE)
 
 # Test whether NCBA columns are in the observation data frame
 print(unique(NCBA.columns %in% names(obs)))
@@ -131,7 +118,6 @@ EBD.columns <- names(ebird_data)
 
 # Get a lower case version of the output data frame columns names
 our.columns <- str_to_lower(names(obs))
-#print(our.columns)
 
 # Is every EBD column in our column list?
 print(setdiff(EBD.columns, our.columns))
@@ -142,8 +128,7 @@ There should only be one species name in the data frame. If the species' name al
 ```{r}
 obs <- get_observations(species = "King Rail", 
                             database = "EBD",
-                            NCBA_only = FALSE,
-                            ncba_config = ncba_config)
+                            NCBA_only = FALSE)
 
 print(unique(obs$common_name))
 ```
@@ -154,8 +139,7 @@ obs <- get_observations(species = "King Rail",
                             database = "EBD",
                             NCBA_only = TRUE,
                             EBD_fields_only = FALSE,
-                            fields = NULL,
-                            ncba_config = ncba_config)
+                            fields = NULL)
 print(unique(obs$project_code))
 ```
 
@@ -166,8 +150,7 @@ fields <- c("sampling_event_identifier", "project_code", "global_unique_identifi
 obs <- get_observations(species = "King Rail", 
                             database = "EBD",
                             NCBA_only = TRUE,
-                            fields = fields,
-                            ncba_config = ncba_config)
+                            fields = fields)
 print(unique(names(obs) == fields))
 ```
 
@@ -181,8 +164,7 @@ For a data-poor species
 time <- c()
 for (i in 1:5) {
   time1 <- proc.time()
-  get_observations_dev(species = "King Rail", database = "AtlasCache",
-                       ncba_config = ncba_config)
+  get_observations_dev(species = "King Rail", database = "AtlasCache")
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }
@@ -197,8 +179,7 @@ For a data-rich species
 time <- c()
 for (i in 1:5) {
   time1 <- proc.time()
-  get_observations_dev(species = "Indigo Bunting", database = "AtlasCache",
-                       ncba_config = ncba_config)
+  get_observations_dev(species = "Indigo Bunting", database = "AtlasCache")
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }
@@ -214,8 +195,7 @@ For a data-poor species
 time <- c()
 for (i in 1:5) {
   time1 <- proc.time()
-  get_observations_dev(species = "King Rail", database = "EBD",
-                       ncba_config = ncba_config)
+  get_observations_dev(species = "King Rail", database = "EBD")
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }
@@ -230,8 +210,7 @@ For a data-rich species
 time <- c()
 for (i in 1:5) {
   time1 <- proc.time()
-  get_observations_dev(species = "Indigo Bunting", database = "EBD",
-                       ncba_config = ncba_config)
+  get_observations_dev(species = "Indigo Bunting", database = "EBD")
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }

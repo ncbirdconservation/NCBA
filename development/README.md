@@ -14,7 +14,7 @@ master -- develop -- species-stats
 "species-stats": Development of Rmarkdown scripts and updating the ncba_functions. These edits should be merged with the develop branch. Workflow:
 
     git pull origin develop
-    git checkout shiny-dev
+    git checkout species-stats
     git merge develop
     # do editing
     git add .

@@ -1,5 +1,5 @@
 ---
-title: "dev_describe_checklists"
+title: "dev_describe_records"
 author: "N.M. Tarr"
 output:
   html_document:
@@ -8,6 +8,10 @@ output:
   word_document: default
 ---
 ```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
 knitr::opts_chunk$set(
   echo = TRUE,
   warning = FALSE,
@@ -20,201 +24,42 @@ This document details several functions that describes the attributes of checkli
 ## Functions
 A function to make a boxplot of checklist distance in kilometers.
 ```{r}
-effort_distance_boxplot_dev <- function(checklists){
-  # Describe the distribution of effort_distance_km values as a boxplot
-  # 
-  # Parameters:
-  # checklists -- data frame of checklists w/ effort_distance_km.
-  #
-  # Example:
-  # effort.dist <- effort_distance_boxplot(get_all_checklists(config, 
-  #                                                         drop_ncba_col=TRUE))
-  # plot(effort.dist)
-  boxplot <- ggplot(data=checklists) +
-    geom_boxplot(mapping=aes(y=effort_distance_km, x=""), 
-                 color="darkgreen", 
-                 outlier.colour="blue", show.legend=TRUE) + 
-    coord_flip() + 
-    labs(title="",
-         caption=" ") +
-    ylab("Kilometers") + 
-    xlab("Checklist Travel Distances") +
-    scale_y_continuous(n.breaks=12)
-}
+effort_distance_boxplot
 ```
 
 A function to make a boxplot of checklist durations in minutes.
 ```{r}
-duration_minutes_boxplot_dev <- function(checklists){
-  # Describe the distribution of effort_minutes values as a box plot.
-  # 
-  # Parameters:
-  # checklists -- data frame of checklists w/ effort_minutes.
-  #
-  # Example:
-  # duration.min <- plot_checklists_coords(get_all_checklists(config, 
-  #                                                        drop_ncba_col=TRUE))
-  # plot(duration.min)
-  boxplot <- ggplot(data=checklists) +
-    geom_boxplot(mapping=aes(y=duration_minutes, x=""), 
-                 color="darkblue", 
-                 outlier.colour="orange", show.legend=TRUE) + 
-    coord_flip() + 
-    labs(title="", caption="") +
-    ylab("Minutes") + 
-    xlab("Checklist Durations ") +
-    scale_y_continuous(n.breaks=12)
-}
+duration_minutes_boxplot
 ```
 
 A function to make a boxplot of checklist start times.
 ```{r}
-start_time_boxplot_dev <- function(checklists){
-  # Describe the distribution of checklist start times as a box plot.
-  # 
-  # Parameters:
-  # checklists -- data frame of checklists w/ start time_observations_started.
-  #
-  # Example:
-  # start.box <- start_time_boxplot(get_all_checklists(config, 
-  #                                                    drop_ncba_col=TRUE))
-  # plot(start.box)
-  # make a vector of plottable start times.
-  library(hms)
-  times <- checklists %>%
-    filter(time_observations_started != "") %>% # empty strings cause probs.
-    select(time_observations_started) %>%
-    mutate(time=hour(as_hms(time_observations_started)))
-  
-  # make graph
-  boxplot <- ggplot(data=times) + 
-    geom_boxplot(mapping=aes(y=time, x=""), 
-                 color="darkblue", outlier.colour="magenta", show.legend=TRUE) + 
-    coord_flip() + 
-    labs(title="",
-         caption="") + 
-    ylab("Time of Day") +
-    xlab("Checklist Start Time") +
-    scale_y_continuous(n.breaks=12)
-}
+start_time_boxplot
 ```
 
 A function to make a pie chart of locality types.
 ```{r}
-# ------------------------------------------------------------------------------
-locality_type_pie_dev <- function(checklists){
-  # Describe the locality types present as a pie chart: whether checklists are 
-  #   for hotspots, personal locations, etc.
-  # 
-  # Parameters:
-  # checklists -- data frame of checklists w/ locality_type.
-  #
-  # Example:
-  # locality.pie <- locality_type_pie(get_all_checklists(config, 
-  #                                                        drop_ncba_col=TRUE))
-  # plot(locality.pie)
-  
-  by_locality_type <- checklists %>%
-    group_by(locality_type) %>%
-    summarize(count = n())
-  
-  ## Print table
-  #knitr::kable(by_locality_type,
-  #             caption="Count of checklists per locality type")
-  
-  # Pie chart
-  pie <- ggplot(data=by_locality_type, aes(x="", y=count, fill=locality_type)) +
-    geom_bar(stat="identity", width=1) +
-    coord_polar("y", start=0) +
-    scale_fill_viridis_d(alpha = 1, option="D") +
-    theme_void() + 
-    #theme(legend.title = "Locality Type") +
-    labs(title="", caption="") +
-    guides(fill=guide_legend(title="Locality Type"))
-}
+locality_type_pie
 ```
 
 A function to make a pie chart of protocol types.
 ```{r}
 # ------------------------------------------------------------------------------
-protocol_type_pie_dev <- function(checklists){
-  # Describe the protocol types present as a pie chart: whether checklists are 
-  #   traveling, stationary, etc.
-  # 
-  # Parameters:
-  # checklists -- data frame of checklists w/ protocol_type.
-  #
-  # Example:
-  # protocol.pie <- protocol_type_pie(get_all_checklists(config, 
-  #                                                        drop_ncba_col=TRUE))
-  # plot(protocol.pie)
-  
-  by_protocol_type <- checklists %>%
-    group_by(protocol_type) %>%
-    summarize(count = n())
-  
-  ## Print table
-  #knitr::kable(by_protocol_type,
-  #             caption="Count of checklists per protocol type")
-  
-  # Pie chart
-  pie <- ggplot(data=by_protocol_type, aes(x="", y=count, fill=protocol_type)) +
-    geom_bar(stat="identity", width=1) +
-    coord_polar("y", start=0) +
-    scale_fill_viridis_d(alpha = 1, option="D") +
-    theme_void() + 
-    labs(title="", caption="") +
-    guides(fill=guide_legend(title="Protocol Type"))
-}
+protocol_type_pie
 ```
 
 A function to make a bar chart of checklist years.
 ```{r}
-year_bar_dev <- function(checklists){
-  # Summarize how many checklists were reported each year.
-  # 
-  # Parameters:
-  # checklists -- data frame of checklists w/ year.
-  #
-  # Example:
-  # year.bar <- year_bar(get_all_checklists(config, drop_ncba_col=TRUE))
-  # plot(year.bar)
-  
-  barchart <- ggplot(data=checklists) +
-  geom_bar(mapping=aes(x=year), 
-               show.legend=FALSE) + 
-  labs(title="",
-       caption=" ") +
-  ylab("Checklists") + 
-  xlab("Year") 
-}
+year_bar
 ```
 
 
 # Usage
 This demo requires the tidyverse packages.
 ```{r}
-library(tidyverse)
+#library(tidyverse)
 ```
 
-Load the NCBA functions because this function relies upon the output from some of them.
-```{r}
-setwd("~/Code/NCBA/resources")
-source("ncba_functions.R")
-config <- "~/Documents/NCBA/Scripts/ncba_config.R"
-```
-
-Set the working directory to somewhere outside of the NCBA repository so that results are not saved in the repository.
-```{r}
-setwd("~/Documents/NCBA/species/")
-```
-
-Use the NCBA connection function to connect to the Atlas Cache (the mongodb).
-```{r}
-# connect to a specific collection (table)
-connection <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt", 
-                              collection = "ebd")
-```
 
 Identify a species to investigate.
 ```{r}
@@ -224,54 +69,42 @@ print(species)
 
 Retrieve the records for the species from the Atlas Cache
 ```{r}
-time1 <- proc.time()
-
 records <- get_observations(species, database = "AtlasCache", NCBA_only = TRUE,
-                            EBD_fields_only = FALSE, fields = NULL, 
-                            ncba_config = config)
-
-records <- to_EBD_format(records, drop = TRUE)
-
-# Calculate processing time
-mongotime <- proc.time() - time1
-
-# Print number of records returned
-print(paste("Records returned:", nrow(records)))
-print(paste("Runtime: ", mongotime[["elapsed"]]))
-print(head(records))
+                            EBD_fields_only = FALSE, fields = NULL) %>%
+  to_EBD_format(drop = TRUE)
 ```
 
 Make an effort distance boxplot and display it
 ```{r}
-distance.box <- effort_distance_boxplot_dev(records)
+distance.box <- effort_distance_boxplot(records)
 plot(distance.box)
 ```
 
 Make an effort duration boxplot and display it
 ```{r}
-minutes.box <- duration_minutes_boxplot_dev(records)
+minutes.box <- duration_minutes_boxplot(records)
 plot(minutes.box)
 ```
 
 ```{r}
-start.box <- start_time_boxplot_dev(records)
+start.box <- start_time_boxplot(records)
 plot(start.box)
 ```
 
 Make a piechart showing the composition of locality types.
 ```{r}
-locality.type <- locality_type_pie_dev(records)
+locality.type <- locality_type_pie(records)
 plot(locality.type)
 ```
 
 Make a piechart showing the composition of protocol types.
 ```{r}
-protocol.type <- protocol_type_pie_dev(records)
+protocol.type <- protocol_type_pie(records)
 plot(protocol.type)
 ```
 
 Make a bar chart showing the number of checklists per year.
 ```{r}
-year.bar <- year_bar_dev(records)
+year.bar <- year_bar(records)
 plot(year.bar)
 ```

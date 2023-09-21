@@ -8,15 +8,18 @@ output: html_document
   rmdformats::downcute:
 ---
 ```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
 knitr::opts_chunk$set(
   echo = TRUE,
   warning = FALSE,
   message = FALSE)
 ```
-
+# IN PROGRESS
 # Purpose
 This document details a function that plots the geographic coordinates of records.
-
 ```{r}
 plot_records_coords <- function(records, codes = NULL){
   # Return a map of record locations, based on their reported coordinates
@@ -30,8 +33,7 @@ plot_records_coords <- function(records, codes = NULL){
   # codes -- breeding codes to map.  They are all lumped into one category
   #
   # Example:
-  # coords.map <- plot_records_coords(get_all_records(config, 
-  #                                      drop_ncba_col=TRUE),
+  # coords.map <- plot_records_coords(get_checklists(drop_ncba_col=TRUE),
   #.                                     codes = c("ON", "NB", "FY"))
   # plot(coords.map)
   library(tidyverse)
@@ -62,29 +64,6 @@ plot_records_coords <- function(records, codes = NULL){
 
 
 # Usage
-This demo requires the tidyverse packages.
-```{r}
-library(tidyverse)
-```
-
-Load the NCBA functions because this function relies upon the output from some of them.
-```{r}
-setwd("~/Code/NCBA/resources")
-source("ncba_functions.R")
-config <- "~/Documents/NCBA/Scripts/ncba_config.R"
-```
-
-Set the working directory to somewhere outside of the NCBA repository so that results are not saved in the repository.
-```{r}
-setwd("~/Documents/NCBA/species/")
-```
-
-Use the NCBA connection function to connect to the Atlas Cache (the mongodb).
-```{r}
-# connect to a specific collection (table)
-connection <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt", 
-                              collection = "ebd")
-```
 
 Identify a species to investigate.
 ```{r}

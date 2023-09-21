@@ -7,25 +7,17 @@ output:
     code_folding: hide
   rmdformats::downcute:
 ---
-```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+```{r setup, include=FALSE, message=TRUE, warning=TRUE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
 knitr::opts_chunk$set(
   echo = TRUE,
   warning = FALSE,
   message = FALSE)
-knitr::opts_knit$set(root.dir = '~/Documents/NCBA/species/')
 ```
 
-This demo requires the tidyverse packages.
-```{r}
-library(tidyverse)
-```
-
-Load the NCBA functions because this function relies upon the output from some of them.
-```{r}
-setwd("~/Code/NCBA/resources")
-source("ncba_functions.R")
-config <- "~/Documents/NCBA/Scripts/ncba_config.R"
-```
 
 # Purpose
 This document details a function that generates a boxplot of breeding codes with some customization options and supports the ability to view the checklist behind individual data points by clicking on them in the figure.  The function offers several options as parameters.
@@ -45,29 +37,20 @@ drop -- TRUE or FALSE whether to include unreported codes in the plot
 breeding_boxplot
 ```
 
+
 # Usage
 Identify a species to investigate.
 ```{r}
-species <- "Loggerhead Shrike"
+species <- "Red-breasted Nuthatch"
 print(species)
 ```
 
 Retrieve the records for the species from the Atlas Cache
 ```{r}
-time1 <- proc.time()
-
-nc_data <- get_observations(species, NCBA_only = TRUE, EBD_fields_only = FALSE,
-                            ncba_config = config)
-
-# format columns to the standard analysis format (ebd format)
-records <- to_EBD_format(nc_data, drop=FALSE)
-
-# Calculate processing time
-mongotime <- proc.time() - time1
-
-# Print number of records returned
-print(paste("Records returned:", nrow(records)))
-print(paste("Runtime: ", mongotime[["elapsed"]]))
+records <- get_observations(species, 
+                            NCBA_only = TRUE, 
+                            EBD_fields_only = FALSE) %>% 
+  to_EBD_format(drop=FALSE)
 ```
 
 Make a non-interactive boxplot without lumping codes together
