@@ -10,6 +10,9 @@ This repo houses code to support the NC Bird Atlas.
 ## Status
 Development
 
+## Updates
+- 9/21/23 moved repository to ncbirdconservation
+
 ## Usage
 Copy a script to you local machine, edit paths and variables where necessary to reflect your computing environment, and run in RStudio.
 
