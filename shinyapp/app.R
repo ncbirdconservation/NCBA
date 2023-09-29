@@ -45,7 +45,7 @@ source("blocks.r")
 source("utils.r") #utilities file
 source("spp.r") #species function file
 source("blkcumhrfunc.r") #block hour graph
-source("ncba_functions_shiny.r")
+# source("ncba_functions_shiny.r") #add this later to sync with Nathan work
 
 # MAP CONSTANTS
 nc_center_lat = 35.5
