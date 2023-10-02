@@ -147,7 +147,7 @@ breeding_boxplot(species, records, type="ecoregional", drop=TRUE)
 
 ```
 
-# Speed Test
+# Speed
 Run the function several times to get descriptive statistics.
 ```{r}
 # Run the function 10 times and record the runtime
