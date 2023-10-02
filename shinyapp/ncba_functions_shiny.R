@@ -13,7 +13,7 @@ source("ncba_config.r")
 
 # Set the working directory to the work_dir variable from the config file.
 #   This may not always work (rmarkdown).....
-setwd(work_dir)
+# setwd(work_dir)
 
 
 # ------------------------------------------------------------------------------
