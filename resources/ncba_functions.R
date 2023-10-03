@@ -974,9 +974,10 @@ get_observations <- function(species, database = "AtlasCache",
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-blocks_observed_in <- function(observations, start_day = 1, end_day = 365, 
-                               within = TRUE,
-                               breeding_categories = c("C4", "C3", "C2", "C1")) 
+blocks_observed_in <- function(observations, start_day = 0, end_day = 366, 
+                                  within = TRUE,
+                                  breeding_categories = c("C4", "C3", "C2", 
+                                                          "C1", "")) 
 {
   # Returns a data frame of blocks where the species was observed
   #
@@ -994,17 +995,16 @@ blocks_observed_in <- function(observations, start_day = 1, end_day = 365,
   #   from outside of the period.
   # breeding_categories -- breeding categories to include.  Defaults to c("C4",
   #   "C3", "C2", "C1")
-  obs <- observations
   
   # Filter on day period
   if (within == TRUE) {
-    obs <- obs %>%
-      filter(yday(observation_date) > breedates[[1]] & yday(observation_date) < breedates[[2]])
+    obs <- observations %>%
+      filter(yday(observation_date) >= start_day & yday(observation_date) <= end_day)
   }
   
   if (within == FALSE) {
-    obs <- obs %>%
-      filter(yday(observation_date) < breedates[[1]] | yday(observation_date) > breedates[[2]])
+    obs <- observations %>%
+      filter(yday(observation_date) < start_day | yday(observation_date) > end_day)
   }
   
   # Filter on breeding categories
@@ -1351,7 +1351,7 @@ get_predicted_presence <- function(species, source, season) {
                                        collection = "blocks")
   
   # Define and execute a query (with fields) for blocks of predicted presence.
-  fields <- '{"ID_EBD_NAME": true}'
+  fields <- '{"ID_BLOCK_CODE": true}'
   query <- str_interp('{"${source}.PRIMARY_COM_NAME": "${species}", "${source}.${season}": 1}')
   pres <- connection_blocks$find(fields = fields, query = query)
   
@@ -1363,6 +1363,84 @@ get_predicted_presence <- function(species, source, season) {
   return(pres)
 }
 
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+blocks_needed <- function(species, source, season, database, NCBA_only, 
+                          observations = NULL) 
+{
+  # Returns a dataframe of blocks where the species was predicted to occur but
+  #   has not been observed.
+  #
+  # Description:
+  # Relies upon other NCBA functions and AtlasCache datasets to create the 
+  #   data frame.  The following are used: get_breeding_dates(), get_blocks(),
+  #   get_observations(), blocks_observed_in(), and get_predicted_presence().
+  #   This function's parameters are passed to some of those functions.  The 
+  #   function get_observations() can be quite slow for some species, so an
+  #   option is provided to pass an observations data frame to avoid needing to
+  #   run get_observations() each time this is run.  
+  #
+  # Parameters:
+  # species -- the common name of the species of interest.
+  # source -- who's prediction you want to base result upon: "GAP" or "eBird"
+  # season -- what season to get a prediction for ("summer" or "winter" for GAP,
+  #   and "breeding" or "wintering" for eBird) 
+  # database -- which database to get observations from: "AtlasCache" or "EBD".
+  #   Default is AtlasCache
+  # NCBA_only -- TRUE or FALSE whether to only use NCBA records for the 
+  #   assessment. Default is TRUE.
+  # observations -- a data frame of observations that came from use of the
+  #   get_observations function.  If set to NULL (the default), then the 
+  #   function will be run as part of the process, which increases runtime
+  #   greatly.
+  
+  # Pull out breeding season records
+  breedates <- get_breeding_dates(species, day_year = TRUE)
+  
+  # Get a blocks data frame with simple features
+  fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
+  blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
+  
+  # Get all the observations for the species
+  if (is.null(observations) == TRUE) {
+    obs <- get_observations(species = species, database = database,
+                            NCBA_only = NCBA_only) %>%
+      to_EBD_format()
+  } else {
+    obs <- observations
+  }
+  
+  # Pull out the blocks with observations
+  #   First we have to set the within parameter to TRUE or FALSE according to 
+  #   desired season.
+  if (season %in% c("summer", "SUMMER", "breeding", "BREEDING") == TRUE) {
+    within = TRUE
+  }
+  
+  if (season %in% c("winter", "WINTER", "wintering", "WINTERING") == TRUE) {
+    within = FALSE
+  }
+  
+  # Get a data frame of blocks with observations
+  observed <- blocks_observed_in(observations = obs, 
+                                 start_day = breedates[[1]],
+                                 end_day = breedates[[2]],
+                                 within = within)$atlas_block
+  
+  # Pull out blocks that were in predicted range
+  predicted <-get_predicted_presence(species, source, season)$ID_BLOCK_CODE
+  
+  # Find blocks from the predicted range that don't have any observations
+  needed <- setdiff(predicted, observed)
+  
+  # Get a spatially-enabled data frame of records for the needed blocks
+  needed_sf <- filter(blocks_sf, ID_BLOCK_CODE %in% needed == TRUE)
+  
+  # A column with a single value helps for making maps
+  needed_sf$needed <- "needed"
+  
+  return(needed_sf)
+}
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
