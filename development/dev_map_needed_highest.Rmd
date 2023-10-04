@@ -1,0 +1,81 @@
+---
+title: "dev_map_needed_highest"
+author: "N.M. Tarr"
+date: "2023-10-04"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+
+# Purpose
+This document defines and demonstrates a function that returns a map showing the highest breeding code reported per block and the blocks within which the species was predicted to occur but has not yet been reported.  The function is written with options to choose a prediction source (US GAP or eBird), database (AtlasCache or EBD), whether to use only NCBA records, and whether to return results for non-priority blocks.
+
+
+# Definition
+```{r}
+map_needed_highest
+```
+
+
+# Usage
+This function builds on other NCBA functions and is meant to require only a few lines of code for use.  
+```{r}
+map <- map_needed_highest(species = "Red-breasted Nuthatch", 
+                          source = "GAP", database = "AtlasCache",
+                          priority_only = FALSE)
+
+show(map)
+```
+
+The map can be restricted to priority blocks only.
+```{r}
+map <- map_needed_highest(species = "Red-breasted Nuthatch", 
+                          source = "GAP", database = "AtlasCache",
+                          priority_only = TRUE)
+
+show(map)
+```
+
+
+# Speed
+This function utilizes the get_observations function, which can be slow for data-rich species, so the runtime will depend upon the species.  Run the function 3 times for a data-poor species and record the runtime.
+```{r}
+time <- c()
+for (i in 1:3) {
+  time1 <- proc.time()
+  map_needed_highest(species = "Willow Flycatcher", 
+                          source = "GAP", database = "AtlasCache",
+                          priority_only = FALSE)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
+
+Run the function 3 times for a data-rich species and record the runtime.
+```{r}
+time <- c()
+for (i in 1:3) {
+  time1 <- proc.time()
+  map_needed_highest(species = "Red-eyed Vireo", 
+                          source = "GAP", database = "AtlasCache",
+                          priority_only = FALSE)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```

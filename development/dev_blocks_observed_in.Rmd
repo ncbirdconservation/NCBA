@@ -36,8 +36,7 @@ breedates <- get_breeding_dates(species, day_year = TRUE)
 
 # Get all the observations for the species, exclude zero count records though
 observations <- get_observations(species = species, 
-                        database = "AtlasCache",
-                        NCBA_only = TRUE, 
+                        database = "AtlasCache", 
                         fields = NULL) %>%
   to_EBD_format() %>%
   filter(observation_count != 0)

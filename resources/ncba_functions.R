@@ -221,7 +221,8 @@ get_breeding_dates <- function(species, day_year = FALSE){
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 highest_category <- function(species, dataframe = NULL) {
-  # Returns a data frame of the highest breeding code reported in each block.
+  # Returns a data frame of the highest breeding code reported in each block 
+  #   with geometries.
   #
   # Description:
   # Creates a data frame with one row for every atlas block that contains the 
@@ -238,7 +239,7 @@ highest_category <- function(species, dataframe = NULL) {
   #
   #
   if (is.null(dataframe) == TRUE) {
-    obs <- get_observations(species, NCBA_only = TRUE, fields = NULL) %>%
+    obs <- get_observations(species, NCBA_only = TRUE) %>%
       to_EBD_format()
   } else {
     obs <- dataframe
@@ -252,13 +253,13 @@ highest_category <- function(species, dataframe = NULL) {
     
     # Use summarise to pull out the records with the highest code
     highest <- obs %>%
-      filter(is.na(breeding_category) == FALSE, breeding_category != "C1") %>%
+      filter(is.na(breeding_category) == FALSE) %>%
       arrange(atlas_block, breeding_category) %>%
       group_by(atlas_block) %>%
       summarise(highest_category = first(breeding_category))
     
     # Get a blocks data frame
-    fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
+    fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME", "PRIORITY")
     blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
     
     # Join to add NA rows and block geometries.
@@ -982,7 +983,21 @@ blocks_observed_in <- function(observations, start_day = 0, end_day = 366,
   # Returns a data frame of blocks where the species was observed
   #
   # Description:
-  # 
+  # This functions offers a flexible way to produce a list of blocks that a 
+  #   species was observed in.  The combination of the start_day
+  #   end_day, and within parameters accommodate queries from within a breeding
+  #   season.  The default start and end days allow records from any day into
+  #   the process and setting custom start and end days enables restriction to 
+  #   within a certain period (e.g., breeding season). Setting within to TRUE 
+  #   will accommodate a summer breeder by only retaining records that are on or 
+  #   after the start day or before or on the end day.  Setting within to FALSE 
+  #   accommodates winter breeders by keeping records before the start day or 
+  #   after the end day.  Unwanted breeding categories can be filtered out of 
+  #   the data during the process.
+  #
+  # Note:
+  # Non-NCBA records are not assigned to an atlas block and thus get dropped
+  #   by this function when is performs a "group by" on the atlas_block field.
   #
   # Parameters:
   # observations -- data frame of observation records obtained with 
@@ -1368,8 +1383,8 @@ get_predicted_presence <- function(species, source, season) {
 blocks_needed <- function(species, source, season, database, NCBA_only, 
                           observations = NULL) 
 {
-  # Returns a dataframe of blocks where the species was predicted to occur but
-  #   has not been observed.
+  # Returns a data frame of blocks with geometries where the species was 
+  #   predicted to occur but has not been observed. 
   #
   # Description:
   # Relies upon other NCBA functions and AtlasCache datasets to create the 
@@ -1398,7 +1413,7 @@ blocks_needed <- function(species, source, season, database, NCBA_only,
   breedates <- get_breeding_dates(species, day_year = TRUE)
   
   # Get a blocks data frame with simple features
-  fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
+  fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME", "PRIORITY")
   blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
   
   # Get all the observations for the species
@@ -1425,7 +1440,9 @@ blocks_needed <- function(species, source, season, database, NCBA_only,
   observed <- blocks_observed_in(observations = obs, 
                                  start_day = breedates[[1]],
                                  end_day = breedates[[2]],
-                                 within = within)$atlas_block
+                                 within = within,
+                                 breeding_categories = c("C4", "C3", "C2", 
+                                                         "C1", ""))$atlas_block
   
   # Pull out blocks that were in predicted range
   predicted <-get_predicted_presence(species, source, season)$ID_BLOCK_CODE
@@ -1738,4 +1755,76 @@ EBD_fields <- function(case = "upper") {
   }
 }
   
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+map_needed_highest <- function(species, source = "GAP", database = "AtlasCache", 
+                               priority_only = FALSE) {
+  # Returns a ggplot2 map of where breeding observations are needed and the 
+  #   highest reported breeding category.  
+  #
+  # Description: 
+  # Returns a map showing the highest breeding code reported per block and the 
+  #   blocks within which the species was predicted to occur but has not yet 
+  #   been reported.  The function is written with options to choose a 
+  #   prediction source (US GAP or eBird), database (AtlasCache or EBD), whether 
+  #   to use only NCBA records, and whether to return results for non-priority 
+  #   blocks.
+  #
+  # Parameters:
+  # species -- species common name
+  # source -- which source for a prediction: GAP or eBird.  GAP is default.
+  # database -- which database to get observations from: AtlasCache or EBD.
+  #   AtlasCache is the default.
+  # priority_only -- TRUE or FALSE whether to omit non-priority blocks from the
+  #   map. Default is FALSE.
   
+  # Get a blocks data frame with simple features
+  blocks <- get_blocks(spatial = TRUE, fields = c("ID_BLOCK_CODE", "PRIORITY"))
+  
+  # Get all the species observations
+  obs <- get_observations(species, EBD_fields_only = TRUE) %>%
+    to_EBD_format()
+  
+  # Get a spatial data frame of blocks needed in
+  if (source == "GAP") {
+    season <- "summer"
+  }
+  if (source == "eBird") {
+    season <- "breeding"
+  }
+  
+  needed <- blocks_needed(species, source = source, season = season,
+                          database = database, observations = obs)
+  
+  # Get a data frame of highest category per block
+  highest <- highest_category(species, dataframe = obs) %>% 
+    filter(is.na(highest_category) == FALSE)
+  
+  # Exclude non-priority blocks if asked to do so
+  if (priority_only == TRUE) {
+    blocks <- filter(blocks, PRIORITY == 1)
+    needed <- filter(needed, PRIORITY == 1)
+    highest <- filter(highest, PRIORITY == 1)
+  }
+  
+  # Make a map with ggplot2
+  the_plot <- ggplot() +
+    geom_sf(data = blocks, fill = "lightgrey", color = "darkgrey") +
+    geom_sf(data = needed, fill = "lightpink", color = "darkgrey") +
+    geom_sf(data = highest, aes(fill = highest_category), color = "darkgrey") +
+    scale_fill_manual(values = c("C1" = "lightyellow", "C2" = "gold",
+                                 "C3" = "lightgreen",
+                                 "C4" = "darkgreen"),
+                      labels = c("Confirmed", "Probable", "Possible", "Observed"),
+                      name = NULL) +
+    theme_void() +
+    labs(title = str_interp("Highest Breeding Category per Block for ${species}"),
+         subtitle = "Blocks needing observations are pink",
+         caption = "Data from the NC Bird Atlas") +
+    theme(plot.title = element_text(hjust = 0.5),
+          plot.subtitle = element_text(hjust = 0.5),
+          plot.caption = element_text(hjust = 0.054),
+          legend.position = c(0.095, 0.22))
+  
+  return(the_plot)
+}

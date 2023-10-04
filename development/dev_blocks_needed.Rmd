@@ -42,11 +42,15 @@ print(head(needed_sf, 5))
 
 The resulting data frame can be drawn up as a map.
 ```{r}
+# Get a blocks data frame with simple features
+fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
+blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
+  
 # Plot the spatial data frame
 ggplot() +
   geom_sf(data = blocks_sf) +
   geom_sf(data = needed_sf, aes(fill = needed)) +
-  ggtitle("Blocks That Need Observations")
+  ggtitle(str_interp("Blocks That Need ${species} Observations"))
 ```
 
 The result can also be used in a map with multiple layers.  For example, it can be drawn below a layer showing the highest reported breeding category per block.  
@@ -60,15 +64,15 @@ ggplot() +
   geom_sf(data = blocks_sf) +
   geom_sf(data = needed_sf, aes(fill = needed)) + 
   geom_sf(data = highest_sf, aes(fill = highest_category)) + 
-  ggtitle("Blocks Needing Summer Observations and Highest Reported Breeding Category")
+  ggtitle(str_interp("Blocks Needing Summer ${species} Observations and Highest Category"))
 ```
 
 Running the get_observations function can be slow, but it can be run ahead of time and the results passed to blocks_needed in order to speed up the runtime.
 ```{r}
 species <- "Red-breasted Nuthatch"
 # Get a data frame of observations
-obs <- get_observations(species = species, database = database,
-                        NCBA_only = NCBA_only) %>%
+obs <- get_observations(species = species, database = "AtlasCache",
+                        NCBA_only = TRUE) %>%
       to_EBD_format()
 ```
 
@@ -76,14 +80,13 @@ Here, a data frame is passed to the function to find blocks needing winter obser
 ```{r}
 # Get a dataframe of blocks that need observations
 needed_sf <- blocks_needed(species = species, source = "GAP", season = "winter",
-                           database = database, NCBA_only = NCBA_only,
-                           observations = obs) 
+                           database = database, observations = obs) 
 
 # Plot the spatial data frame
 ggplot() +
   geom_sf(data = blocks_sf) +
   geom_sf(data = needed_sf, aes(fill = needed)) + 
-  ggtitle("Blocks for Which Winter Observations are Needed")
+  ggtitle(str_interp("Blocks for Which Winter ${species} Observations are Needed"))
 ```
 
 # Tests
@@ -101,7 +104,7 @@ needed_sf <- blocks_needed(species = "Red-breasted Nuthatch",
 ggplot() +
   geom_sf(data = blocks_sf) +
   geom_sf(data = needed_sf, aes(fill = needed)) + 
-  ggtitle("Blocks for Which Summer Observations are Needed (GAP)")
+  ggtitle("Blocks for Which Summer Red-breasted Nuthatch Observations are Needed (GAP)")
 ```
 
 ```{r}
@@ -117,7 +120,7 @@ needed_sf <- blocks_needed(species = "Red-breasted Nuthatch",
 ggplot() +
   geom_sf(data = blocks_sf) +
   geom_sf(data = needed_sf, aes(fill = needed)) + 
-  ggtitle("Blocks for Which Winter Observations are Needed (eBird)")
+  ggtitle("Blocks for Which Red-breasted Nuthatch Winter Observations are Needed (eBird)")
 ```
 
 ```{r}
@@ -133,7 +136,7 @@ needed_sf <- blocks_needed(species = "Bald Eagle",
 ggplot() +
   geom_sf(data = blocks_sf) +
   geom_sf(data = needed_sf, aes(fill = needed)) + 
-  ggtitle("Blocks for Which Winter Observations are Needed (GAP)")
+  ggtitle("Blocks for Which Bald Eagle Winter Observations are Needed (GAP)")
 ```
 ```{r}
 # Get a dataframe of blocks that need observations
@@ -141,15 +144,16 @@ needed_sf <- blocks_needed(species = "Bald Eagle",
                            source = "eBird", 
                            season = "breeding",
                            database = database, 
-                           NCBA_only = NCBA_only,
+                           NCBA_only = TRUE,
                            observations = obs) 
 
 # Plot the spatial data frame
 ggplot() +
   geom_sf(data = blocks_sf) +
   geom_sf(data = needed_sf, aes(fill = needed)) + 
-  ggtitle("Blocks for Which Breeding Observations are Needed (eBird)")
+  ggtitle("Blocks for Which Bald Eagle Breeding Observations are Needed (eBird)")
 ```
+
 
 # Speed
 Run the function 5 times and record the runtime
