@@ -750,7 +750,7 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
     library(auk)
     
     # Condition next action on whether NCBA records only are desired.
-    if (ncba_only == TRUE) {
+    if (NCBA_only == TRUE) {
       # Read in sampling data frame with auk
       sampling <- EBD_sampling %>%
         auk_sampling() %>%

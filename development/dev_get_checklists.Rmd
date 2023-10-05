@@ -19,11 +19,165 @@ knitr::opts_chunk$set(
 
 # Function
 ```{r}
-get_checklists
+get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
+                           NCBA_only = TRUE, fields = NULL, 
+                           observer = NULL, block = NULL, EBD_format = FALSE){
+  # Get a data frame of checklists from the AtlasCache.  Use get_observations()
+  #   instead if you want species observation records.
+  # 
+  # Description:
+  # This function enables the retrieval of checklist records from the AtlasCache
+  #   or the EBD.  It offers options to restrict records to those with a 
+  #   particular project id, block id, or observer id.  Additionally, one can 
+  #   specify a subset of fields to return or drop non-EBD fields.  to apply the
+  #   to_EBD_format() function to the result of an AtlasCache query, set the
+  #   EBD_format variable to TRUE.
+  #
+  #
+  # Parameters:
+  # database -- either "EBD" for a downloaded eBird database or "AtlasCache" for
+  #   the NCBA mongodb.
+  # EBD_fields_only -- whether to include non-EBD, Atlas Cache fields in the output 
+  #   data frame. TRUE or FALSE and defaults to FALSE. This argument is set to 
+  #   FALSE if the fields argument in not NULL. When database is set to EBD,
+  #   this parameter is obsolete.
+  # NCBA_only -- whether to exclude non-NCBA project records.  This argument 
+  #   is set to FALSE if the fields argument in not NULL.
+  # fields -- a list of fields to return, excluding those not listed.  This 
+  #   parameter offers no speed benefit with EBD sampling datasets.
+  # observer -- an observer id to filter based on. For example, "obs421398"
+  # block -- a block id to filter based on. For example, "34080G3NW"
+  #
+  # Notes:
+  # - Data frame output when setting database to "AtlasCache" may require 
+  #     additional wrangling with the to_EBD_format function before subsequent
+  #     functions can be used.
+  
+  library(tidyverse)
+  library(auk)
+  
+  # Set the working directory
+  if (is.null(work_dir) == FALSE) {
+    setwd(work_dir)
+  }
+  
+  # If a list of fields is provided, set EBD_fields_only to FALSE
+  if (is.null(fields) == FALSE) {
+    EBD_fields_only = FALSE
+  }
+  
+  if (database == "AtlasCache") {
+    # Connect to the NCBA database
+    connection <- connect_ncba_db("ebd_mgmt", "ebd")
+    
+    # Define a query sequentially.  First, address NCBA_only.
+    if (NCBA_only == FALSE) {
+      query <- '{}'
+    } else {
+      query <- '{"PROJECT_CODE" : "EBIRD_ATL_NC"}'
+    }
+    
+    # Next, address observer
+    if (is.null(observer) == FALSE) {
+      new_end <- str_interp(', "OBSERVER_ID" : "${observer}"}')
+      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
+    } else {
+      query <- query
+    }
+    
+    # Next, address block id
+    if (is.null(block) == FALSE) {
+      new_end <- str_interp(', "ATLAS_BLOCK" : "${block}"}')
+      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
+    } else {
+      query <- query
+    }
+    
+    # Define a filter that excludes the observation column...
+    if (is.null(fields) == TRUE) {
+      fields <- '{"OBSERVATIONS" : false}'
+      
+      # Identify AC fields for omission
+      AC.fields <- nonEBD_fields()
+      
+      # Build a field string for the query if necessary
+      if (EBD_fields_only == TRUE) {
+        # Convert the list of field names to a mongolite filter string
+        fields_string <- paste0('{', paste0('"', AC.fields, '" : false', 
+                                            collapse = ', '))
+        
+        # Redefine fields so that it can be pasted with the filter string
+        fields <- ', "OBSERVATIONS" : false}'
+        
+        # Combine with the existing fields string
+        fields <- paste0(fields_string, fields)
+      }
+      
+      # ... but if fields are provided, use those as a filter
+    } else {
+      # Convert the list of field names to a mongolite filter string
+      fields_string <- paste0('{', paste0('"', fields, '" : true', 
+                                          collapse = ', '), '}')
+      fields <- c(fields_string)
+    }
+    
+    # Retrieve the checklists
+    checklists <- connection$find(query = query, fields = fields)
+    
+    # Reformat to EBD if requested
+    if (EBD_format == TRUE) {
+      checklists <- checklists %>% to_EBD_format()
+    }
+  }
+  
+  
+  if (database == "EBD") {
+    library(auk)
+    
+    # Condition next action on whether NCBA records only are desired.
+    if (NCBA_only == TRUE) {
+      # Read in sampling data frame with auk
+      sampling <- EBD_sampling %>%
+        auk_sampling() %>%
+        auk_project("EBIRD_ATL_NC") %>%
+        auk_filter(file = "TMP_EBD.txt", overwrite = TRUE) %>%
+        read_sampling() %>%
+        data.frame()
+    } else {
+      sampling <- EBD_sampling %>%
+        auk_sampling() %>%
+        auk_filter(file = "TMP_EBD.txt", overwrite = TRUE) %>%
+        read_sampling() %>%
+        data.frame()
+    }
+    
+    # Pull out desired block and observer
+    if (is.null(observer) == FALSE) {
+      sampling <- filter(sampling, observer_id == observer)
+    } else {
+      sampling <- sampling
+    }
+    
+    if (is.null(block) == FALSE) {
+      sampling <- filter(sampling, atlas_block == block)
+    } else {
+      sampling <- sampling
+    }
+
+    # Subset the columns
+    if (is.null(fields) == FALSE) {
+      checklists <- select(sampling, fields)
+    } else {
+      checklists <- sampling
+    }
+  }
+  
+  return(checklists)
+}
 ```
 
-# Usage
 
+# Usage
 Retrieve all checklists from the Atlas Cache.
 ```{r}
 checklists <- get_checklists(database = "AtlasCache")
