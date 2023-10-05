@@ -56,6 +56,12 @@ few_cols <- get_checklists(database = "AtlasCache", project = "EBIRD_ATL_NC",
 print(few_cols)
 ```
 
+Get all the checklists for an observer.
+```{r}
+ob <- get_checklists(observer = "obsr447159", project = NULL)
+print(head(ob))
+```
+
 
 # Tests
 

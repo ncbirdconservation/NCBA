@@ -718,7 +718,7 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
     # Connect to the NCBA database
     connection <- connect_ncba_db("ebd_mgmt", "ebd")
     
-    # Define a query sequentially.  First, address NCBA_only.
+    # Define a query sequentially.  First, address project
     if (is.null(project) == TRUE) {
       query <- '{}'
     } else {
@@ -727,9 +727,14 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
     
     # Next, address observer
     if (is.null(observer) == FALSE) {
-      new_end <- str_interp(', "OBSERVER_ID" : "${observer}"}')
+      # Avoid a leading comma
+      if (query == '{}') {
+        new_end <- str_interp('"OBSERVER_ID" : "${observer}"}')
+      } else {
+        new_end <- str_interp(', "OBSERVER_ID" : "${observer}"}')
+      }
       query <- paste0(substr(query, 1, nchar(query)-1), new_end)
-    } else {
+      } else {
       query <- query
     }
     
