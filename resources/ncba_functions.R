@@ -668,10 +668,20 @@ breeding_boxplot <- function(species, data, type="interactive",
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
-                               NCBA_only = TRUE, fields = NULL){
+                           project = "EBIRD_ATL_NC", fields = NULL, 
+                           observer = NULL, block = NULL){
   # Get a data frame of checklists from the AtlasCache.  Use get_observations()
   #   instead if you want species observation records.
   # 
+  # Description:
+  # This function enables the retrieval of checklist records from the AtlasCache
+  #   or the EBD.  It offers options to restrict records to those with a 
+  #   particular project id, block id, or observer id.  Additionally, one can 
+  #   specify a subset of fields to return or drop non-EBD fields.  to apply the
+  #   to_EBD_format() function to the result of an AtlasCache query, set the
+  #   EBD_format variable to TRUE.
+  #
+  #
   # Parameters:
   # database -- either "EBD" for a downloaded eBird database or "AtlasCache" for
   #   the NCBA mongodb.
@@ -679,10 +689,12 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
   #   data frame. TRUE or FALSE and defaults to FALSE. This argument is set to 
   #   FALSE if the fields argument in not NULL. When database is set to EBD,
   #   this parameter is obsolete.
-  # NCBA_only -- whether to exclude non-NCBA project records.  This argument 
-  #   is set to FALSE if the fields argument in not NULL.
+  # project -- a project name to filter on.  Default is "EBIRD_ATL_NC".  Setting
+  #   to NULL will pull records from all projects.
   # fields -- a list of fields to return, excluding those not listed.  This 
   #   parameter offers no speed benefit with EBD sampling datasets.
+  # observer -- an observer id to filter based on. For example, "obs421398"
+  # block -- a block id to filter based on. For example, "34080G3NW"
   #
   # Notes:
   # - Data frame output when setting database to "AtlasCache" may require 
@@ -706,11 +718,27 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
     # Connect to the NCBA database
     connection <- connect_ncba_db("ebd_mgmt", "ebd")
     
-    # Define a query
-    if (NCBA_only == FALSE) {
+    # Define a query sequentially.  First, address NCBA_only.
+    if (is.null(project) == TRUE) {
       query <- '{}'
     } else {
-      query <- '{"PROJECT_CODE" : "EBIRD_ATL_NC"}'
+      query <- str_interp('{"PROJECT_CODE" : "${project}"}')
+    }
+    
+    # Next, address observer
+    if (is.null(observer) == FALSE) {
+      new_end <- str_interp(', "OBSERVER_ID" : "${observer}"}')
+      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
+    } else {
+      query <- query
+    }
+    
+    # Next, address block id
+    if (is.null(block) == FALSE) {
+      new_end <- str_interp(', "ATLAS_BLOCK" : "${block}"}')
+      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
+    } else {
+      query <- query
     }
     
     # Define a filter that excludes the observation column...
@@ -750,20 +778,33 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
     library(auk)
     
     # Condition next action on whether NCBA records only are desired.
-    if (NCBA_only == TRUE) {
+    if (is.null(project) == FALSE) {
       # Read in sampling data frame with auk
       sampling <- EBD_sampling %>%
         auk_sampling() %>%
-        auk_project("EBIRD_ATL_NC") %>%
-        auk_filter("TMP_EBD.txt") %>%
+        auk_project(project) %>%
+        auk_filter(file = "TMP_EBD.txt", overwrite = TRUE) %>%
         read_sampling() %>%
         data.frame()
     } else {
       sampling <- EBD_sampling %>%
         auk_sampling() %>%
-        auk_filter("TMP_EBD.txt") %>%
+        auk_filter(file = "TMP_EBD.txt", overwrite = TRUE) %>%
         read_sampling() %>%
         data.frame()
+    }
+    
+    # Pull out desired block and observer
+    if (is.null(observer) == FALSE) {
+      sampling <- filter(sampling, observer_id == observer)
+    } else {
+      sampling <- sampling
+    }
+    
+    if (is.null(block) == FALSE) {
+      sampling <- filter(sampling, atlas_block == block)
+    } else {
+      sampling <- sampling
     }
     
     # Subset the columns
