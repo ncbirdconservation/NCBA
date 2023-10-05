@@ -180,6 +180,8 @@ to_EBD_format <- function(dataframe, drop = FALSE) {
     )
   }
   
+  # Drop some problematic fields from AtlasCache
+  df2 <- select(df2, ! any_of(c("x_id", "geom")))
   return(df2)
 }
 

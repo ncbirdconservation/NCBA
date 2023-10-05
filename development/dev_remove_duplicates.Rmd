@@ -1,0 +1,88 @@
+---
+title: "dev_remove_duplicates"
+author: "N.M. Tarr"
+date: "2023-10-04"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+
+print(paste("The document working directory is: ", getwd()))
+```
+
+# Purpose
+This documented details the definition and application of a function that removes duplicate records from a data frame of checklist or observation records.  Duplicates could exist because of the ability for eBirders to submit shared checklists.
+
+The auk package includes a function (auk_unique()) that handles duplicates.  That function is automatically deployed for queries of the EBD and EBD sampling databases.  Therefore, it is only necessary to call the function for queries of the AtlasCache.  Preliminary tests of the function on AtlasCache query output via get_observations() and get_checklists() failed due to the presence of nested fields ("geom").  Dropping that field in the to_EBD_format() function fixed the problem.
+
+
+# Function
+```{r}
+library(auk)
+auk_unique
+```
+
+
+# Usage
+Retrieve a data frame of observations for a species and drop any duplicates with auk_unique().
+```{r}
+# Get observations, convert them to the EBD format
+obs <- get_observations("Willow Flycatcher") %>% 
+  to_EBD_format(drop = FALSE) 
+
+# Drop duplicates with auk_unique()
+obs2 <- auk_unique(obs)
+
+# Preview
+print(head(obs2))
+```
+
+Retrieve a data frame of checklists for a species and drop any duplicates with auk_unique()
+```{r}
+# Get checklists, convert them to the EBD format
+checklists <- get_checklists(EBD_fields_only = FALSE) %>% 
+  to_EBD_format(drop = TRUE)
+
+# Drop duplicates with auk_unique()
+checklists2 <- auk_unique(checklists, checklists_only = TRUE)
+
+# Preview
+print(head(checklists2))
+```
+
+
+# Tests
+auk_unique is maintained and tested by eBird, so testing is not warranted.  However, we can verify that the row count reduces after running it for data frame from above.
+```{r}
+print(nrow(obs))
+print(nrow(obs2))
+```
+
+```{r}
+print(nrow(checklists))
+print(nrow(checklists2))
+```
+
+
+# Speed
+Run the function 5 times and record the runtime.
+```{r}
+time <- c()
+for (i in 1:5) {
+  time1 <- proc.time()
+  auk_unique(checklists, checklists_only = TRUE)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
