@@ -24,7 +24,8 @@ observer <- "obsr1000095"
 Get all of their checklists.
 ```{r}
 checklists.obs <- get_checklists(observer = observer, project = NULL) %>%
-  to_EBD_format()
+  to_EBD_format() %>%
+  auk_unique()
 ```
 
 View the checklist records.  They could also be saved with to.csv().
@@ -78,7 +79,13 @@ show(duration_minutes_boxplot(checklists.obs))
 Get all the observer's observations.
 ```{r}
 observations <- get_observations(observer = observer, project = NULL) %>%
-  to_EBD_format()
+  to_EBD_format() %>%
+  auk_unique()
+```
+
+How many species have they reported?
+```{r}
+
 ```
 
 
