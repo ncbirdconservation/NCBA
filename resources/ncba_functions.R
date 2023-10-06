@@ -877,10 +877,10 @@ get_all_checklists <- function(drop_ncba_col=TRUE){
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-get_observations <- function(species, database = "AtlasCache",
-                                 NCBA_only = FALSE,
-                                 EBD_fields_only = FALSE,
-                                 fields = NULL) {
+get_observations <- function(database = "AtlasCache", species = NULL, 
+                             observer = NULL, block = NULL, 
+                             project = "EBIRD_ATL_NC", EBD_fields_only = FALSE,
+                             fields = NULL) {
   # Returns a data frame of species observations
   #
   # Description:
@@ -901,8 +901,9 @@ get_observations <- function(species, database = "AtlasCache",
   #   this parameter is obsolete.
   # NCBA_only -- whether to exclude non-NCBA project records.  This argument
   #   is set to FALSE if the fields argument in not NULL.
-  # fields -- a list of fields to return, excluding those not listed.  This
-  #   parameter offers no speed benefit with EBD sampling datasets.
+  # fields -- a list of fields to return, excluding those not listed.  The field
+  #   names need to be entered in upper case.  This parameter offers no speed 
+  #   benefit with EBD sampling datasets due to the structure of auk.
   #
   # Notes:
   # - Data frame output when setting database to "AtlasCache" may require
@@ -911,7 +912,8 @@ get_observations <- function(species, database = "AtlasCache",
   
   library(tidyverse)
   library(auk)
-
+  
+  # SET UP ---------------------------------------------------------------------
   # Set the working directory
   if (is.null(work_dir) == FALSE) {
     setwd(work_dir)
@@ -920,22 +922,62 @@ get_observations <- function(species, database = "AtlasCache",
   # If a list of fields is provided, set EBD_fields_only to FALSE
   if (is.null(fields) == FALSE) {
     EBD_fields_only = FALSE
+    
+    # and make upper case
+    fields <- str_to_upper(fields)
   }
   
+  # ATLAS CACHE ----------------------------------------------------------------
   if (database == "AtlasCache") {
     # Connect to the NCBA database
     connection <- connect_ncba_db("ebd_mgmt", "ebd")
     
-    # Define a query
-    if (NCBA_only == FALSE) {
-      query <- str_interp('{"OBSERVATIONS.COMMON_NAME" : "${species}"}')
+    # ---------- QUERY DEFINITION ----------
+    # Define a query sequentially.  First, address project
+    if (is.null(project) == TRUE) {
+      query <- '{}'
+    } else {
+      query <- str_interp('{"PROJECT_CODE" : "${project}"}')
     }
     
-    if (NCBA_only == TRUE) {
-      query <- str_interp('{"PROJECT_CODE" : "EBIRD_ATL_NC",
-                          "OBSERVATIONS.COMMON_NAME" : "${species}"}')
+    # Next, address observer
+    if (is.null(observer) == FALSE) {
+      # Avoid a leading comma
+      if (query == '{}') {
+        new_end <- str_interp('"OBSERVER_ID" : "${observer}"}')
+      } else {
+        new_end <- str_interp(', "OBSERVER_ID" : "${observer}"}')
+      }
+      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
+    } else {
+      query <- query
     }
     
+    # Next, address block id
+    if (is.null(block) == FALSE) {
+      if (query == '{}') {
+        new_end <- str_interp('"ATLAS_BLOCK" : "${block}"}')
+      } else {
+        new_end <- str_interp(', "ATLAS_BLOCK" : "${block}"}')
+      }
+      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
+    } else {
+      query <- query
+    }
+    
+    # Next, address species
+    if (is.null(species) == FALSE) {
+      if (query == '{}') {
+        new_end <- str_interp('"OBSERVATIONS.COMMON_NAME" : "${species}"}')
+      } else {
+        new_end <- str_interp(', "OBSERVATIONS.COMMON_NAME" : "${species}"}')
+      }
+      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
+    } else {
+      query <- query
+    }
+    
+    # ---------- FIELDS ----------
     # Define a fields filter for the desired columns...
     if (is.null(fields) == TRUE) {
       if (EBD_fields_only == TRUE) {
@@ -968,12 +1010,17 @@ get_observations <- function(species, database = "AtlasCache",
       fields2 <- paste0(fields_string, fields2)
     }
     
+    # ---------- GET RECORDS ----------
     # Retrieve the checklists
-    records <- connection$find(fields = fields2, query = query) %>%
-      unnest(cols = (c(OBSERVATIONS))) %>% # Expand observations
-      filter(COMMON_NAME == species) # Rows for non-target species detected along
-    # with target species exist and need to be
-    # dropped.
+    if (is.null(species) == FALSE) {
+      records <- connection$find(fields = fields2, query = query) %>%
+        unnest(cols = (c(OBSERVATIONS))) %>% # Expands observations
+        filter(COMMON_NAME == species) # Rows for non-target species detected along
+      # with target species exist and need to be dropped.
+    } else {
+      records <- connection$find(fields = fields2, query = query) %>%
+        unnest(cols = (c(OBSERVATIONS)))
+    }
     
     # Second pass at dropping unwanted fields (needed because of nested fields).
     if (is.null(fields) == FALSE) {
@@ -986,37 +1033,51 @@ get_observations <- function(species, database = "AtlasCache",
     return(data.frame(records))
   }
   
-  
+  # EBIRD BASIC DATASET --------------------------------------------------------
   if (database == "EBD") {
     library(auk)
     
-    # Condition next action on whether NCBA records only are desired.
-    if (NCBA_only == TRUE) {
+    # Condition next action on whether a single species is specified.
+    if (is.null(species) == FALSE) {
       # Read in sampling data frame with auk
       ebd <- EBD_observations %>%
         auk_ebd() %>%
-        auk_project("EBIRD_ATL_NC") %>%
         auk_species(species = species) %>%
         auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
         read_ebd() %>%
         data.frame()
     }
     
-    if (NCBA_only == FALSE) {
+    if (is.null(species) == TRUE) {
       ebd <- EBD_observations %>%
         auk_ebd() %>%
-        auk_species(species = species) %>%
         auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
         read_ebd() %>%
         data.frame()
+    }
+    
+    # Pull out desired project
+    if (is.null(project) == FALSE) {
+      ebd <- filter(ebd, project_code == project)
+    }
+    
+    # Pull out desired block
+    if (is.null(block) == FALSE) {
+      ebd <- filter(ebd, atlas_block == block)
+    }
+    
+    # Pull out desired observer
+    if (is.null(observer) == FALSE) {
+      ebd <- filter(ebd, observer_id == observer)
     }
     
     # Subset the columns
     if (is.null(fields) == FALSE) {
-      checklists <- select(ebd, fields)
+      ebd <- select(ebd, str_to_lower(fields))
     } else {
       checklists <- ebd
     }
+    return(ebd)
   }
 }
 

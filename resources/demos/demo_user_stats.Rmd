@@ -1,5 +1,5 @@
 ---
-title: "dev_user_stats"
+title: "demo_user_stats"
 author: "N.M. Tarr"
 date: "2023-10-05"
 output: word_document
@@ -23,18 +23,18 @@ observer <- "obsr1000095"
 
 Get all of their checklists.
 ```{r}
-checks0 <- get_checklists(observer = observer, project = NULL) %>%
+checklists.obs <- get_checklists(observer = observer, project = NULL) %>%
   to_EBD_format()
 ```
 
 View the checklist records.  They could also be saved with to.csv().
 ```{r}
-View(checks0)
+View(checklists.obs)
 ```
 
 Plot the checklist locations as points.
 ```{r}
-sf <- records_as_sf(checks0, kind = "checklists", method = "points")
+sf <- records_as_sf(checklists.obs, kind = "checklists", method = "points")
 
 # Make a simple map
 ggplot(data = counties_NC()) +
@@ -46,7 +46,7 @@ ggplot(data = counties_NC()) +
 
 Plot the checklist locations as uncertainty buffers.
 ```{r}
-sf <- records_as_sf(checks0, kind = "checklists", method = "point-radius")
+sf <- records_as_sf(checklists.obs, kind = "checklists", method = "point-radius")
 
 # Make a simple map
 ggplot(data = counties_NC()) +
@@ -59,20 +59,27 @@ ggplot(data = counties_NC()) +
 
 Summarise the protocol type of the checklists.
 ```{r}
-protocol_table(checks0)
-show(protocol_type_pie(checks0))
+protocol_table(checklists.obs)
+show(protocol_type_pie(checklists.obs))
 ```
 
 Summarize the breakdown of complete vs. incomplete checklists.
 ```{r}
-complete_checklist_table(checks0)
+complete_checklist_table(checklists.obs)
 ```
 
 Summarize the distance and duration of checklists.
 ```{r}
-duration_distance_table(checks0)
+duration_distance_table(checklists.obs)
+show(effort_distance_boxplot(checklists.obs))
+show(duration_minutes_boxplot(checklists.obs))
 ```
 
+Get all the observer's observations.
+```{r}
+observations <- get_observations(observer = observer, project = NULL) %>%
+  to_EBD_format()
+```
 
 
 

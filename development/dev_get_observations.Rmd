@@ -7,7 +7,7 @@ output:
   html_document: default
 ---
 
-```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
 
@@ -26,13 +26,16 @@ get_observations
 ```
 
 # Usage
+The function can target records of a certain species, project, block, or observer, as well as combinations of those four.
+
+## Species
 Retrieve observations from the Atlas Cache with the function, but only certain fields.
 ```{r}
-fields <- c("SAMPLING_EVENT_IDENTIFIER", "PROJECT_CODE", "GLOBAL_UNIQUE_IDENTIFIER")
+fields <- c("SAMPLING_EVENT_IDENTIFIER", "PROJECT_CODE", 
+            "GLOBAL_UNIQUE_IDENTIFIER", "ATLAS_BLOCK")
 
 obs <- get_observations(species = "King Rail", 
                         database = "AtlasCache",
-                        NCBA_only = TRUE,
                         EBD_fields_only = TRUE,
                         fields = fields)
 print(head(obs, 5))
@@ -40,10 +43,116 @@ print(head(obs, 5))
 
 Retrieve observations from the EBD with the function.
 ```{r}
-obs <- get_observations(species = "King Rail", database = "EBD",
-                            NCBA_only = TRUE)
+obs <- get_observations(species = "American Avocet", database = "EBD")
 print(head(obs, 5))
 ```
+
+## Block
+Retrieve observations from a particular block from the Atlas Cache.
+```{r}
+block <- "35075F4NW"
+
+fields <- c("ATLAS_BLOCK", "SAMPLING_EVENT_IDENTIFIER", "PROJECT_CODE", 
+            "GLOBAL_UNIQUE_IDENTIFIER")
+
+obs <- get_observations(block = block, database = "AtlasCache", fields = fields)
+print(head(obs, 5))
+```
+
+Retrieve observations from the EBD with the function.  THIS IS VERY SLOW.
+```{r}
+obs <- get_observations(block = block, database = "EBD", fields = fields)
+print(head(obs, 5))
+```
+
+## Observer
+Retrieve observations from a particular observer from the Atlas Cache.
+```{r}
+observer <- "obsr375303"
+
+fields <- c("OBSERVER_ID", "SAMPLING_EVENT_IDENTIFIER", "PROJECT_CODE", 
+            "GLOBAL_UNIQUE_IDENTIFIER")
+
+obs <- get_observations(observer = observer, database = "AtlasCache", 
+                        fields = fields)
+print(head(obs, 5))
+```
+
+Retrieve observations from the EBD with the function. THIS IS VERY SLOW.
+```{r}
+obs <- get_observations(observer = observer, database = "EBD",
+                        fields = fields)
+print(head(obs, 5))
+```
+
+## Project
+Retrieve observations from a particular project from the Atlas Cache.
+```{r}
+fields <- c("PROJECT_CODE", "SAMPLING_EVENT_IDENTIFIER", 
+            "GLOBAL_UNIQUE_IDENTIFIER", "COUNTY", "COMMON_NAME")
+
+obs <- get_observations(project = "EBIRD_ATL_VA", 
+                        database = "AtlasCache", 
+                        fields = fields)
+print(head(obs, 5))
+```
+
+Retrieve observations from the EBD with the function.  THIS IS VERY SLOW.
+```{r}
+obs <- get_observations(project = "EBIRD_ATL_VA", database = "EBD", 
+                        fields = fields)
+print(head(obs, 5))
+```
+
+## All options
+More than parameter can be utilized.
+```{r}
+fields <- c("PROJECT_CODE", "SAMPLING_EVENT_IDENTIFIER", 
+            "GLOBAL_UNIQUE_IDENTIFIER")
+
+obs.AC <- get_observations(project = "EBIRD_ATL_NC",
+                           observer = "obsr375303",
+                           species = "American Avocet",
+                           block = "35075F4NW",
+                           database = "AtlasCache", 
+                           fields = fields)
+print(head(obs.AC, 5))
+```
+
+```{r}
+obs.EBD <- get_observations(project = "EBIRD_ATL_NC",
+                            observer = "obsr375303",
+                            species = "American Avocet",
+                            block = "35075F4NW",
+                            database = "EBD", 
+                            fields = fields)
+print(head(obs.EBD, 5))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Tests
 
@@ -52,7 +161,7 @@ There should only be one species name in the data frame. If the species' name al
 ```{r}
 obs <- get_observations(species = "King Rail", 
                             database = "AtlasCache",
-                            NCBA_only = FALSE,
+                            project = "EBIRD_ATL_NC",
                             EBD_fields_only = FALSE,
                             fields = NULL)
 print(unique(obs$COMMON_NAME))
@@ -62,7 +171,7 @@ If NCBA_only was set to TRUE, then the PROJECT_CODE field should only contain "E
 ```{r}
 obs <- get_observations(species = "King Rail", 
                             database = "AtlasCache",
-                            NCBA_only = TRUE,
+                            project = "EBIRD_ATL_NC",
                             EBD_fields_only = FALSE,
                             fields = NULL)
 print(unique(obs$PROJECT_CODE))
@@ -74,7 +183,7 @@ fields <- c("SAMPLING_EVENT_IDENTIFIER", "PROJECT_CODE", "GLOBAL_UNIQUE_IDENTIFI
 
 obs <- get_observations(species = "King Rail", 
                             database = "AtlasCache",
-                            NCBA_only = TRUE,
+                            project = "EBIRD_ATL_NC",
                             EBD_fields_only = TRUE,
                             fields = fields)
 print(unique(names(obs) == fields))
