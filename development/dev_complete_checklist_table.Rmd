@@ -1,0 +1,67 @@
+---
+title: "dev_complete_checklist_table"
+author: "N.M. Tarr"
+date: "2023-10-06"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+
+# Purpose
+This document details a function to summarise how many records are for complete checklists.
+
+# Function
+```{r}
+complete_checklist_table
+```
+
+# Usage
+Get a data frame of checklist records.
+```{r}
+records <- get_checklists(observer = "obsr1000095", project = NULL) %>%
+  to_EBD_format()
+```
+
+Run the function with the records.
+```{r}
+complete_checklist_table(records)
+```
+
+Summarise the protocol type of observation records.
+```{r}
+willow <- get_observations("Willow Flycatcher")  %>%
+  to_EBD_format()
+
+complete_checklist_table(willow)
+```
+
+
+# Speed
+Run the function several times to get descriptive statistics.
+```{r}
+# Get the data
+records <- get_checklists(observer = "obsr1000095", project = NULL) %>%
+to_EBD_format()
+
+# Run the function 10 times and record the runtime
+time <- c()
+for (i in 1:10) {
+  time1 <- proc.time()
+  complete_checklist_table(records)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```

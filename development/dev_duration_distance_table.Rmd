@@ -1,0 +1,65 @@
+---
+title: "dev_duration_distance_table"
+author: "N.M. Tarr"
+date: "2023-10-06"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+
+# Purpose
+The documented details a function that creates a table (data frame) summarizing the durations and distances of checklists in a data frame.
+
+# Function
+```{r}
+duration_distance_table
+```
+
+# Usage
+Summarize a data frame of checklist records.
+```{r}
+observer <- "obsr1000095"
+records <- get_checklists(observer = observer, project = NULL) %>%
+  to_EBD_format()
+
+duration_distance_table(records)
+```
+
+Summarize a data frame of observation records.
+```{r}
+records <- get_observations("Vesper Sparrow") %>%
+  to_EBD_format()
+
+duration_distance_table(records)
+```
+
+
+# Speed
+Run the function several times to get descriptive statistics.
+```{r}
+# Get the data
+records <- get_observations("Worm-eating Warbler") %>%
+  to_EBD_format()
+
+# Run the function 10 times and record the runtime
+time <- c()
+for (i in 1:10) {
+  time1 <- proc.time()
+  duration_distance_table(records)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```

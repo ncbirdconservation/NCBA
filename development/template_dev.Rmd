@@ -1,0 +1,62 @@
+---
+title: "dev_protocol_table"
+author: "N.M. Tarr"
+date: "2023-10-06"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+
+# Purpose
+
+
+# Function
+```{r}
+
+```
+
+# Usage
+```{r}
+
+```
+
+
+```{r}
+```
+
+
+# Tests
+```{r}
+
+```
+
+
+# Speed
+Run the function several times to get descriptive statistics.
+```{r}
+# Get the data
+records <- get_checklists(observer = "obsr1000095", project = NULL) %>%
+to_EBD_format()
+
+# Run the function 10 times and record the runtime
+time <- c()
+for (i in 1:10) {
+  time1 <- proc.time()
+  protocol_table(records)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```

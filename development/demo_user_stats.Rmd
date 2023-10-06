@@ -1,0 +1,82 @@
+---
+title: "dev_user_stats"
+author: "N.M. Tarr"
+date: "2023-10-05"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+Identify an observer.
+```{r}
+observer <- "obsr1000095"
+```
+
+Get all of their checklists.
+```{r}
+checks0 <- get_checklists(observer = observer, project = NULL) %>%
+  to_EBD_format()
+```
+
+View the checklist records.  They could also be saved with to.csv().
+```{r}
+View(checks0)
+```
+
+Plot the checklist locations as points.
+```{r}
+sf <- records_as_sf(checks0, kind = "checklists", method = "points")
+
+# Make a simple map
+ggplot(data = counties_NC()) +
+    geom_sf() +
+    geom_sf(data = sf, size = 4, shape = 20, 
+            crs = st_crs(6542), colour = "darkred") + 
+    ggtitle(paste("Coordinates of Checklists from", observer), subtitle = "")
+```
+
+Plot the checklist locations as uncertainty buffers.
+```{r}
+sf <- records_as_sf(checks0, kind = "checklists", method = "point-radius")
+
+# Make a simple map
+ggplot(data = counties_NC()) +
+    geom_sf() +
+    geom_sf(data = sf, size = 4, shape = 20, 
+            crs = st_crs(6542), colour = "darkred") + 
+    ggtitle(paste("Uncertainty Buffers of Checklists from", observer), 
+                  subtitle = "")
+```
+
+Summarise the protocol type of the checklists.
+```{r}
+protocol_table(checks0)
+show(protocol_type_pie(checks0))
+```
+
+Summarize the breakdown of complete vs. incomplete checklists.
+```{r}
+complete_checklist_table(checks0)
+```
+
+Summarize the distance and duration of checklists.
+```{r}
+duration_distance_table(checks0)
+```
+
+
+
+
+
+
+
+

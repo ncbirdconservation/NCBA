@@ -1258,6 +1258,126 @@ locality_type_pie <- function(checklists){
     guides(fill=guide_legend(title="Locality Type"))
 }
 
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+protocol_table <- function(records) {
+  # Returns a summary table of protocol type values from a data frame.
+  # 
+  # Description:
+  # Works for data frames of observation or checklist records. The data frame
+  #   result summarises the number and percentage of records for each type
+  #   as well as the total duration of checklists of each type.
+  # 
+  # Parameters:
+  # records -- a data frame of records in in the EBD format.  Can be 
+  #   observation or checklist records.  Needs to have the duration_minutes
+  #   and protocol_type columns.
+  
+  # Build the basic table
+  basic <- records %>%
+    group_by(protocol_type) %>%
+    summarize(number = n(), percentage = 100 * (number / nrow(records))) %>%
+    arrange(protocol_type)
+  
+  # Make a column for total hours
+  th <- records %>%
+    mutate(hours = duration_minutes / 60) %>%
+    group_by(protocol_type) %>%
+    summarize(duration_hours = sum(hours)) %>%
+    arrange(protocol_type)
+  
+  # Add the column with a join
+  out <- basic %>%
+    left_join(th, by = "protocol_type")
+  
+  return(out)
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+complete_checklist_table <- function(records) {
+  # Returns a summary table of completeness (all species counted).
+  # 
+  # Description:
+  # Works for data frames of observation or checklist records. The data frame
+  #   result summarises the number and percentage of records from complete
+  #   checklists, as well as the total duration of checklists of each type.
+  # 
+  # Parameters:
+  # records -- a data frame of records in in the EBD format.  Can be 
+  #   observation or checklist records.  Needs to have the all_species_reported
+  #   and duration_minutes columns.
+  
+  # Build the basic table
+  basic <- records %>%
+    group_by(all_species_reported) %>%
+    summarize(number = n(), percentage = 100 *(number / nrow(records))) %>%
+    arrange(all_species_reported)
+  
+  # Make a column for total hours
+  th <- records %>%
+    mutate(hours = duration_minutes / 60) %>%
+    group_by(all_species_reported) %>%
+    summarize(duration_hours = sum(hours)) %>%
+    arrange(all_species_reported)
+  
+  # Add the column with a join
+  out <- basic %>%
+    left_join(th, by = "all_species_reported")
+  
+  return(out)
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+duration_distance_table <- function(records) {
+  # Returns a summary table of checklist duration and distance.
+  # 
+  # Description:
+  # Works for data frames of observation or checklist records. The data frame
+  #   result summarises the number and percentage of records from complete
+  #   checklists, as well as the total duration of checklists of each type.  
+  #   The duration_minutes and effort_distance_km columns must be present.
+  # 
+  # Parameters:
+  # records -- a data frame of records in the EBD format.  Can be 
+  #   observation or checklist records.
+  
+  # Start by making a new column with duration in hours.
+  records$duration_hours = records$duration_minutes / 60
+  
+  # Make a data frame with duration summaries
+  time <- data.frame(
+    row.names = c("duration (hours)"),
+    min = records$duration_hours %>% min(),
+    median = records$duration_hours %>% median(),
+    max = records$duration_hours %>% max(),
+    mean = records$duration_hours %>% mean(),
+    sd = records$duration_hours %>% sd(),
+    count = records$duration_hours %>% length()
+  )
+  
+  # Make a data frame with distance summaries
+  distance <- data.frame(
+    row.names = c("distance (km)"),
+    min = records$effort_distance_km %>% min(),
+    median = records$effort_distance_km %>% median(),
+    max = records$effort_distance_km %>% max(),
+    mean = records$effort_distance_km %>% mean(),
+    sd = records$effort_distance_km %>% sd(),
+    count = records$effort_distance_km %>% length()
+  )
+  
+  # Concatenate the two data frames
+  time_distance <- rbind(time, distance)
+  
+  return(time_distance)
+}
+
+
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 protocol_type_pie <- function(checklists){
