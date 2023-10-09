@@ -90,7 +90,7 @@ How many species have they reported?
 print(length(unique(observations$common_name)))
 ```
 
-How many species have they reported in priority and non-priority block types?
+How many breeding codes have they reported in priority and non-priority block types?
 ```{r}
 observer_priority_by_breeding(observer = observer, data = "species")
 ```
@@ -100,8 +100,15 @@ How many blocks have they reported confirmation of breeding from?
 observer_priority_by_breeding(observer = observer, data = "blocks")
 ```
 
+How many complete checklists have they submitted from priority blocks versus non-priority blocks?
+```{r}
+observer_complete_by_priority(observer = observer, data = "checklists")
+```
 
-
+From how many blocks have they submitted complete checklists?
+```{r}
+observer_complete_by_priority(observer = observer, data = "blocks")
+```
 
 
 
