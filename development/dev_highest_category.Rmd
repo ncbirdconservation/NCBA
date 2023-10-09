@@ -29,7 +29,7 @@ Get a data frame of blocks with the highest reported code for the species.
 ```{r}
 species <- "Yellow-breasted Chat"
 
-highest.sf.1 <- highest_category(species, dataframe = NULL)
+highest.sf.1 <- highest_category(species = species, dataframe = NULL)
 ```
 
 Plot the spatial data frame.
@@ -50,7 +50,7 @@ Run the function utilizing the data frame parameter.
 # Get an observations data frame
 observations <- get_observations(species = "Magnolia Warbler", 
                         database = "AtlasCache",
-                        NCBA_only = TRUE,
+                        project = "EBIRD_ATL_NC",
                         EBD_fields_only = TRUE,
                         fields = NULL) %>%
   to_EBD_format(drop = TRUE)

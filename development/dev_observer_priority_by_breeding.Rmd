@@ -1,0 +1,126 @@
+---
+title: "dev_observer_block_category_summary"
+author: "N.M. Tarr"
+date: "2023-10-06"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+
+# Purpose
+This document contains descriptions and tests of a function that provides tables summarizing an observer's data by breeding category and atlas block type.  The summary can be presented in terms of the number of species, or the number of blocks with submissions by the observer.
+
+
+# Function
+```{r}
+observer_priority_by_breeding
+```
+
+
+# Usage
+Get a table that summarizes the number of species that the observer reported, broken out by breeding category and atlas block type (priority or non-priority).
+```{r}
+table1 <- observer_priority_by_breeding(observer = "obsr1000095", 
+                                        data = "species")
+
+print(table1)
+```
+
+Get a table that summarizes the number of blocks from which the observer reported each breeding category, broken out by block type (priority or non-priority).
+```{r}
+table2 <- observer_priority_by_breeding(observer = "obsr1000095",
+                                        data = "blocks")
+
+print(table2)
+```
+
+
+# Tests
+The first sections of code in this function rely upon functions that were tested elsewhere, so only the latter portions of code need to be tested.  Test the function by verifying individual cell values from the output table with different methods than those used within the function.
+
+Get a data frame with the same code as used within the function to test against. 
+```{r}
+library(auk)
+
+observer = "obsr1000095"
+
+# Get a data frame of atlas blocks with the priority column
+blocks <- get_blocks(spatial = FALSE,
+                     fields = c("ID_BLOCK_CODE", "PRIORITY"))
+
+# Get a data frame of the observer's observations, join get PRIORITY
+observations <- get_observations(observer = observer) %>%
+    to_EBD_format() %>%
+    auk_unique()
+
+# Drop excess columns in observations and join to get PRIORITY
+obs0 <- observations %>%
+    select(c("atlas_block", "common_name", "breeding_category")) %>%
+    left_join(blocks, by = join_by("atlas_block" == "ID_BLOCK_CODE")) %>%
+    data.frame()
+```
+
+Get a table with species count as the data and extract the number of species confirmed in priority blocks.
+```{r}
+spp.cnt <- observer_priority_by_breeding(observer = observer, data = "species")
+
+confirmed.priority <- spp.cnt[1,2]
+
+print(spp.cnt)
+```
+
+Now find the number of species confirmed in priority blocks with a different method.  The test is passed if the chunk returns TRUE.
+```{r}
+tv0 <- obs0 %>%
+  filter(PRIORITY == 1, breeding_category == "C4") %>%
+  select(c("common_name"))
+tv1 <- nrow(unique(tv0))
+
+print(tv1 == confirmed.priority)
+```
+
+Do a similar test but with the number of blocks as the data type.
+```{r}
+block.cnt <- observer_priority_by_breeding(observer = observer, data = "blocks")
+
+confirmed.priority <- block.cnt[1,2]
+
+print(block.cnt)
+```
+
+The test is passed if the chunk returns TRUE.
+```{r}
+tv2 <- obs0 %>%
+  filter(PRIORITY == 1, breeding_category == "C4") %>%
+  select(c("atlas_block"))
+tv3 <- nrow(unique(tv2))
+
+print(tv3 == confirmed.priority)
+```
+
+
+# Speed
+Run the function several times to get descriptive statistics.
+```{r}
+# Run the function 3 times and record the runtime
+time <- c()
+for (i in 1:3) {
+  time1 <- proc.time()
+  observer_priority_by_breeding(data = "species", observer = "obsr1000095")
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```

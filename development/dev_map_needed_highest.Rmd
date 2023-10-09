@@ -48,7 +48,9 @@ show(map)
 
 
 # Speed
-This function utilizes the get_observations function, which can be slow for data-rich species, so the runtime will depend upon the species.  Run the function 3 times for a data-poor species and record the runtime.
+This function utilizes the get_observations function, which can be slow for data-rich species, so the runtime will depend upon the species.  
+
+Run the function 3 times for a data-poor species and record the runtime.
 ```{r}
 time <- c()
 for (i in 1:3) {

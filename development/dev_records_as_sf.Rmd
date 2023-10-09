@@ -16,11 +16,6 @@ knitr::opts_chunk$set(
   message = FALSE)
 ```
 
-This demo requires the tidyverse packages.
-```{r}
-#library(tidyverse)
-```
-
 
 # Purpose
 This document details a function that creates a spatial representation of checklists or observations.  SHOULD A MAX EFFORT DISTANCE PARAMETER BE ADDED?
@@ -47,7 +42,8 @@ Retrieve the records for the species from the Atlas Cache
 ```{r}
 nc_data <- get_observations(species, database = "AtlasCache", NCBA_only = TRUE,
                             EBD_fields_only = TRUE) %>%
-  to_EBD_format(drop=FALSE)
+  to_EBD_format(drop=FALSE) %>%
+  auk_unique()
 ```
 
 Plot the coordinates

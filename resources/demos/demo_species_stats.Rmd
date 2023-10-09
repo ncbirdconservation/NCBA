@@ -1,0 +1,70 @@
+---
+title: "demo_species_stats"
+author: "N.M. Tarr"
+date: "2023-10-9"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+library(auk)
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+# Purpose
+This document demonstrates species-level data summaries that are available from the NCBA code repository.
+
+Identify a species and get the observations.
+```{r}
+species <- "Blackburnian Warbler"
+
+observations <- get_observations(species = species, project = "EBIRD_ATL_NC",
+                                 EBD_fields_only = FALSE) %>%
+  to_EBD_format() %>%
+  auk_unique()
+```
+
+Plot the coordinates.
+```{r}
+# Get spatial data frame of observations
+obs.spatial <- records_as_sf(records_df = observations, 
+                             kind = "observations", method = "points")
+
+# Make a simple map
+ggplot(data = counties_NC()) +
+    geom_sf() +
+    geom_sf(data = obs.spatial, size = 4, shape = 20, 
+            crs = st_crs(6542), colour = "darkred", fill = NA) + 
+    ggtitle(paste(species, "Record Coordinates"), subtitle = "")
+```
+
+Plot the footprints.
+```{r}
+# Get spatial data frame of observations
+obs.spatial <- records_as_sf(records_df = observations, 
+                             kind = "observations", method = "point-radius")
+
+# Make a simple map
+ggplot(data = counties_NC()) +
+    geom_sf() +
+    geom_sf(data = obs.spatial, size = 4, shape = 20, 
+            crs = st_crs(6542), colour = "darkred", fill = NA) + 
+    ggtitle(paste(species, "Uncertainty Buffers"), subtitle = "")
+```
+
+Map the highest reported breeding code by block with needed blocks identified.
+```{r}
+show(map_needed_highest(species = species))
+```
+
+Get a boxplot of breeding phenology
+```{r}
+breeding_boxplot(species = species, data = observations, type = "ecoregional", 
+                 drop = FALSE, lump = breeding_codes())
+```

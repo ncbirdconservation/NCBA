@@ -26,7 +26,7 @@ connect_ncba_db <- function(database, collection){
   # and password are retrieved from a config file containing variables that can
   # retrieved from the working directory (default) or a user-specified location.
   # 
-  # Parameters:
+  # Arguments:
   # database -- the database (within MongoDB) to query, likely "ebd_management"
   # collection -- collection name (e.g., "ebd")
   #
@@ -56,7 +56,7 @@ get_blocks <- function(spatial = FALSE, fields = NULL,
   #   (simple feature).  A subset of all available fields can be specified
   #   to speed up the query.
   # 
-  # Parameters:
+  # Arguments:
   # spatial -- TRUE or FALSE whether to return a spatially enabled data frame
   #     TRUE yields a data frame whereas FALSE returns a simple features data 
   #     frame.
@@ -137,7 +137,7 @@ to_EBD_format <- function(dataframe, drop = FALSE) {
   #   format.  If not, it then reformats the data frame to match the EBD.  It 
   #   then checks again for compliance before returning output.
   # 
-  # Parameters:
+  # Arguments:
   # dataframe -- a data frame retrieved from the NCBA Atlas Cache.
   # drop -- TRUE or FALSE whether to drop columns not present in the EBD.
   
@@ -194,7 +194,7 @@ get_breeding_dates <- function(species, day_year = FALSE){
   # Description:
   # Returns a list of start and end days of year for breeding.
   #
-  # Parameters:
+  # Arguments:
   # species -- common name of the species
   
   # Connect to the blocks collection (table)
@@ -234,14 +234,14 @@ highest_category <- function(species, dataframe = NULL) {
   #   from the Atlas Cache.  The output of this function is a simple features
   #   data frame that can be used in maps or table applications.
   #
-  # Parameters:
+  # Arguments:
   # species -- the common name of the species of interest.
   # dataframe -- the name of a data frame to use as input.  NULL prompts the use
   #   of get_observations() to access a data frame from the Atlas Cache.
   #
   #
   if (is.null(dataframe) == TRUE) {
-    obs <- get_observations(species, NCBA_only = TRUE) %>%
+    obs <- get_observations(species = species) %>%
       to_EBD_format()
   } else {
     obs <- dataframe
@@ -298,7 +298,7 @@ calculate_breeding_dates <- function(species, basis, quantiles, year = 2023,
   #   by a day.  However, this is not a significant amount of error for the 
   #   intended applications of this function.
   #
-  # Parameters:
+  # Arguments:
   # species -- common name of the species
   # basis -- the types of breeding categories to bass calculations upon as a 
   #   vector.  For example, c("confirmed", "probable", "possible").
@@ -550,7 +550,7 @@ breeding_boxplot <- function(species, data, type="interactive",
     boxplot(obsdate ~ breeding_code, horizontal = TRUE, 
             cex.axis = cex.y.axis, xaxt = "n", data = ebird, border = "white", 
             main = species, las = 2, xlab = "Calendar Day", 
-            ylab = "Breeding Code", show.names = TRUE,
+            ylab = "", show.names = TRUE,
             na.action = na.pass)
     
     have_dates <- subset(ebird, is.na(observation_date) == FALSE)
@@ -682,7 +682,7 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
   #   EBD_format variable to TRUE.
   #
   #
-  # Parameters:
+  # Arguments:
   # database -- either "EBD" for a downloaded eBird database or "AtlasCache" for
   #   the NCBA mongodb.
   # EBD_fields_only -- whether to include non-EBD, Atlas Cache fields in the output 
@@ -829,7 +829,7 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
 get_all_checklists <- function(drop_ncba_col=TRUE){
   # Get a data frame of checklists from the AtlasCache
   # 
-  # Parameters:
+  # Arguments:
   # drop_ncba_col -- Setting to TRUE will drop columns from the NCBA database
   #   that are not provided by eBird. List of columns found in eBird Sampling 
   #   Dataset on 2/18/2022. 
@@ -891,7 +891,7 @@ get_observations <- function(database = "AtlasCache", species = NULL,
   #   be specified to limit the columns that are included in the output data
   #   frame.
   #
-  # Parameters:
+  # Arguments:
   # species -- common name of the species
   # database -- either "EBD" for a downloaded eBird database or "AtlasCache" for
   #   the NCBA mongodb.
@@ -1084,6 +1084,121 @@ get_observations <- function(database = "AtlasCache", species = NULL,
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+observer_priority_by_breeding <- function(observer, data) {
+  # Returns a table with species or block tallies by block type and breeeding
+  #   category.
+  #
+  # Description:
+  # This function returns a data frame with rows for priority, non-priority,
+  #   and either in reference to block type.  The columns are for the various
+  #   breeding categories.  The cell values are either species counts or a tally
+  #   of how many blocks the observer reported a category in.
+  #
+  # Arguments:
+  # observer -- an eBird observer id
+  # data -- enter "species" or "blocks" to pick which data to summarize.
+  #
+  library(auk)
+  
+  # Get a data frame of atlas blocks with the priority column
+  blocks <- get_blocks(spatial = FALSE,
+                       fields = c("ID_BLOCK_CODE", "PRIORITY"))
+  
+  # Get a data frame of the observer's observations, join get PRIORITY
+  observations <- get_observations(observer = observer) %>%
+    to_EBD_format() %>%
+    auk_unique()
+  
+  # Drop excess columns in observations and join to get PRIORITY
+  obs0 <- observations %>%
+    select(c("atlas_block", "common_name", "breeding_category")) %>%
+    left_join(blocks, by = join_by("atlas_block" == "ID_BLOCK_CODE")) %>%
+    data.frame()
+  
+  # Replace the values in breeding_category with words
+  obs0$breeding_category <- ifelse(obs0$breeding_category == "C4", 
+                                   "confirmed",
+                                   ifelse(obs0$breeding_category == "C3", 
+                                          "probable",
+                                          ifelse(obs0$breeding_category == "C2", 
+                                                 "possible",
+                                                 ifelse(obs0$breeding_category == "C1", 
+                                                        "observed", NA))))
+  
+  # Fill NA breeding_category values with "observed"
+  obs0$breeding_category <- ifelse(is.na(obs0$breeding_category), "observed",
+                                   obs0$breeding_category)
+  
+  # Replace the values in PRIORITY.  0 = non-priority, 1 = priority.
+  obs0$PRIORITY <- ifelse(obs0$PRIORITY == 0, "non-priority", "priority")
+  
+  # Species --------------------------------------------------------------------
+  if (data == "species") {
+    # Make a summary data frame with PRIORITY values as the index, breeding_category values
+    # as the columns, and the number of species (i.e., common_names) in each cell.
+    obs1 <- obs0 %>%
+      group_by(PRIORITY, breeding_category) %>%
+      summarise(n = n_distinct(common_name)) %>%
+      rename("block_type" = PRIORITY,
+             "breeding_category" = breeding_category,
+             "species_count" = n) %>%
+      data.frame() %>%
+      pivot_wider(names_from = breeding_category,
+                  values_from = species_count,
+                  values_fill = list(species_count = 0)) %>%
+      arrange(desc(block_type))
+    
+    # Reorder the columns to confirmed, probable, possible, observed
+    obs1 <- obs1[, c(1, 2, 5, 4, 3)]
+    
+    # Add a row to the bottom of the table with the number of species with
+    # each breeding_category value from any atlas block.
+    obs1 <- obs1 %>%
+      add_row(block_type = "either",
+              confirmed = n_distinct(obs0$common_name[obs0$breeding_category == "confirmed"]),
+              probable = n_distinct(obs0$common_name[obs0$breeding_category == "probable"]),
+              possible = n_distinct(obs0$common_name[obs0$breeding_category == "possible"]),
+              observed = n_distinct(obs0$common_name[obs0$breeding_category == "observed"])) %>%
+      data.frame()
+    return(obs1)
+  }
+  
+  # Data -----------------------------------------------------------------------
+  if (data == "blocks") {
+    # Make a summary data frame with PRIORITY values as the index, 
+    #   breeding_category values as the columns, and the number of blocks 
+    #   (i.e., atlas_block) in each cell.
+    obs2 <- obs0 %>%
+      group_by(PRIORITY, breeding_category) %>%
+      summarise(n = n_distinct(atlas_block)) %>%
+      rename("block_type" = PRIORITY,
+             "breeding_category" = breeding_category,
+             "block_count" = n) %>%
+      data.frame() %>%
+      pivot_wider(names_from = breeding_category,
+                  values_from = block_count,
+                  values_fill = list(block_count = 0)) %>%
+      arrange(desc(block_type))
+    
+    # Reorder the columns to confirmed, probable, possible, observed
+    obs2 <- obs2[, c(1, 2, 5, 4, 3)]
+    
+    # Add a row to the bottom of the table for either block type
+    obs2 <- obs2 %>%
+      add_row(block_type = "either",
+              confirmed = sum(obs2$confirmed),
+              probable = sum(obs2$probable),
+              possible = sum(obs2$possible),
+              observed = sum(obs2$observed)) %>%
+      data.frame()
+    
+    return(obs2)
+  }
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 blocks_observed_in <- function(observations, start_day = 0, end_day = 366, 
                                   within = TRUE,
                                   breeding_categories = c("C4", "C3", "C2", 
@@ -1108,7 +1223,7 @@ blocks_observed_in <- function(observations, start_day = 0, end_day = 366,
   # Non-NCBA records are not assigned to an atlas block and thus get dropped
   #   by this function when is performs a "group by" on the atlas_block field.
   #
-  # Parameters:
+  # Arguments:
   # observations -- data frame of observation records obtained with 
   #   get_observations() and to_EBD_format().
   # start_day -- a numbered day of the year for the start of a period.  Can be 
@@ -1149,7 +1264,7 @@ blocks_observed_in <- function(observations, start_day = 0, end_day = 366,
 lists_by_week <- function(checklists){
   # Return a figure of checklists per week
   # 
-  # Parameters:
+  # Arguments:
   # checklists -- data frame of checklists w/ observation_date field
   #
   # Example:
@@ -1186,13 +1301,94 @@ counties_NC <- function(){
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+observer_complete_by_priority <- function(observer, data) {
+  # Returns a data frame summarizing an observers effort by checklist 
+  #   completeness and block type.  Reported values can be number of checklists
+  #   or number of blocks.
+  #   
+  # Description:
+  # Creates a data frame with rows for block type and columns for checklist type
+  #   (complete or incomplete).  The data parameter controls what the cell
+  #   values are.  Selecting "checklists" will present the number of checklists
+  #   in each combination, whereas selecting "blocks" will present the number of
+  #   blocks with checklists in each combination.
+  #
+  # Arguments:
+  # observer -- an eBird observer id
+  # data -- your choice of what to summarize.  Either "checklists" or "blocks"
+  
+  # Get a data frame of atlas blocks with the priority column
+  blocks <- get_blocks(spatial = FALSE,
+                       fields = c("ID_BLOCK_CODE", "PRIORITY"))
+  
+  # Get a data frame of the observer's checklists, join get PRIORITY
+  checklists <- get_checklists(observer = observer) %>%
+    to_EBD_format() %>%
+    auk_unique(checklists_only = TRUE)
+  
+  # Drop excess columns in checklists and join to get PRIORITY
+  checks0 <- checklists %>%
+    select(c("atlas_block", "all_species_reported", "sampling_event_identifier")) %>%
+    left_join(blocks, by = join_by("atlas_block" == "ID_BLOCK_CODE")) %>%
+    data.frame()
+  
+  # Replace the values in PRIORITY.
+  checks0$PRIORITY <- ifelse(checks0$PRIORITY == 1, "priority", "non-priority")
+  
+  # Replace the values in all_species_reported.
+  checks0$all_species_reported <- ifelse(checks0$all_species_reported == TRUE, 
+                                         "complete", "incomplete")
+  
+  if (data == "blocks") {
+    # Make a summary data frame.
+    obs3 <- checks0 %>%
+      group_by(PRIORITY, all_species_reported) %>%
+      summarise(n = n_distinct(atlas_block)) %>%
+      rename("block_type" = PRIORITY,
+             "checklist_type" = all_species_reported,
+             "block_count" = n) %>%
+      data.frame() %>%
+      pivot_wider(names_from = checklist_type,
+                  values_from = block_count,
+                  values_fill = list(block_count = 0)) %>%
+      arrange(desc(block_type))
+    return(obs3)
+  }
+  
+  if (data == "checklists") {
+    # Make a summary data frame.
+    obs4 <- checks0 %>%
+      group_by(PRIORITY, all_species_reported) %>%
+      summarise(n = n_distinct(sampling_event_identifier)) %>%
+      rename("block_type" = PRIORITY,
+             "checklist_type" = all_species_reported,
+             "checklist_count" = n) %>%
+      data.frame() %>%
+      pivot_wider(names_from = checklist_type,
+                  values_from = checklist_count,
+                  values_fill = list(checklist_count = 0)) %>%
+      arrange(desc(block_type))
+    
+    # Add a row at the bottom for the column totals.
+    obs4 <- obs4 %>%
+      add_row(block_type = "either",
+              complete = sum(obs4$complete),
+              incomplete = sum(obs4$incomplete)) %>%
+      data.frame()
+    return(obs4)
+  }
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 plot_checklists_coords <- function(checklists){
   # Return a map of checklist locations, based on their reported coordinates
   #   
   # Note: points will be mapped in the CRS of the checklists data frame,
   #   which is likely EPSG:4326.
   # 
-  # Parameters:
+  # Arguments:
   # checklists -- data frame of checklists, with columns named "latitude" and 
   #   "longitude".
   #
@@ -1213,7 +1409,7 @@ plot_checklists_coords <- function(checklists){
 effort_distance_boxplot <- function(checklists){
   # Describe the distribution of effort_distance_km values as a boxplot
   # 
-  # Parameters:
+  # Arguments:
   # checklists -- data frame of checklists w/ effort_distance_km.
   #
   # Example:
@@ -1237,7 +1433,7 @@ effort_distance_boxplot <- function(checklists){
 duration_minutes_boxplot <- function(checklists){
   # Describe the distribution of effort_minutes values as a box plot.
   # 
-  # Parameters:
+  # Arguments:
   # checklists -- data frame of checklists w/ effort_minutes.
   #
   # Example:
@@ -1260,7 +1456,7 @@ duration_minutes_boxplot <- function(checklists){
 start_time_boxplot <- function(checklists){
   # Describe the distribution of checklist start times as a box plot.
   # 
-  # Parameters:
+  # Arguments:
   # checklists -- data frame of checklists w/ start time_observations_started.
   #
   # Example:
@@ -1292,7 +1488,7 @@ locality_type_pie <- function(checklists){
   # Describe the locality types present as a pie chart: whether checklists are 
   #   for hotspots, personal locations, etc.
   # 
-  # Parameters:
+  # Arguments:
   # checklists -- data frame of checklists w/ locality_type.
   #
   # Example:
@@ -1330,7 +1526,7 @@ protocol_table <- function(records) {
   #   result summarises the number and percentage of records for each type
   #   as well as the total duration of checklists of each type.
   # 
-  # Parameters:
+  # Arguments:
   # records -- a data frame of records in in the EBD format.  Can be 
   #   observation or checklist records.  Needs to have the duration_minutes
   #   and protocol_type columns.
@@ -1366,7 +1562,7 @@ complete_checklist_table <- function(records) {
   #   result summarises the number and percentage of records from complete
   #   checklists, as well as the total duration of checklists of each type.
   # 
-  # Parameters:
+  # Arguments:
   # records -- a data frame of records in in the EBD format.  Can be 
   #   observation or checklist records.  Needs to have the all_species_reported
   #   and duration_minutes columns.
@@ -1403,7 +1599,7 @@ duration_distance_table <- function(records) {
   #   checklists, as well as the total duration of checklists of each type.  
   #   The duration_minutes and effort_distance_km columns must be present.
   # 
-  # Parameters:
+  # Arguments:
   # records -- a data frame of records in the EBD format.  Can be 
   #   observation or checklist records.
   
@@ -1445,7 +1641,7 @@ protocol_type_pie <- function(checklists){
   # Describe the protocol types present as a pie chart: whether checklists are 
   #   traveling, stationary, etc.
   # 
-  # Parameters:
+  # Arguments:
   # checklists -- data frame of checklists w/ protocol_type.
   #
   # Example:
@@ -1476,7 +1672,7 @@ protocol_type_pie <- function(checklists){
 year_bar <- function(checklists){
   # Summarize how many checklists were reported each year.
   # 
-  # Parameters:
+  # Arguments:
   # checklists -- data frame of checklists w/ year.
   #
   # Example:
@@ -1510,7 +1706,7 @@ records_as_sf <- function(records_df, kind, method, fill_na_km = 0.1) {
   #   values are filled with zero, which assumes those records are stationary 
   #   counts.
   #
-  #   Parameters:
+  #   Arguments:
   #   records_df -- data frame of records with latitude, longitude, 
   #     checklists_id or sampling_event_identifier, atlas_block, protocol_type,
   #     and effort_distance_km columns.
@@ -1581,7 +1777,7 @@ get_predicted_presence <- function(species, source, season) {
   #   species of interested, during a season of interest, and from a source
   #   of interest.
   #
-  # Parameters:
+  # Arguments:
   # species -- the common name of the species of interest.
   # source -- who's prediction you want: "GAP" or "eBird"
   # season -- "summer" or "winter" for GAP; "breeding" or "wintering" for eBird
@@ -1624,7 +1820,7 @@ blocks_needed <- function(species, source, season, database, NCBA_only,
   #   option is provided to pass an observations data frame to avoid needing to
   #   run get_observations() each time this is run.  
   #
-  # Parameters:
+  # Arguments:
   # species -- the common name of the species of interest.
   # source -- who's prediction you want to base result upon: "GAP" or "eBird"
   # season -- what season to get a prediction for ("summer" or "winter" for GAP,
@@ -1707,7 +1903,7 @@ checklists_per_block <- function(records_df, blocks_sf, attribute, method){ # DR
   # spatial subregions, such as counties or atlas blocks, a checklist should
   # be attributed to.
   #
-  # Parameters:
+  # Arguments:
   # records_sf -- a data frame of checklists from EBD or the atlas cache.  
   #   The functions "records_as_sf()" can provide this.
   #
@@ -1822,7 +2018,7 @@ observations_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT
   # spatial subregions, such as counties or atlas blocks, an observation should
   # be attributed to.
   #
-  # Parameters:
+  # Arguments:
   # records_sf -- a data frame of observations from EBD or the atlas cache.
   #
   # blocks_sf -- a spatial data frame of atlas blacks
@@ -1922,7 +2118,7 @@ observations_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT
 breeding_codes <- function(lumped = TRUE){
   # Returns either a full or nested list of all breeding codes.
   
-  # Parameters:
+  # Arguments:
   # collapsed -- TRUE or FALSE whether you want codes lumped into categories: 
   #   observed, possible, probable, confirmed.
   if (lumped == FALSE) {
@@ -1999,20 +2195,22 @@ map_needed_highest <- function(species, source = "GAP", database = "AtlasCache",
   #   to use only NCBA records, and whether to return results for non-priority 
   #   blocks.
   #
-  # Parameters:
+  # Arguments:
   # species -- species common name
   # source -- which source for a prediction: GAP or eBird.  GAP is default.
   # database -- which database to get observations from: AtlasCache or EBD.
   #   AtlasCache is the default.
   # priority_only -- TRUE or FALSE whether to omit non-priority blocks from the
   #   map. Default is FALSE.
+  library(auk)
   
   # Get a blocks data frame with simple features
   blocks <- get_blocks(spatial = TRUE, fields = c("ID_BLOCK_CODE", "PRIORITY"))
   
   # Get all the species observations
-  obs <- get_observations(species, EBD_fields_only = TRUE) %>%
-    to_EBD_format()
+  obs <- get_observations(species = species) %>%
+    to_EBD_format() %>%
+    auk_unique()
   
   # Get a spatial data frame of blocks needed in
   if (source == "GAP") {
@@ -2026,7 +2224,7 @@ map_needed_highest <- function(species, source = "GAP", database = "AtlasCache",
                           database = database, observations = obs)
   
   # Get a data frame of highest category per block
-  highest <- highest_category(species, dataframe = obs) %>% 
+  highest <- highest_category(species = species, dataframe = NULL) %>% 
     filter(is.na(highest_category) == FALSE)
   
   # Exclude non-priority blocks if asked to do so

@@ -10,6 +10,7 @@ output:
 ```{r setup, include=FALSE, message=TRUE, warning=TRUE}
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
+library(auk)
 
 knitr::opts_knit$set(root.dir = work_dir)
 knitr::opts_chunk$set(
@@ -41,16 +42,17 @@ breeding_boxplot
 # Usage
 Identify a species to investigate.
 ```{r}
-species <- "Red-breasted Nuthatch"
+species <- "Black-throated Green Warbler"
 print(species)
 ```
 
 Retrieve the records for the species from the Atlas Cache
 ```{r}
-records <- get_observations(species, 
-                            NCBA_only = TRUE, 
+records <- get_observations(species = species, 
+                            project = "EBIRD_ATL_NC", 
                             EBD_fields_only = FALSE) %>% 
-  to_EBD_format(drop=FALSE)
+  to_EBD_format(drop=FALSE) %>%
+  auk_unique()
 ```
 
 Make a non-interactive boxplot without lumping codes together

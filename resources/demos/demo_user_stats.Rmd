@@ -8,6 +8,7 @@ output: word_document
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
+library(auk)
 
 knitr::opts_knit$set(root.dir = work_dir)
 knitr::opts_chunk$set(
@@ -23,9 +24,10 @@ observer <- "obsr1000095"
 
 Get all of their checklists.
 ```{r}
-checklists.obs <- get_checklists(observer = observer, project = NULL) %>%
+checklists.obs <- get_checklists(database = "AtlasCache", observer = observer, 
+                                 project = NULL) %>%
   to_EBD_format() %>%
-  auk_unique()
+  auk_unique(checklists_only = TRUE)
 ```
 
 View the checklist records.  They could also be saved with to.csv().
@@ -85,9 +87,18 @@ observations <- get_observations(observer = observer, project = NULL) %>%
 
 How many species have they reported?
 ```{r}
-
+print(length(unique(observations$common_name)))
 ```
 
+How many species have they reported in priority and non-priority block types?
+```{r}
+observer_priority_by_breeding(observer = observer, data = "species")
+```
+
+How many blocks have they reported confirmation of breeding from?
+```{r}
+observer_priority_by_breeding(observer = observer, data = "blocks")
+```
 
 
 
