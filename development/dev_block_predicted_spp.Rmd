@@ -1,0 +1,116 @@
+---
+title: "dev_block_predicted_spp"
+author: "N.M. Tarr"
+date: "2023-10-11"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+
+# Purpose
+
+
+# Function
+```{r}
+block_predicted_spp <- function(block, source) {
+  # Returns predicted summer and winter species lists.
+  #
+  # Description:
+  # The AtlasCache blocks document contains fields that report species lists 
+  #   for each block in summer and winter.  Those lists are derived from 
+  #   predictions by the USGS GAP Analysis Program and eBird.  This function
+  #   retrieves lists of species that were predicted to occupy a
+  #   block of interest from a source of interest of each summer and winter.
+  #
+  # Arguments:
+  # block -- the eBird ID code of the block of interest.
+  # source -- who's prediction do you want: "GAP" or "eBird"?
+
+  source_lookup <- list("GAP" = "GAP_SPP", "eBird" = "EBD_SPP")
+  source <- source_lookup[[source]]
+  
+  # Connect to the blocks collection (table)
+  connection_blocks <- connect_ncba_db(database = "ebd_mgmt", 
+                                       collection = "blocks")
+  
+  # Define and execute a query (with fields) for blocks of predicted presence.
+  fields <- str_interp('{"${source}": true}')
+  query <- str_interp('{"ID_BLOCK_CODE" : "${block}"}')
+  pres <- connection_blocks$find(query = query, fields = fields) %>%
+    unnest(source)
+  
+  # GAP prediction
+  if (source == "GAP_SPP") {
+    # Summer list
+    summer_spp <- pres %>% 
+      filter(SUMMER == 1)
+    summer_spp <- summer_spp$PRIMARY_COM_NAME
+    
+    # Winter list
+    winter_spp <- pres %>% 
+      filter(WINTER == 1)
+    winter_spp <- winter_spp$PRIMARY_COM_NAME  
+  } 
+  
+  # eBird prediction
+  if (source == "EBD_SPP") {
+    # Summer list
+    summer_spp <- pres %>% 
+      filter(BREEDING == 1)
+    summer_spp <- summer_spp$PRIMARY_COM_NAME
+    
+    # Winter list
+    winter_spp <- pres %>% 
+      filter(WINTERING == 1)
+    winter_spp <- winter_spp$PRIMARY_COM_NAME
+  }
+  
+  return(list("summer" = summer_spp, "winter" = winter_spp))
+}
+```
+
+# Usage
+```{r}
+
+```
+
+
+```{r}
+```
+
+
+# Tests
+```{r}
+
+```
+
+
+# Speed
+Run the function several times to get descriptive statistics.
+```{r}
+# Get the data
+records <- get_checklists(observer = "obsr1000095", project = NULL) %>%
+to_EBD_format()
+
+# Run the function 10 times and record the runtime
+time <- c()
+for (i in 1:10) {
+  time1 <- proc.time()
+  protocol_table(records)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```

@@ -1,0 +1,124 @@
+---
+title: "dev_spp_count_summary"
+author: "N.M. Tarr"
+date: "2023-10-11"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+
+# Purpose
+
+
+# Function
+```{r}
+spp_count_summary <- function(observed_spp, predicted_spp) {
+  # Returns a table summarizing species count by breeding category.
+  #
+  # Description:
+  # Provides a summary of how many species have been reported in each category
+  #   as a total number of species, percentage of observed species, and 
+  #   percentage of species predicted/expected to occur.  The observed_spp
+  #   must come from block_spp_lists() because this function expects the format
+  #   that function returns.
+  #
+  # Arguments:
+  # observed_spp -- a lists of lists retrieved from block_spp_lists().
+  # predicted_spp -- a vector of species names.
+
+  # Make empty data frame
+  dataframe <- data.frame(
+    highest_category = c("observed", "possible", "probable", "confirmed"),
+    species_count = c(0, 0, 0, 0),
+    percent_of_observed = c(0, 0, 0, 0),
+    percent_of_predicted = c(0, 0, 0, 0)
+  )
+  
+  # Fill out values
+  dataframe[dataframe$highest_category == "observed", 
+            "species_count"] <- length(observed_spp$observed_highest)
+  dataframe[dataframe$highest_category == "possible", 
+            "species_count"] <- length(observed_spp$possible_highest)
+  dataframe[dataframe$highest_category == "probable", 
+            "species_count"] <- length(observed_spp$probable_highest)
+  dataframe[dataframe$highest_category == "confirmed", 
+            "species_count"] <- length(observed_spp$confirmed)
+  
+  # Get species count for what's been observed
+  total <- length(observed_spp$all)
+  
+  dataframe[dataframe$highest_category == "observed", 
+            "percent_of_observed"] <- round(100*(length(observed_spp$observed_highest)/total))
+  dataframe[dataframe$highest_category == "possible", 
+            "percent_of_observed"] <- round(100*(length(observed_spp$possible_highest)/total))
+  dataframe[dataframe$highest_category == "probable", 
+            "percent_of_observed"] <- round(100*(length(observed_spp$probable_highest)/total))
+  dataframe[dataframe$highest_category == "confirmed", 
+            "percent_of_observed"] <- round(100*(length(observed_spp$confirmed)/total))
+  
+  # Get species count for predicted
+  total <- length(predicted_spp)
+  
+  dataframe[dataframe$highest_category == "observed", 
+            "percent_of_predicted"] <- round(100*(length(observed_spp$observed_highest)/total))
+  dataframe[dataframe$highest_category == "possible", 
+            "percent_of_predicted"] <- round(100*(length(observed_spp$possible_highest)/total))
+  dataframe[dataframe$highest_category == "probable", 
+            "percent_of_predicted"] <- round(100*(length(observed_spp$probable_highest)/total))
+  dataframe[dataframe$highest_category == "confirmed", 
+            "percent_of_predicted"] <- round(100*(length(observed_spp$confirmed)/total))
+  
+  # Add a sum row at the bottom
+  dataframe <- rbind(dataframe, c("sum", sum(dataframe$species_count),
+                                  sum(dataframe$percent_of_observed),
+                                  sum(dataframe$percent_of_predicted)))
+  
+  return(dataframe)
+}
+```
+
+# Usage
+```{r}
+
+```
+
+
+```{r}
+```
+
+
+# Tests
+```{r}
+
+```
+
+
+# Speed
+Run the function several times to get descriptive statistics.
+```{r}
+# Get the data
+records <- get_checklists(observer = "obsr1000095", project = NULL) %>%
+to_EBD_format()
+
+# Run the function 10 times and record the runtime
+time <- c()
+for (i in 1:10) {
+  time1 <- proc.time()
+  protocol_table(records)
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```

@@ -1,5 +1,5 @@
 ---
-title: "dev_breeding_dates"
+title: "dev_calculate_breeding_dates"
 author: "N.M. Tarr"
 date: "2023-09-13"
 output:
@@ -7,7 +7,7 @@ output:
   word_document: default
 ---
 
-```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
 
