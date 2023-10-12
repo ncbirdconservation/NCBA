@@ -18,103 +18,48 @@ knitr::opts_chunk$set(
 
 
 # Purpose
+This document details a function to summarize the number of species that have been reported within a block.  The summary is organized by breeding category.  Columns are generated for species count, percentage of all species reported thus far in the block, and percentage of species predicted to occur within the block.  This function expects output from the block_spp_lists function.
 
 
 # Function
 ```{r}
-spp_count_summary <- function(observed_spp, predicted_spp) {
-  # Returns a table summarizing species count by breeding category.
-  #
-  # Description:
-  # Provides a summary of how many species have been reported in each category
-  #   as a total number of species, percentage of observed species, and 
-  #   percentage of species predicted/expected to occur.  The observed_spp
-  #   must come from block_spp_lists() because this function expects the format
-  #   that function returns.
-  #
-  # Arguments:
-  # observed_spp -- a lists of lists retrieved from block_spp_lists().
-  # predicted_spp -- a vector of species names.
-
-  # Make empty data frame
-  dataframe <- data.frame(
-    highest_category = c("observed", "possible", "probable", "confirmed"),
-    species_count = c(0, 0, 0, 0),
-    percent_of_observed = c(0, 0, 0, 0),
-    percent_of_predicted = c(0, 0, 0, 0)
-  )
-  
-  # Fill out values
-  dataframe[dataframe$highest_category == "observed", 
-            "species_count"] <- length(observed_spp$observed_highest)
-  dataframe[dataframe$highest_category == "possible", 
-            "species_count"] <- length(observed_spp$possible_highest)
-  dataframe[dataframe$highest_category == "probable", 
-            "species_count"] <- length(observed_spp$probable_highest)
-  dataframe[dataframe$highest_category == "confirmed", 
-            "species_count"] <- length(observed_spp$confirmed)
-  
-  # Get species count for what's been observed
-  total <- length(observed_spp$all)
-  
-  dataframe[dataframe$highest_category == "observed", 
-            "percent_of_observed"] <- round(100*(length(observed_spp$observed_highest)/total))
-  dataframe[dataframe$highest_category == "possible", 
-            "percent_of_observed"] <- round(100*(length(observed_spp$possible_highest)/total))
-  dataframe[dataframe$highest_category == "probable", 
-            "percent_of_observed"] <- round(100*(length(observed_spp$probable_highest)/total))
-  dataframe[dataframe$highest_category == "confirmed", 
-            "percent_of_observed"] <- round(100*(length(observed_spp$confirmed)/total))
-  
-  # Get species count for predicted
-  total <- length(predicted_spp)
-  
-  dataframe[dataframe$highest_category == "observed", 
-            "percent_of_predicted"] <- round(100*(length(observed_spp$observed_highest)/total))
-  dataframe[dataframe$highest_category == "possible", 
-            "percent_of_predicted"] <- round(100*(length(observed_spp$possible_highest)/total))
-  dataframe[dataframe$highest_category == "probable", 
-            "percent_of_predicted"] <- round(100*(length(observed_spp$probable_highest)/total))
-  dataframe[dataframe$highest_category == "confirmed", 
-            "percent_of_predicted"] <- round(100*(length(observed_spp$confirmed)/total))
-  
-  # Add a sum row at the bottom
-  dataframe <- rbind(dataframe, c("sum", sum(dataframe$species_count),
-                                  sum(dataframe$percent_of_observed),
-                                  sum(dataframe$percent_of_predicted)))
-  
-  return(dataframe)
-}
+spp_count_summary
 ```
+
 
 # Usage
+Designate a block of interest.
 ```{r}
-
+block <- "35079H1SE"
 ```
 
-
+Use block_spp_lists() to get lists of species lists for the blocks.  To summarize within a time period specify the start and end days as numbered days of the year and use the "within" option.  Records from between the start and end date will be used.
 ```{r}
+spp_lists <- block_spp_lists(block = block, start_day = 70, end_day = 230,
+                             within = TRUE)
 ```
 
-
-# Tests
+Get a list of predicted species for the block.  Use GAP and summer season.
 ```{r}
+predicted <- block_predicted_spp(block = block, source = "GAP")
+predicted <- predicted$summer
+```
 
+Feed the lists of observed species and the predicted species into the function.  The result is for summer/breeding because the GAP predictions used were for summer, and the dates used for spp_lists correspond to summer/breeding.
+```{r}
+result <- spp_count_summary(observed_spp = spp_lists, predicted_spp = predicted)
+print(result)
 ```
 
 
 # Speed
 Run the function several times to get descriptive statistics.
 ```{r}
-# Get the data
-records <- get_checklists(observer = "obsr1000095", project = NULL) %>%
-to_EBD_format()
-
 # Run the function 10 times and record the runtime
 time <- c()
 for (i in 1:10) {
   time1 <- proc.time()
-  protocol_table(records)
+  spp_count_summary(observed_spp = spp_lists, predicted_spp = predicted)
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }

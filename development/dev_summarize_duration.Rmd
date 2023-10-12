@@ -1,0 +1,103 @@
+---
+title: "dev_summarize_duration"
+author: "N.M. Tarr"
+date: "2023-10-10"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+library(auk)
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+
+# Purpose
+This document details a function for summarizing hours of effort within a block.  Options are provided to choose whether to summarize by month or year (or both) and to customize a period of the year for the summary.      
+
+# Function
+```{r}
+summarize_duration
+```
+
+# Usage
+First, identify a block of interest.
+```{r}
+block <- "35079H1SE"
+```
+
+To summarize within a time period specify the start and end days as numbered days of the year and use the "within" option.  Records from between the start and end date will be used.
+```{r}
+start_day <- 70
+end_day <- 230
+
+summer.summary <- summarize_duration(block = block, summarize_by = "year", 
+                                     start_day = start_day,
+                                     end_day = end_day, 
+                                     within = TRUE)
+
+print(summer.summary)
+```
+
+To summarize dates outside of a time period (e.g., nonbreeding season), use the within option.
+```{r}
+winter.summary <- summarize_duration(block = block, summarize_by = "year", 
+                                     start_day = start_day,
+                                     end_day = end_day, 
+                                     within = FALSE)
+
+print(winter.summary)
+```
+
+Summaries can be based on month...
+```{r}
+winter.summary2 <- summarize_duration(block = block, summarize_by = "month", 
+                                     start_day = start_day,
+                                     end_day = end_day, 
+                                     within = FALSE)
+
+print(winter.summary2)
+```
+
+Or year and month...
+```{r}
+winter.summary3 <- summarize_duration(block = block, summarize_by = "year-month", 
+                                      start_day = start_day,
+                                      end_day = end_day, 
+                                      within = FALSE)
+
+print(winter.summary3)
+```
+
+If a table of winter and summer together were desired, merely add a column to each and then use "rbind" to combine them.
+```{r}
+summer.summary$season <- "summer"
+winter.summary$season <- "winter"
+all.summary <- rbind(summer.summary, winter.summary)
+print(arrange(all.summary, year))
+```
+
+
+# Speed
+Run the function several times to get descriptive statistics.
+```{r}
+# Run the function 3 times and record the runtime
+time <- c()
+for (i in 1:3) {
+  time1 <- proc.time()
+  summarize_duration(block = block, summarize_by = "year", 
+                     start_day = start_day, end_day = end_day,
+                     within = FALSE)  
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```

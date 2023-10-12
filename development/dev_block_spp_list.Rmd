@@ -24,8 +24,8 @@ This document details and demonstrates a function that retrieves a list of repor
 block_spp_lists
 ```
 
-# Usage
 
+# Usage
 Get summer species lists for a block of interest (May 15 - August 15).
 ```{r}
 block <- "35078H8SE"
@@ -33,125 +33,54 @@ spp_lists <- block_spp_lists(block = block, start_day = 135, end_day = 227,
                              within = TRUE)
 ```
 
-Combine the lists to get a list of all species reported.
+The result of the function is a list of lists.  Retrieve the names of all the lists included.
 ```{r}
-summer_spp_observed <- spp_lists$all 
+print(names(spp_lists))
 ```
 
-
-Get a list of species predicted to occur.
+Print a list of all species that have been reported.
 ```{r}
-source <- "GAP"
-season <- "summer"
-
-season <- str_to_upper(season)
-source_lookup <- list("GAP" = "GAP_SPP", "eBird" = "EBD_SPP")
-source <- source_lookup[[source]]
-
-# Connect to the blocks collection (table)
-connection_blocks <- connect_ncba_db(database = "ebd_mgmt", 
-                                     collection = "blocks")
-
-# Define and execute a query (with fields) for blocks of predicted presence.
-fields <- str_interp('{"${source}": true}')
-query <- str_interp('{"ID_BLOCK_CODE" : "${block}"}')
-pres <- connection_blocks$find(query = query, fields = fields) %>%
-  unnest(source)
-
-# GAP
-if (source == "GAP_SPP") {
-  # Summer list
-  summer_spp <- pres %>% 
-    filter(SUMMER == 1)
-  summer_spp <- summer_spp$PRIMARY_COM_NAME
-  
-  # Winter list
-  winter_spp <- pres %>% 
-    filter(WINTER == 1)
-  winter_spp <- winter_spp$PRIMARY_COM_NAME  
-} 
-
-if (source == "EBD_SPP") {
-  # Summer list
-  summer_spp <- pres %>% 
-    filter(BREEDING == 1)
-  summer_spp <- summer_spp$PRIMARY_COM_NAME
-  
-  # Winter list
-  winter_spp <- pres %>% 
-    filter(WINTERING == 1)
-  winter_spp <- winter_spp$PRIMARY_COM_NAME
-}
+print(spp_lists$all)
 ```
 
-Which species were predicted to occur during summer but have not been observed?
+Print a list of all species that have been reported as possibly breeding.
 ```{r}
-print(setdiff(summer_spp, spp_lists$all))
+print(spp_lists$possible)
 ```
 
-Which species were not predicted to occur but were then observed?
+Print a list of all species that have been reported as probably breeding.
 ```{r}
-print(setdiff(spp_lists$all, summer_spp))
+print(spp_lists$probable)
 ```
 
-
-Which species have been observed, but not coded as probable or confirmed during summer?
+Print a list of all species that have been reported as confirmed breeding.
 ```{r}
-print(setdiff(spp_lists$all, union(spp_lists$probable, spp_lists$confirmed)))
+print(spp_lists$confirmed)
 ```
 
-Species count table
+Print a list of all species that have been reported under an "observed" breeding code or no breeding code.
 ```{r}
-# Make empty data frame
-dataframe <- data.frame(
-  highest_category = c("observed", "possible", "probable", "confirmed"),
-  species_count = c(0, 0, 0, 0),
-  percent_observed = c(0, 0, 0, 0),
-  percent_predicted = c(0, 0, 0, 0)
-)
-
-# Fill out values
-dataframe[dataframe$highest_category == "observed", 
-          "species_count"] <- length(spp_lists$observed_highest)
-dataframe[dataframe$highest_category == "possible", 
-          "species_count"] <- length(spp_lists$possible_highest)
-dataframe[dataframe$highest_category == "probable", 
-          "species_count"] <- length(spp_lists$probable_highest)
-dataframe[dataframe$highest_category == "confirmed", 
-          "species_count"] <- length(spp_lists$confirmed)
-
-# Get species count for what's been observed
-total <- length(spp_lists$all)
-
-dataframe[dataframe$highest_category == "observed", 
-          "percent_observed"] <- round(100*(length(spp_lists$observed_highest)/total))
-dataframe[dataframe$highest_category == "possible", 
-          "percent_observed"] <- round(100*(length(spp_lists$possible_highest)/total))
-dataframe[dataframe$highest_category == "probable", 
-          "percent_observed"] <- round(100*(length(spp_lists$probable_highest)/total))
-dataframe[dataframe$highest_category == "confirmed", 
-          "percent_observed"] <- round(100*(length(spp_lists$confirmed)/total))
-
-# Get species count for predicted
-total <- length(summer_spp)
-
-dataframe[dataframe$highest_category == "observed", 
-          "percent_predicted"] <- round(100*(length(spp_lists$observed_highest)/total))
-dataframe[dataframe$highest_category == "possible", 
-          "percent_predicted"] <- round(100*(length(spp_lists$possible_highest)/total))
-dataframe[dataframe$highest_category == "probable", 
-          "percent_predicted"] <- round(100*(length(spp_lists$probable_highest)/total))
-dataframe[dataframe$highest_category == "confirmed", 
-          "percent_predicted"] <- round(100*(length(spp_lists$confirmed)/total))
-
-print(dataframe)
+print(spp_lists$observed)
 ```
 
-
-
-# Tests
+Print a list of all species for which observed is the highest category that has been submitted.
 ```{r}
+print(spp_lists$observed_highest)
+```
 
+Print a list of all species for which possible is the highest category that has been submitted.
+```{r}
+print(spp_lists$possible_highest)
+```
+
+Print a list of all species for which probable is the highest category that has been submitted.
+```{r}
+print(spp_lists$probable_highest)
+```
+
+Print a list of all species for which confirmed is the highest category that has been submitted.
+```{r}
+print(spp_lists$confirmed)
 ```
 
 
@@ -162,7 +91,8 @@ Run the function several times to get descriptive statistics.
 time <- c()
 for (i in 1:5) {
   time1 <- proc.time()
-  
+  block_spp_lists(block = block, start_day = 135, end_day = 227,
+                             within = TRUE)
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }

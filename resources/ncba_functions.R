@@ -7,6 +7,7 @@
 # For example, 'source("C:/Code/NCBA/ncba_functions.R").  The functions can
 # then be called by their names.
 library(tidyverse)
+library(auk)
 
 # Load the config file
 source("ncba_config.r")
@@ -277,6 +278,104 @@ block_spp_lists <- function(block, start_day = 1, end_day = 365, within = TRUE) 
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+summarize_duration <- function(block, summarize_by, start_day, end_day, within) {
+  # Returns a data frame that summarizes hours of effort within a block
+  #
+  # Description:
+  #   Summarizes hours of survey effort within a block by year, month, or year
+  #   and month.  The combination of the start_day, end_day, and within 
+  #   parameters accommodate queries from within a breeding season.  The default 
+  #   start and end days allow records from any day into the process and setting 
+  #   custom start and end days enables restriction to within a certain period 
+  #   (e.g., breeding season). Setting within to TRUE will accommodate a summer 
+  #   breeder by only retaining records that are on or after the start day or 
+  #   before or on the end day.  Setting within to FALSE accommodates winter 
+  #   breeders by keeping records before the start day or after the end day.
+  #
+  # Arguments:
+  # block -- an eBird block ID code.
+  # summarize_by -- time period to summarize by: "year", "month", or "year-month"
+  # start_day -- a numbered day of the year for the start of a period.  Can be 
+  #   obtained with yday().
+  # end_day -- a numbered day of the year for the end of a period.
+  # within -- TRUE or FALSE whether to exclude records from outside of the
+  #   period.  TRUE keeps records within the period and FALSE keeps records 
+  #   from outside of the period.
+  
+  # Get all the checklists from the block
+  fields <- c("checklist_id", "year", "month", "ncba_nocturnal", "duration_minutes",
+              "observation_date", "atlas_block", "sampling_event_identifier")
+  
+  checklists <- get_checklists(block = block, EBD_fields_only = FALSE) %>%
+    to_EBD_format() %>%
+    auk_unique(checklists_only = TRUE)
+  
+  if (within == TRUE) {
+    # Filter within period
+    checklists <- checklists %>%
+      filter(yday(observation_date) >= start_day & yday(observation_date) <= end_day)
+  } 
+  
+  if (within == FALSE) {
+    # Filter outside period
+    checklists.W <- checklists %>%
+      filter(yday(observation_date) < start_day | yday(observation_date) > end_day)
+  }
+  
+  if (summarize_by == "year") {
+    # Summarize
+    summary <- checklists %>%
+      select(c("year", "ncba_nocturnal", "duration_minutes")) %>%
+      group_by(year, ncba_nocturnal) %>%
+      summarize(total_hrs = sum(duration_minutes)/60) %>%
+      pivot_wider(names_from = ncba_nocturnal, values_from = total_hrs) %>%
+      replace_na(list("1" = 0)) %>%
+      mutate_if(is.numeric, ~round(., 1))
+    
+    # Rename columns 
+    names(summary) <- c("year", "diurnal_hours", "nocturnal_hours")
+  }
+  
+  if (summarize_by == "month") {
+    # Summarize
+    summary <- checklists %>%
+      select(c("month", "ncba_nocturnal", "duration_minutes")) %>%
+      group_by(month, ncba_nocturnal) %>%
+      summarize(total_hrs = sum(duration_minutes)/60) %>%
+      pivot_wider(names_from = ncba_nocturnal, values_from = total_hrs) %>%
+      replace_na(list("1" = 0)) %>%
+      mutate_if(is.numeric, ~round(., 1))
+    
+    # Replace month number with abb
+    summary$month <- month.abb[summary$month]
+    
+    # Rename columns 
+    names(summary) <- c("month", "diurnal_hours", "nocturnal_hours")
+  }
+  
+  if (summarize_by == "year-month") {
+    # Summarize
+    summary <- checklists %>%
+      select(c("year", "month", "ncba_nocturnal", "duration_minutes")) %>%
+      group_by(year, month, ncba_nocturnal) %>%
+      summarize(total_hrs = sum(duration_minutes)/60) %>%
+      pivot_wider(names_from = ncba_nocturnal, values_from = total_hrs) %>%
+      replace_na(list("1" = 0)) %>%
+      mutate_if(is.numeric, ~round(., 1))
+    
+    # Replace month number with abb
+    summary$month <- month.abb[summary$month]
+    
+    # Rename columns 
+    names(summary) <- c("year", "month", "diurnal_hours", "nocturnal_hours")
+  }
+  
+  return(summary)
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 get_breeding_dates <- function(species, day_year = FALSE){
   # Gets the start and end day of year for breeding from the Atlas Cache.
   #
@@ -388,7 +487,7 @@ calculate_breeding_dates <- function(species, basis, quantiles, year = 2023,
   #   intended applications of this function.
   #
   # Arguments:
-  # species -- common name of the species
+  # species -- common name of the species.
   # basis -- the types of breeding categories to bass calculations upon as a 
   #   vector.  For example, c("confirmed", "probable", "possible").
   # quantiles -- vector of lower and upper quantiles to use as the bounds.  For
