@@ -26,6 +26,25 @@ First, specify a block of interest.
 block <- "35079H1SE"
 ```
 
+Get identifying information about the block
+```{r}
+blocks <- get_blocks(spatial = TRUE)
+block_info <- blocks %>% 
+  filter(ID_BLOCK_CODE == block) %>%
+  select(c("ID_BLOCK_CODE", "ID_BLOCK", "ID_EBD_NAME", "ECOREGION"
+  ))
+print(block_info %>% data.frame())
+```
+
+Highlight the block on a map
+```{r}
+# Make a simple map
+ggplot() +
+    geom_sf(data = blocks, fill = "lightgrey", color = "darkgrey") +
+    geom_sf(data = block_info, fill = "purple", color = "purple") +
+    ggtitle("", subtitle = "")
+```
+
 Get a list of species predicted by National GAP to occur in the block in each season.
 ```{r}
 preds <- block_predicted_spp(block = block, source = "GAP")
@@ -92,11 +111,12 @@ Get a summary of how many species have been submitted for each breeding category
 print(spp_count_summary(observed_summer, predicted_summer))
 ```
 
-
+Summarize the duration of effort in hours.
 ```{r}
 print(summarize_duration(block = block, summarize_by = "year", start_day = start_day,
                          end_day = end_day, within = TRUE))
 ```
+
 
 ## Winter
 Assign start and end days to for winter.  The concept of winter regarding birds is more ambiguous than summer, so use the NCBA winter start and end days.
@@ -105,7 +125,44 @@ start_day <- 59
 end_day <- 305
 ```
 
+Get species lists from the Atlas Cache for the time period between those days.
+```{r}
+observed_winter <- block_spp_lists(block = block, start_day = start_day, 
+                                   end_day = end_day, within = FALSE)
+```
 
+Which species were predicted to occur during winter but have not been observed?
+```{r}
+print(setdiff(predicted_winter, observed_winter$all))
+```
 
+Which species were not predicted to occur but were then observed?
+```{r}
+print(setdiff(observed_winter$all, predicted_winter))
+```
 
+Get a summary of how many species have been submitted for each breeding category.  Reports of breeding during the winter dates reflects upon the quality or appropriateness of the records and/ or the winter start and end dates.
+```{r}
+print(spp_count_summary(observed_winter, predicted_winter))
+```
 
+Which species have been confirmed breeding during winter?
+```{r}
+print(observed_winter$confirmed)
+```
+
+Which species have been reported possibly breeding during winter?
+```{r}
+print(observed_winter$possible)
+```
+
+Which species have been reported probably breeding during winter?
+```{r}
+print(observed_winter$probable)
+```
+
+Summarize duration of effort in hours by month.
+```{r}
+print(summarize_duration(block = block, summarize_by = "month", start_day = start_day,
+                         end_day = end_day, within = FALSE))
+```
