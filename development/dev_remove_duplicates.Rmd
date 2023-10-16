@@ -35,7 +35,7 @@ auk_unique
 Retrieve a data frame of observations for a species and drop any duplicates with auk_unique().
 ```{r}
 # Get observations, convert them to the EBD format
-obs <- get_observations("Willow Flycatcher") %>% 
+obs <- get_observations(species = "Kentucky Warbler") %>% 
   to_EBD_format(drop = FALSE) 
 
 # Drop duplicates with auk_unique()

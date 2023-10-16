@@ -2,7 +2,9 @@
 title: "dev_blocks_needed"
 author: "N.M. Tarr"
 date: "2023-10-03"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
@@ -34,7 +36,7 @@ species <- "Loggerhead Shrike"
 # Get a data frame of blocks that need observations
 needed_sf <- blocks_needed(species = "Loggerhead Shrike", 
                            source = "GAP", season = "summer",
-                           database = "AtlasCache", NCBA_only = TRUE,
+                           database = "AtlasCache", project = "EBIRD_ATL_NC",
                            observations = NULL)
 # Print 
 print(head(needed_sf, 5))
@@ -72,7 +74,7 @@ Running the get_observations function can be slow, but it can be run ahead of ti
 species <- "Red-breasted Nuthatch"
 # Get a data frame of observations
 obs <- get_observations(species = species, database = "AtlasCache",
-                        NCBA_only = TRUE) %>%
+                        project = "EBIRD_ATL_NC") %>%
       to_EBD_format()
 ```
 
@@ -97,7 +99,7 @@ needed_sf <- blocks_needed(species = "Red-breasted Nuthatch",
                            source = "GAP", 
                            season = "summer",
                            database = database, 
-                           NCBA_only = NCBA_only,
+                           project = "EBIRD_ATL_NC",
                            observations = obs) 
 
 # Plot the spatial data frame
@@ -113,7 +115,7 @@ needed_sf <- blocks_needed(species = "Red-breasted Nuthatch",
                            source = "eBird", 
                            season = "wintering",
                            database = database, 
-                           NCBA_only = NCBA_only,
+                           project = "EBIRD_ATL_NC",
                            observations = obs) 
 
 # Plot the spatial data frame
@@ -129,7 +131,7 @@ needed_sf <- blocks_needed(species = "Bald Eagle",
                            source = "GAP", 
                            season = "winter",
                            database = database, 
-                           NCBA_only = FALSE,
+                           project = NULL,
                            observations = obs) 
 
 # Plot the spatial data frame
@@ -138,13 +140,14 @@ ggplot() +
   geom_sf(data = needed_sf, aes(fill = needed)) + 
   ggtitle("Blocks for Which Bald Eagle Winter Observations are Needed (GAP)")
 ```
+
 ```{r}
 # Get a dataframe of blocks that need observations
 needed_sf <- blocks_needed(species = "Bald Eagle", 
                            source = "eBird", 
                            season = "breeding",
                            database = database, 
-                           NCBA_only = TRUE,
+                           project = "EBIRD_ATL_NC",
                            observations = obs) 
 
 # Plot the spatial data frame
@@ -162,7 +165,7 @@ time <- c()
 for (i in 1:5) {
   time1 <- proc.time()
   blocks_needed(species = species, source = "GAP", season = "winter",
-                           database = database, NCBA_only = NCBA_only,
+                           database = database, project = "EBIRD_ATL_NC",
                            observations = obs)
   t <- proc.time() - time1
   time[i] <- t["elapsed"]

@@ -5,7 +5,7 @@ date: "2023-10-06"
 output: word_document
 ---
 
-```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
 
@@ -39,7 +39,7 @@ protocol_table(records)
 
 Summarise the protocol type of observation records.
 ```{r}
-willow <- get_observations("Willow Flycatcher")  %>%
+willow <- get_observations(species = "Willow Flycatcher")  %>%
   to_EBD_format()
 
 protocol_table(willow)

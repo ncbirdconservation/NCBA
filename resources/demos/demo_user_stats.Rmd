@@ -1,5 +1,5 @@
 ---
-title: "demo_user_stats"
+title: "Exploration of Data for an Individual Observer"
 author: "N.M. Tarr"
 date: "2023-10-05"
 output: word_document
@@ -32,7 +32,7 @@ checklists.obs <- get_checklists(database = "AtlasCache", observer = observer,
 
 View the checklist records.  They could also be saved with to.csv().
 ```{r}
-View(checklists.obs)
+#View(checklists.obs)
 ```
 
 Plot the checklist locations as points.
@@ -60,7 +60,7 @@ ggplot(data = counties_NC()) +
                   subtitle = "")
 ```
 
-Summarise the protocol type of the checklists.
+Summarize the protocol type of the checklists.
 ```{r}
 protocol_table(checklists.obs)
 show(protocol_type_pie(checklists.obs))
@@ -110,5 +110,58 @@ From how many blocks have they submitted complete checklists?
 observer_complete_by_priority(observer = observer, data = "blocks")
 ```
 
+Get all the checklists from the observer of interest.
+```{r}
+checklists <- get_checklists(observer = observer) %>%
+  to_EBD_format() %>%
+  auk_unique(checklists_only = TRUE)
+```
 
+Plot observations by week.
+```{r}
+lists_by_week(checklists)
+```
 
+Summarize checklist distance.
+```{r}
+show(effort_distance_boxplot(checklists))
+```
+
+Summarize duration
+```{r}
+show(duration_minutes_boxplot(checklists))
+```
+
+```{r}
+duration_distance_table(checklists)
+```
+
+Summarize start times.
+```{r}
+show(start_time_boxplot(checklists))
+```
+
+Summarize locality type.
+```{r}
+show(locality_type_pie(checklists))
+```
+
+Summarize protocol in a table.
+```{r}
+protocol_table(checklists)
+```
+
+Summarize protocol in a figure.
+```{r}
+show(protocol_type_pie(checklists))
+```
+
+Summarize checklist completeness.
+```{r}
+complete_checklist_table(checklists)
+```
+
+Summarize observations per year.
+```{r}
+show(year_bar(checklists))
+```

@@ -3,9 +3,8 @@ title: "dev_records_as_sf"
 author: "N.M. Tarr"
 output:
   word_document: default
-  html_document: default
 ---
-```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
 
@@ -35,13 +34,12 @@ counties <- counties_NC()
 ## Observations (species-level records)
 Identify a species to investigate.
 ```{r}
-species <- "Virginia Rail"
+species <- "Yellow-throated Warbler"
 ```
 
 Retrieve the records for the species from the Atlas Cache
 ```{r}
-nc_data <- get_observations(species, database = "AtlasCache", NCBA_only = TRUE,
-                            EBD_fields_only = TRUE) %>%
+records <- get_observations(species = species) %>%
   to_EBD_format(drop=FALSE) %>%
   auk_unique()
 ```
@@ -100,7 +98,8 @@ ggplot(data = counties) +
 Retrieve a dataframe of checklists.  Note that this use depends on connection code from above.
 ```{r}
 fields <- c("atlas_block", "latitude", "longitude", "sampling_event_identifier")
-checklists <- get_checklists(EBD_fields_only = TRUE, NCBA_only = TRUE) %>% 
+checklists <- get_checklists(EBD_fields_only = TRUE, 
+                             project = "EBIRD_ATL_NC") %>% 
   to_EBD_format(drop=TRUE)
 ```
 
@@ -117,3 +116,19 @@ ggplot(data = counties) +
        ggtitle("All NC Atlas Cache Checklist Coordinates", subtitle = "")
 ```
 
+
+# Speed
+Run the function several times to get descriptive statistics.
+```{r}
+# Run the function 3 times and record the runtime
+time <- c()
+for (i in 1:3) {
+  time1 <- proc.time()
+  records_as_sf(checklists, kind="checklists", method="point-radius")
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```

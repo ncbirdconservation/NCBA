@@ -3,11 +3,11 @@ title: "dev_get_breeding_dates"
 author: "N.M. Tarr"
 date: "2023-09-19"
 output:
-  html_document: default
   word_document: default
+  html_document: default
 ---
 
-```{r setup, include=TRUE, message=TRUE, warning=TRUE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
 

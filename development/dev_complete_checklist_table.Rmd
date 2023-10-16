@@ -39,7 +39,7 @@ complete_checklist_table(records)
 
 Summarise the protocol type of observation records.
 ```{r}
-willow <- get_observations("Willow Flycatcher")  %>%
+willow <- get_observations(species = "Willow Flycatcher")  %>%
   to_EBD_format()
 
 complete_checklist_table(willow)
@@ -53,9 +53,9 @@ Run the function several times to get descriptive statistics.
 records <- get_checklists(observer = "obsr1000095", project = NULL) %>%
 to_EBD_format()
 
-# Run the function 10 times and record the runtime
+# Run the function 5 times and record the runtime
 time <- c()
-for (i in 1:10) {
+for (i in 1:5) {
   time1 <- proc.time()
   complete_checklist_table(records)
   t <- proc.time() - time1

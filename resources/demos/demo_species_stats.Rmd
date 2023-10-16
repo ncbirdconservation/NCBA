@@ -1,5 +1,5 @@
 ---
-title: "demo_species_stats"
+title: "Exploration of Data for an Individual Species"
 author: "N.M. Tarr"
 date: "2023-10-9"
 output: word_document
@@ -29,6 +29,17 @@ observations <- get_observations(species = species, project = "EBIRD_ATL_NC",
   to_EBD_format() %>%
   auk_unique()
 ```
+
+Print the number of observations.
+```{r}
+print(nrow(observations))
+```
+
+Print the total number of individuals reported.
+```{r}
+print(sum(as.integer(observations$observation_count)))
+```
+
 
 Plot the coordinates.
 ```{r}
@@ -68,3 +79,53 @@ Get a boxplot of breeding phenology
 breeding_boxplot(species = species, data = observations, type = "ecoregional", 
                  drop = FALSE, lump = breeding_codes())
 ```
+
+Plot observations by week.
+```{r}
+lists_by_week(observations)
+```
+
+Summarize checklist distance.
+```{r}
+show(effort_distance_boxplot(observations))
+```
+
+Summarize duration
+```{r}
+show(duration_minutes_boxplot(observations))
+```
+
+```{r}
+duration_distance_table(observations)
+```
+
+Summarize start times.
+```{r}
+show(start_time_boxplot(observations))
+```
+
+Summarize locality type.
+```{r}
+show(locality_type_pie(observations))
+```
+
+Summarize protocol in a table.
+```{r}
+protocol_table(observations)
+```
+
+Summarize protocol in a figure.
+```{r}
+protocol_table(observations)
+```
+
+Summarize checklist completeness.
+```{r}
+complete_checklist_table(observations)
+```
+
+Summarize observations per year.
+```{r}
+show(year_bar(observations))
+```
+

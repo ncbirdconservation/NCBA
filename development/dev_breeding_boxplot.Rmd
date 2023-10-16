@@ -1,11 +1,12 @@
 ---
 title: "Breeding Boxplot Function"
 author: "N.M. Tarr"
-output: 
+output:
+  word_document: default
+  rmdformats::downcute: null
   html_document:
     df_print: paged
     code_folding: hide
-  rmdformats::downcute:
 ---
 ```{r setup, include=FALSE, message=TRUE, warning=TRUE}
 setwd("~/Code/NCBA/resources")
@@ -62,22 +63,22 @@ breeding_boxplot(species, records, type = "non-interactive")
 
 Make an interactive boxplot without lumping codes together
 ```{r}
-breeding_boxplot(species, records)
+#breeding_boxplot(species, records)
 ```
 
 Create an interactive boxplot with some of the codes lumped together.
 ```{r}
 lump <- list(S = c("S", "S7", "M"), O = c("NULL", "F", "O", "NC"))
 
-breeding_boxplot(species, records, lump=lump)
+#breeding_boxplot(species, records, lump=lump)
 ```
 
 Create an interactive boxplot that omits some codes and uses a different colormap.
 ```{r}
 omit <- c("S7", "M", "NC", "H", "T", "P", "C", "CN", "N", "A", "NB", 
           "FS")
-breeding_boxplot(species, records, type = "interactive", pallet="Set3",
-                     omit_codes=omit, lump=NULL, drop=TRUE)
+#breeding_boxplot(species, records, type = "interactive", pallet="Set3",
+#                     omit_codes=omit, lump=NULL, drop=TRUE)
 ```
 
 Make a figure that has a boxplot for each ecoregion.
@@ -98,7 +99,7 @@ lump <- list(X = c("S", "S7", "M", "H", "NULL", "P", "F", "UN", "PE", "NY"),
 
 breeding_boxplot(species, records, type = "non-interactive", lump=lump)
 
-breeding_boxplot(species, records, type = "interactive", lump=lump)
+#breeding_boxplot(species, records, type = "interactive", lump=lump)
 
 breeding_boxplot(species, records, type = "ecoregional", lump=lump)
 
@@ -108,7 +109,7 @@ breeding_boxplot(species, records, type = "ecoregional", lump=lump)
 A standard lumping list is available for the primary categories.
 ```{r}
 lumped_codes <- breeding_codes()
-breeding_boxplot(species, records, type = "interactive", lump=lumped_codes)
+breeding_boxplot(species, records, type = "non-interactive", lump=lumped_codes)
 ```
 
 2. Omit all but three codes as an extreme example to make sure things work.  
@@ -117,7 +118,7 @@ omit <- c("S", "M", "H", "NULL", "P", "A", "N", "CN", "T", "NB","FS", "CF", "C")
 
 breeding_boxplot(species, records, type = "non-interactive", omit_codes = omit)
 
-breeding_boxplot(species, records, type = "interactive", omit_codes = omit)
+#breeding_boxplot(species, records, type = "interactive", omit_codes = omit)
 
 breeding_boxplot(species, records, type = "ecoregional", omit_codes = omit)
 
@@ -125,8 +126,8 @@ breeding_boxplot(species, records, type = "ecoregional", omit_codes = omit)
 
 3. Check that the pallet argument works by assigning a non-default value.
 ```{r}
-breeding_boxplot(species, records, pallet="Spectral")
-breeding_boxplot(species, records, pallet="Paired")
+#breeding_boxplot(species, records, pallet="Spectral")
+#breeding_boxplot(species, records, pallet="Paired")
 
 breeding_boxplot(species, records, type="non-interactive", pallet="Spectral")
 breeding_boxplot(species, records, type="non-interactive", pallet="Paired")
@@ -135,7 +136,7 @@ breeding_boxplot(species, records, type="non-interactive", pallet="Paired")
 4. Check that all breeding codes that are present in the figure when drop is set to "FALSE".
 ```{r}
 breeding_boxplot(species, records, type="non-interactive", drop=FALSE)
-breeding_boxplot(species, records, drop=FALSE)
+#breeding_boxplot(species, records, drop=FALSE)
 breeding_boxplot(species, records, type="ecoregional", drop=FALSE)
 ```
 
@@ -143,7 +144,7 @@ breeding_boxplot(species, records, type="ecoregional", drop=FALSE)
 ```{r}
 # Print the unique breeding codes in records and the figure
 print(unique(records$breeding_code))
-breeding_boxplot(species, records, type="interactive", drop=TRUE)
+#breeding_boxplot(species, records, type="interactive", drop=TRUE)
 breeding_boxplot(species, records, type="non-interactive", drop=TRUE)
 breeding_boxplot(species, records, type="ecoregional", drop=TRUE)
 
@@ -152,9 +153,9 @@ breeding_boxplot(species, records, type="ecoregional", drop=TRUE)
 # Speed
 Run the function several times to get descriptive statistics.
 ```{r}
-# Run the function 10 times and record the runtime
+# Run the function 2 times and record the runtime
 time <- c()
-for (i in 1:10) {
+for (i in 1:2) {
   time1 <- proc.time()
   breeding_boxplot(species, records, type = "non-interactive")
   t <- proc.time() - time1

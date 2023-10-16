@@ -61,8 +61,8 @@ print(head(obs, 5))
 
 Retrieve observations from the EBD with the function.  THIS IS VERY SLOW.
 ```{r}
-obs <- get_observations(block = block, database = "EBD", fields = fields)
-print(head(obs, 5))
+#obs <- get_observations(block = block, database = "EBD", fields = fields)
+#print(head(obs, 5))
 ```
 
 ## Observer
@@ -80,9 +80,9 @@ print(head(obs, 5))
 
 Retrieve observations from the EBD with the function. THIS IS VERY SLOW.
 ```{r}
-obs <- get_observations(observer = observer, database = "EBD",
-                        fields = fields)
-print(head(obs, 5))
+#obs <- get_observations(observer = observer, database = "EBD",
+#                        fields = fields)
+#print(head(obs, 5))
 ```
 
 ## Project
@@ -99,9 +99,9 @@ print(head(obs, 5))
 
 Retrieve observations from the EBD with the function.  THIS IS VERY SLOW.
 ```{r}
-obs <- get_observations(project = "EBIRD_ATL_VA", database = "EBD", 
-                        fields = fields)
-print(head(obs, 5))
+#obs <- get_observations(project = "EBIRD_ATL_VA", database = "EBD", 
+#                        fields = fields)
+#print(head(obs, 5))
 ```
 
 ## All options
@@ -128,30 +128,6 @@ obs.EBD <- get_observations(project = "EBIRD_ATL_NC",
                             fields = fields)
 print(head(obs.EBD, 5))
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # Tests
@@ -237,7 +213,7 @@ There should only be one species name in the data frame. If the species' name al
 ```{r}
 obs <- get_observations(species = "King Rail", 
                             database = "EBD",
-                            NCBA_only = FALSE)
+                            project = NULL)
 
 print(unique(obs$common_name))
 ```
@@ -246,7 +222,7 @@ If NCBA_only was set to TRUE, then the PROJECT_CODE field should only contain "E
 ```{r}
 obs <- get_observations(species = "King Rail", 
                             database = "EBD",
-                            NCBA_only = TRUE,
+                            project = "EBIRD_ATL_NC",
                             EBD_fields_only = FALSE,
                             fields = NULL)
 print(unique(obs$project_code))
@@ -258,7 +234,7 @@ fields <- c("sampling_event_identifier", "project_code", "global_unique_identifi
 
 obs <- get_observations(species = "King Rail", 
                             database = "EBD",
-                            NCBA_only = TRUE,
+                            project = "EBIRD_ATL_NC",
                             fields = fields)
 print(unique(names(obs) == fields))
 ```
@@ -273,7 +249,7 @@ For a data-poor species
 time <- c()
 for (i in 1:5) {
   time1 <- proc.time()
-  get_observations_dev(species = "King Rail", database = "AtlasCache")
+  get_observations(species = "King Rail", database = "AtlasCache")
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }
@@ -288,7 +264,7 @@ For a data-rich species
 time <- c()
 for (i in 1:5) {
   time1 <- proc.time()
-  get_observations_dev(species = "Indigo Bunting", database = "AtlasCache")
+  get_observations(species = "Indigo Bunting", database = "AtlasCache")
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }
@@ -300,11 +276,11 @@ print(summary(time))
 ## EBD
 For a data-poor species
 ```{r}
-# Run the function 5 times and record the runtime
+# Run the function 2 times and record the runtime
 time <- c()
-for (i in 1:5) {
+for (i in 1:2) {
   time1 <- proc.time()
-  get_observations_dev(species = "King Rail", database = "EBD")
+  get_observations(species = "King Rail", database = "EBD")
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }
@@ -315,11 +291,11 @@ print(summary(time))
 
 For a data-rich species
 ```{r}
-# Run the function 5 times and record the runtime
+# Run the function 2 times and record the runtime
 time <- c()
-for (i in 1:5) {
+for (i in 1:2) {
   time1 <- proc.time()
-  get_observations_dev(species = "Indigo Bunting", database = "EBD")
+  get_observations(species = "Indigo Bunting", database = "EBD")
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }

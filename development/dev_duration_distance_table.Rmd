@@ -37,7 +37,7 @@ duration_distance_table(records)
 
 Summarize a data frame of observation records.
 ```{r}
-records <- get_observations("Vesper Sparrow") %>%
+records <- get_observations(species = "Vesper Sparrow") %>%
   to_EBD_format()
 
 duration_distance_table(records)
@@ -48,7 +48,7 @@ duration_distance_table(records)
 Run the function several times to get descriptive statistics.
 ```{r}
 # Get the data
-records <- get_observations("Worm-eating Warbler") %>%
+records <- get_observations(species = "Worm-eating Warbler") %>%
   to_EBD_format()
 
 # Run the function 10 times and record the runtime

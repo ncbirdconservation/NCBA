@@ -1,7 +1,7 @@
 ---
 title: "dev_get_checklists"
 author: "N.M. Tarr"
-date: "2023-10-05
+date: "2023-10-16"
 output: word_document
 ---
 
@@ -37,7 +37,7 @@ print(nrow(checklists))
 Retrieve all checklists from an EBD download for a single block.
 ```{r}
 checklists.EBD <- get_checklists(database = "EBD", block = "35079E2SW")
-print(head(checklists.EBD))
+print(head(checklists.EBD, 2))
 ```
 
 Get checklists from specific observer, block, and project.
@@ -153,9 +153,9 @@ print(summary(time))
 Measure the runtime of an EBD query, which tend to be very slow, so only do that one
 once.
 ```{r}
-# time1 <- proc.time()
-# get_checklists(database = "EBD")
-# print(proc.time() - time1)
+time1 <- proc.time()
+x <- get_checklists(database = "EBD")
+print(proc.time() - time1)
 ```
 
 

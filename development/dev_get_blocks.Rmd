@@ -31,7 +31,7 @@ get_blocks
 Retrieve a blocks data frame with all columns
 ```{r}
 blocks <- get_blocks(spatial = FALSE)
-print(head(blocks, 3))
+#print(head(blocks, 3))
 ```
 
 Retrieve a blocks data frame with a subset of columns

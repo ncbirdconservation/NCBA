@@ -1274,7 +1274,7 @@ get_observations <- function(database = "AtlasCache", species = NULL,
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 observer_priority_by_breeding <- function(observer, data) {
-  # Returns a table with species or block tallies by block type and breeeding
+  # Returns a table with species or block tallies by block type and breeding
   #   category.
   #
   # Description:
@@ -2122,7 +2122,7 @@ spp_count_summary <- function(observed_spp, predicted_spp) {
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-blocks_needed <- function(species, source, season, database, NCBA_only, 
+blocks_needed <- function(species, source, season, database, project, 
                           observations = NULL) {
   # Returns a data frame of blocks with geometries where the species was 
   #   predicted to occur but has not been observed. 
@@ -2143,8 +2143,7 @@ blocks_needed <- function(species, source, season, database, NCBA_only,
   #   and "breeding" or "wintering" for eBird) 
   # database -- which database to get observations from: "AtlasCache" or "EBD".
   #   Default is AtlasCache
-  # NCBA_only -- TRUE or FALSE whether to only use NCBA records for the 
-  #   assessment. Default is TRUE.
+  # project -- project to limit to (e.g., "EBIRD_ATL_NC").
   # observations -- a data frame of observations that came from use of the
   #   get_observations function.  If set to NULL (the default), then the 
   #   function will be run as part of the process, which increases runtime
@@ -2160,7 +2159,7 @@ blocks_needed <- function(species, source, season, database, NCBA_only,
   # Get all the observations for the species
   if (is.null(observations) == TRUE) {
     obs <- get_observations(species = species, database = database,
-                            NCBA_only = NCBA_only) %>%
+                            project = project) %>%
       to_EBD_format()
   } else {
     obs <- observations

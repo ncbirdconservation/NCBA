@@ -3,8 +3,8 @@ title: "dev_calculate_breeding_dates"
 author: "N.M. Tarr"
 date: "2023-09-13"
 output:
-  html_document: default
   word_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
@@ -25,7 +25,7 @@ This document defines and demonstrates a function that computes breeding season 
 
 
 # Function
-Note: I explored using the quantiles function to calculate directly from date type values, but the results did not seem correct and were possible biased by over a month.
+Note: I explored using the quantiles function to calculate directly from date type values, but the results did not seem correct and were possibly biased by over a month.
 ```{r}
 calculate_breeding_dates
 ```
@@ -66,7 +66,7 @@ print(calculate_breeding_dates(species = species, basis = ("confirmed"),
 ```{r}
 quantiles <- c(0.25, 0.75)
 observations <- get_observations(species, database = "AtlasCache", 
-                                 NCBA_only = TRUE, 
+                                 project = "EBIRD_ATL_NC", 
                                  EBD_fields_only = FALSE,
                                  fields = NULL) %>%
   to_EBD_format(drop=FALSE)
@@ -76,8 +76,8 @@ breeding_boxplot(species = species, data = observations, type = "ecoregional",
 ```
 
 ```{r}
-breeding_boxplot(species = species, data = observations, type = "interactive",
-                 lump = breeding_codes(lumped = TRUE))
+#breeding_boxplot(species = species, data = observations, type = "interactive",
+#                 lump = breeding_codes(lumped = TRUE))
 ```
 
 
@@ -103,9 +103,9 @@ print(summary(time))
 
 Test a data-rich species.
 ```{r}
-# Run the function 3 times and record the runtime
+# Run the function 2 times and record the runtime
 time <- c()
-for (i in 1:3) {
+for (i in 1:2) {
   time1 <- proc.time()
   calculate_breeding_dates(species = "Tufted Titmouse", basis = basis, 
                  quantiles = quantiles, year = 2023)
