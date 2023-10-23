@@ -15,7 +15,8 @@ out_file <- "~/Temp/block_hours.csv"
 time1 <- proc.time()
 
 # GET CHECKLISTS --------------------------------------------------------------
-checklists <- get_checklists(EBD_fields_only = FALSE) %>%
+checklists <- get_checklists(project = "EBIRD_ATL_NC", 
+                             EBD_fields_only = FALSE) %>%
   to_EBD_format() %>%
   auk_unique(checklists_only = TRUE) %>%
   select(c("atlas_block", "priority_block", "duration_minutes", 
