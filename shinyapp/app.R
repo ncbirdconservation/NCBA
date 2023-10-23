@@ -45,7 +45,7 @@ source("blocks.r")
 source("utils.r") #utilities file
 source("spp.r") #species function file
 source("blkcumhrfunc.r") #block hour graph
-# source("ncba_functions_shiny.r") #add this later to sync with Nathan work
+source("ncba_functions_shiny.r") #add this later to sync with Nathan work
 
 # MAP CONSTANTS
 nc_center_lat = 35.5
@@ -185,6 +185,13 @@ ui <- bootstrapPage(
           # plotOutput("spp_traveldist_plot"),
           # plotOutput("spp_mineffort_plot"),
           # plotOutput("spp_localitytype_plot")
+      )
+    )
+    ),
+    tabPanel("Overview",
+      div(class="container-fluid", tags$head(includeCSS("styles.css")),
+        div(class="col-md-12",
+          leafletOutput("overview-map")
       )
     )
     ),
@@ -836,7 +843,7 @@ server <- function(input, output, session) {
         spp_blocks,
         blocklink = sprintf('https://ebird.org/atlasnc/block/%s', spp_blocks$ID_BLOCK_CODE)
       )
-      print(table(t(spp_blocks$breedcat)))
+      # print(table(t(spp_blocks$breedcat)))
       output$block_breedcode_table <- renderTable(table(spp_blocks$breedcat))
 
       # breedcat_order <- factor(
@@ -1028,6 +1035,259 @@ server <- function(input, output, session) {
     drop=TRUE)
 })
 
+#############################################################
+## OVERVIEW TAB
+
+# output$overview_map <- renderLeaflet({
+  ### SETUP LEAFLET MAP, RENDER BASEMAP 
+  output$overview_map <- renderLeaflet({
+    #setup block geojson layer
+    print("starting effort map, adding blocks")
+    leaflet() %>%
+      setView(
+        lng = nc_center_lng,
+        lat = nc_center_lat,
+        zoom = nc_center_zoom
+      ) %>%
+      ### Base Groups (Satellite Imagery and Blocks )
+      addProviderTiles(
+        "CartoDB.DarkMatterNoLabels",
+        options = providerTileOptions(opacity = 1)
+      ) %>%
+      addRectangles(
+        data = pb_map,
+        layerId = ~ ID_NCBA_BLOCK,
+        lng1 = ~ NW_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        stroke = TRUE,
+        weight = 2.5,
+        color = ~breedingpal(portal_breeding_hrsDiurnal),
+        # fillColor= ~binpal(breeding_hrsDiurnal),
+        # fillOpacity = 0.8,
+        fill = FALSE,
+        label = ~paste(
+            "<strong>",
+            ID_NCBA_BLOCK,
+            "</strong><br>Breeding Diurnal Hours:",
+            signif(portal_breeding_hrsDiurnal, 2)
+          ) %>%
+          lapply(htmltools::HTML),
+          group = "Breeding Diurnal Hours"
+      ) %>%
+      ### Overlay Groups 
+      ## Nocturnal Hours - Circle Outlines
+      addCircles(
+        data = pb_map,
+        lng = ~ SE_X, lat = ~ centr_y,
+        radius = 400,
+        color = ~binpalnight(portal_breeding_hrsNocturnal),
+        stroke = TRUE,
+        weight = 2,
+        fill = FALSE,
+        label = ~paste(
+          "<strong>",
+          ID_NCBA_BLOCK,
+          "</strong><br>Nocturnal Breeding Hours:",
+          signif(portal_breeding_hrsNocturnal, 2)
+        ) %>%
+        lapply(htmltools::HTML),
+        group = "Breeding Nocturnal Hours"
+      ) %>%
+      ## Number of Confirmed Species, Custom Crow Icon from Font Awesome
+      addMarkers(data = pb_map,
+                 lng = ~centr_x, lat = ~centr_y,
+                 icon = ~confirm_icons[confirm_colors],
+                 label = ~paste (
+                  "<strong>",
+                  ID_NCBA_BLOCK,
+                  "<br>% Confirmed:",
+                  PctConfirm,
+                  "</strong><br> # Confirmed:",
+                  portal_breeding_sppCountConfirmed,
+                  "<br> # Probable:",
+                  portal_breeding_sppCountProbable,
+                  "<br> # Possible:",
+                  portal_breeding_sppCountPossible
+                  ) %>%
+                  lapply(htmltools::HTML),
+                 group = "% Species Confirmed"
+      ) %>%
+      ## Wintering Diurnal Hours - Filled Circles
+      addCircles(data = pb_map,
+        lng = ~ centr_x,
+        lat = ~ NW_Y,
+        radius = 600,
+        stroke = FALSE,
+        fill = TRUE,
+        fillOpacity = 1,
+        fillColor = ~winterbinpal(portal_wintering_hrsDiurnal),
+        label = ~paste(
+          "<strong>",
+          ID_NCBA_BLOCK,
+          "</strong><br>Wintering Diurnal Hours:",
+          signif(portal_wintering_hrsDiurnal, 2)
+          ) %>%
+          lapply(htmltools::HTML),
+          group = "Wintering Diurnal Hours"
+      ) %>%
+      # Layers Control (Making Icons as Overlay Layers)
+      addLayersControl(data = pb_map,
+        baseGroups = c("Breeding Diurnal Hours"),
+        overlayGroups = c(
+          "Wintering Diurnal Hours",
+          "% Species Confirmed",
+          "Breeding Nocturnal Hours"
+          ),
+        options = layersControlOptions(collapsed = FALSE)
+      ) %>%
+      # Hide Nocturnal Hours and Confirmed Species Icons upon Map Start
+      hideGroup(
+        c(
+          "Wintering Diurnal Hours",
+          "% Species Confirmed",
+          "Breeding Nocturnal Hours"
+          )
+        ) %>%
+      # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
+      addLegendImage(
+        images = diurnal_symbols,
+        labels = c("0", "≤5", "5-10", "10-15", "15-20", "≥20"), 
+        orientation = "vertical",
+        title = "Breeding Diurnal Hours",
+        position = "topleft",
+        width = 16.44,
+        height = 16.44,
+        labelStyle = "font-size: 14px; vertical-align: center;"
+      ) %>%
+      addLegendImage(
+        images = winter_diurnal_symbols,
+        labels = c("0", "≤2.5", "2.5-5.0", "5.0-7.5", "7.5-10", "≥10"),
+        orientation = "vertical",
+        title = "Wintering Diurnal Hours",
+        position = "topleft",
+        width = 16.44,
+        height = 16.44,
+        labelStyle = "font-size: 14px; vertical-align: center;"
+        ) %>% 
+      addLegendImage(
+        images = breeding_nocturnal_symbols,
+        labels = c("0", "≤0.5", "0.5-1.0", "1.0-1.5", "1.5-2.0", "≥2.0"),
+        orientation = "vertical",
+        title = "Breeding Nocturnal Hours",
+        position = "topright",
+        width = 16.44,
+        height = 16.44,
+        labelStyle = "font-size: 14px; vertical-align: center;"
+      ) %>%
+      addLegendImage(
+        images = c(
+          "input_data/crow_red.png",
+          "input_data/crow_yellow.png",
+          "input_data/crow_green.png",
+          "input_data/crow_teal.png",
+          "input_data/crow_blue.png",
+          "input_data/crow_purple.png"
+          ),
+        labels = c("1-5", "5-10", "10-15", "15-20", "20-25", ">25"),
+        labelStyle = "font-size: 14px; vertical-align: center;",
+        title = "% Species Confirmed",
+        orientation = "vertical",
+        width = 13.32,
+        height = 16.44,
+        position = "bottomright",
+        group = "Confirmed Species Legend"
+      )
+    })
+  
+  # ### Merging Block Shapes for mapping and Summary Table
+  # pb_map <- merge(priority_block_data, blocksum, all = TRUE)
+  
+  # ## Convert percentages to numbers instead of decimals
+  # pb_map <- pb_map %>% 
+  #   mutate(PctConfirm = signif(portal_breeding_sppPctConfirmed*100,4))
+
+  # ### Centroids of Priority Blocks
+  # centr_x <- (pb_map$NW_X + pb_map$SE_X)/2
+  # centr_y <- (pb_map$NW_Y + pb_map$SE_Y)/2
+  # mutate(pb_map, centr_x)
+  # mutate(pb_map, centr_y)
+  
+  # ### Custom Crow icon is from Font Awesome (https://fontawesome.com/icons)
+  # ### "fa-solid fa-crow"
+
+  # ## Make a list of icons. We'll index into it based on name.
+  # confirm_icons <- iconList(
+  #   crow_grey = makeIcon(
+  #     iconUrl = "input_data/crow_grey.svg",
+  #     iconWidth = 4.16,
+  #     iconHeight = 3.33,
+  #     iconAnchorX = 6,
+  #     iconAnchorY = 1
+  #     ),
+  #   crow_red = makeIcon(iconUrl = "input_data/crow_red.svg",
+  #                       iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
+  #   crow_yellow = makeIcon(iconUrl = "input_data/crow_yellow.svg",
+  #                          iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
+  #   crow_green = makeIcon(iconUrl = "input_data/crow_green.svg",
+  #                         iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
+  #   crow_teal = makeIcon(iconUrl = "input_data/crow_teal.svg",
+  #                        iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
+  #   crow_blue = makeIcon(iconUrl = "input_data/crow_blue.svg",
+  #                        iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
+  #   crow_purple = makeIcon(iconUrl = "input_data/crow_purple.svg",
+  #                          iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1))
+  
+  # # add "confirm_color" column as a variable : this will be associated to the icons' list
+  # pb_map <- pb_map %>%
+  #   mutate(confirm_colors = case_when(
+  #     PctConfirm == 0 ~ "crow_grey",
+  #     PctConfirm <= 5 ~ "crow_red",
+  #     PctConfirm <= 10 ~ "crow_yellow",
+  #     PctConfirm <= 15 ~ "crow_green",
+  #     PctConfirm <= 20 ~ "crow_teal",
+  #     PctConfirm <= 25 ~ "crow_blue",
+  #     PctConfirm > 25 ~ "crow_purple"))
+  
+  # ### palette for Diurnal Hours
+  # ### Grey = #808080FF, Yellow = #FDE725FF, Green = #5DC863FF, Teal = #21908DFF,  Blue = #3B528BFF, Purple = #440154FF
+           
+  # breedingpal <- colorBin("viridis", pb_map$portal_breeding_hrsDiurnal, bins = c(0.1,5,10,15,20,Inf), reverse = TRUE)
+  # breedingpalnum <- colorNumeric("viridis", pb_map$portal_breeding_hrsDiurnal, reverse = TRUE)
+
+  
+  # winterbinpal <- colorBin("viridis", pb_map$portal_wintering_hrsDiurnal, bins = c(0.1,2.5,5,7.5,10,Inf), reverse = TRUE)
+  
+  # ### palette for Nocturnal Hours
+  # binpalnight <- colorBin("viridis", pb_map$portal_breeding_hrsNocturnal, bins = c(0.1,0.5,1,1.5,2,Inf), reverse = TRUE)
+  
+  
+  # ### legend components for breeding diurnal hours
+  # diurnal_shapes <- c('rect','rect','rect','rect','rect','rect')
+  # diurnal_colors <- c("#808080FF", "#FDE725FF", "#5DC863FF", "#21908DFF", "#3B528BFF", " #440154FF")
+  # diurnal_symbols <- Map(f = makeSymbol, shape = diurnal_shapes, fillColor = diurnal_colors, 
+  #                                       color = diurnal_colors, opacity = 1, fillOpacity = 0, width = 20,
+  #                                       `stroke-width` = 2)
+  
+  # ### legend for winter diurnal hours
+  # winter_shapes <- c('circle','circle','circle','circle','circle','circle')
+  # winter_diurnal_symbols <- Map(f = makeSymbol, shape = winter_shapes, fillColor = diurnal_colors, 
+  #                        color = diurnal_colors, opacity = 1, fillOpacity = 1, width = 20,
+  #                        `stroke-width` = 2)
+  
+  # ### legend for breeding nocturnal symbols
+  # winter_shapes <- c('circle','circle','circle','circle','circle','circle')
+  # breeding_nocturnal_symbols <- Map(f = makeSymbol, shape = winter_shapes, fillColor = diurnal_colors, 
+  #                               color = diurnal_colors, opacity = 1, fillOpacity = 0, width = 20,
+  #                               `stroke-width` = 2)
+  
+ 
+
+  ### Change to Block Tab when Clicking a Block in Effort Map
+  ### 
+
+}  
 #
 # ## SUMMARIZE START TIMES --------------------------------------------------
 # plot(start_time_boxplot(ebird))
@@ -1044,9 +1304,5 @@ server <- function(input, output, session) {
 #
 # ## LOCALITY TYPE BREAKDOWN ------------------------------------------------
 # plot(locality_type_pie(ebird))
-
-
-
-}
 
 shinyApp(ui, server)
