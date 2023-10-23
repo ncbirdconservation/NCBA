@@ -319,7 +319,6 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
               season = "Non-Breeding"
               }
             }
-            
             return(season)
 
           })
@@ -366,7 +365,7 @@ get_block_gap_spp <- function(blockid){
 # Retrieves list of species for the passed block id
   filter <- '{"GAP_SPP":1}'
   query <- '{"_id":"${blockid}"}'
-  blockdata <- m_blocks$find("{}",filter)
+  blockdata <- m_blocks$find("{}", filter)
 
 # add code here to unnest data (like observations above)
 
@@ -497,4 +496,29 @@ get_block_hours <- function(id_ncba_block) {
     return(result)
 
   }
+}
+
+
+## for overview map
+get_block_summaries <- function() {
+  # blocksum <- m_blocksum$find(
+  #   fields = '{ "ID_NCBA_BLOCK": true, "county": true, "region": true, "portal.breeding.hrsDiurnal": true, "portal.breeding.hrsNocturnal": true,
+  #               "portal.wintering.hrsDiurnal": true, "portal.wintering.hrsNocturnal": true, "portal.breeding.sppCountConfirmed": true, "portal.breeding.sppPctConfirmed":true,
+  #               "portal.breeding.sppCountProbable": true, "portal.breeding.sppCountPossible": true, "portal.breeding.sppCountCoded": true, "portal.breeding.sppCountDetected": true }',)
+  blocksum_filter <- '{"sppList": 0}'
+
+  blocksum <- m_block_summaries$find("{}", blocksum_filter)
+
+  # blocksum <-  tibble(blocksum)
+
+  # names(blocksum)
+
+  # blocksum <- blocksum %>%
+  #   unnest_wider("portal", names_sep = "_") %>% 
+  #   unnest_wider("portal_breeding", names_sep = "_") %>% 
+  #   unnest_wider("portal_wintering", names_sep = "_")
+
+  blocksum <- as.data.frame(blocksum)
+  print(head(blocksum))
+  return(blocksum)
 }

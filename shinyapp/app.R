@@ -17,10 +17,18 @@ if(!require(dplyr)) install.packages(
   "dplyr", repos = "http://cran.us.r-project.org")
 if(!require(leaflet)) install.packages(
   "leaflet", repos = "http://cran.us.r-project.org")
+if(!require(leaflegend)) install.packages(
+  "leaflegend",
+  repos = "http://cran.us.r-project.org"
+)
 if(!require(htmltools)) install.packages(
   "htmltools", repos = "http://cran.us.r-project.org")
 if(!require(shinythemes)) install.packages(
   "shinythemes", repos = "http://cran.us.r-project.org")
+if(!require(shinydashboard)) install.packages(
+  "shinydashboard",
+  repos = "http://cran.us.r-project.org"
+)
 # if(!require(waffle)) install.packages(
 #   "waffle", repos = "https://cinc.rud.is")
 
@@ -188,13 +196,6 @@ ui <- bootstrapPage(
       )
     )
     ),
-    tabPanel("Overview",
-      div(class="container-fluid", tags$head(includeCSS("styles.css")),
-        div(class="col-md-12",
-          leafletOutput("overview-map")
-      )
-    )
-    ),
     tabPanel("Species Map",
 
         div(class = "col-md-2",
@@ -209,6 +210,13 @@ ui <- bootstrapPage(
             id = "spp-block-map",
             leafletOutput("mysppmap")
           )
+    ),
+    tabPanel("Overview",
+      # div(class="container-fluid", tags$head(includeCSS("styles.css")),
+        div(class = "col-md-12",
+          leafletOutput("overview_map", height = "70vh")
+      # )
+    )
     ),
     tabPanel("About",
       tags$div(
@@ -1040,6 +1048,7 @@ server <- function(input, output, session) {
 
 # output$overview_map <- renderLeaflet({
   ### SETUP LEAFLET MAP, RENDER BASEMAP 
+  print("loading overview_map")
   output$overview_map <- renderLeaflet({
     #setup block geojson layer
     print("starting effort map, adding blocks")
@@ -1063,7 +1072,7 @@ server <- function(input, output, session) {
         lat2 = ~ SE_Y,
         stroke = TRUE,
         weight = 2.5,
-        color = ~breedingpal(portal_breeding_hrsDiurnal),
+        color = ~breedingpal(breedHrsDiurnal),
         # fillColor= ~binpal(breeding_hrsDiurnal),
         # fillOpacity = 0.8,
         fill = FALSE,
@@ -1071,7 +1080,7 @@ server <- function(input, output, session) {
             "<strong>",
             ID_NCBA_BLOCK,
             "</strong><br>Breeding Diurnal Hours:",
-            signif(portal_breeding_hrsDiurnal, 2)
+            signif(breedHrsDiurnal, 2)
           ) %>%
           lapply(htmltools::HTML),
           group = "Breeding Diurnal Hours"
@@ -1082,7 +1091,7 @@ server <- function(input, output, session) {
         data = pb_map,
         lng = ~ SE_X, lat = ~ centr_y,
         radius = 400,
-        color = ~binpalnight(portal_breeding_hrsNocturnal),
+        color = ~binpalnight(breedHrsNocturnal),
         stroke = TRUE,
         weight = 2,
         fill = FALSE,
@@ -1090,7 +1099,7 @@ server <- function(input, output, session) {
           "<strong>",
           ID_NCBA_BLOCK,
           "</strong><br>Nocturnal Breeding Hours:",
-          signif(portal_breeding_hrsNocturnal, 2)
+          signif(breedHrsNocturnal, 2)
         ) %>%
         lapply(htmltools::HTML),
         group = "Breeding Nocturnal Hours"
@@ -1105,11 +1114,11 @@ server <- function(input, output, session) {
                   "<br>% Confirmed:",
                   PctConfirm,
                   "</strong><br> # Confirmed:",
-                  portal_breeding_sppCountConfirmed,
+                  breedCountConfirmed,
                   "<br> # Probable:",
-                  portal_breeding_sppCountProbable,
+                  breedCountProbable,
                   "<br> # Possible:",
-                  portal_breeding_sppCountPossible
+                  breedCountPossible
                   ) %>%
                   lapply(htmltools::HTML),
                  group = "% Species Confirmed"
@@ -1122,12 +1131,12 @@ server <- function(input, output, session) {
         stroke = FALSE,
         fill = TRUE,
         fillOpacity = 1,
-        fillColor = ~winterbinpal(portal_wintering_hrsDiurnal),
+        fillColor = ~winterbinpal(winterHrsDiurnal),
         label = ~paste(
           "<strong>",
           ID_NCBA_BLOCK,
           "</strong><br>Wintering Diurnal Hours:",
-          signif(portal_wintering_hrsDiurnal, 2)
+          signif(winterHrsDiurnal, 2)
           ) %>%
           lapply(htmltools::HTML),
           group = "Wintering Diurnal Hours"
@@ -1201,86 +1210,167 @@ server <- function(input, output, session) {
       )
     })
   
-  # ### Merging Block Shapes for mapping and Summary Table
-  # pb_map <- merge(priority_block_data, blocksum, all = TRUE)
+  ### Merging Block Shapes for mapping and Summary Table
+  pb_map <- merge(
+    priority_block_data,
+    get_block_summaries(),
+    all = TRUE
+    )
   
-  # ## Convert percentages to numbers instead of decimals
-  # pb_map <- pb_map %>% 
-  #   mutate(PctConfirm = signif(portal_breeding_sppPctConfirmed*100,4))
+  ## Convert percentages to numbers instead of decimals
+  pb_map <- pb_map %>% 
+    mutate(PctConfirm = signif(breedHrsDiurnal*100,4))
 
-  # ### Centroids of Priority Blocks
-  # centr_x <- (pb_map$NW_X + pb_map$SE_X)/2
-  # centr_y <- (pb_map$NW_Y + pb_map$SE_Y)/2
-  # mutate(pb_map, centr_x)
-  # mutate(pb_map, centr_y)
+  ### Centroids of Priority Blocks
+  centr_x <- (pb_map$NW_X + pb_map$SE_X)/2
+  centr_y <- (pb_map$NW_Y + pb_map$SE_Y)/2
+  mutate(pb_map, centr_x)
+  mutate(pb_map, centr_y)
   
-  # ### Custom Crow icon is from Font Awesome (https://fontawesome.com/icons)
-  # ### "fa-solid fa-crow"
+  ### Custom Crow icon is from Font Awesome (https://fontawesome.com/icons)
+  ### "fa-solid fa-crow"
 
-  # ## Make a list of icons. We'll index into it based on name.
-  # confirm_icons <- iconList(
-  #   crow_grey = makeIcon(
-  #     iconUrl = "input_data/crow_grey.svg",
-  #     iconWidth = 4.16,
-  #     iconHeight = 3.33,
-  #     iconAnchorX = 6,
-  #     iconAnchorY = 1
-  #     ),
-  #   crow_red = makeIcon(iconUrl = "input_data/crow_red.svg",
-  #                       iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
-  #   crow_yellow = makeIcon(iconUrl = "input_data/crow_yellow.svg",
-  #                          iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
-  #   crow_green = makeIcon(iconUrl = "input_data/crow_green.svg",
-  #                         iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
-  #   crow_teal = makeIcon(iconUrl = "input_data/crow_teal.svg",
-  #                        iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
-  #   crow_blue = makeIcon(iconUrl = "input_data/crow_blue.svg",
-  #                        iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1),
-  #   crow_purple = makeIcon(iconUrl = "input_data/crow_purple.svg",
-  #                          iconWidth = 8.33, iconHeight = 6.66, iconAnchorX = 6, iconAnchorY = 1))
+  ## Make a list of icons. We'll index into it based on name.
+  confirm_icons <- iconList(
+    crow_grey = makeIcon(
+      iconUrl = "input_data/crow_grey.svg",
+      iconWidth = 4.16,
+      iconHeight = 3.33,
+      iconAnchorX = 6,
+      iconAnchorY = 1
+      ),
+    crow_red = makeIcon(
+      iconUrl = "input_data/crow_red.svg",
+      iconWidth = 8.33,
+      iconHeight = 6.66,
+      iconAnchorX = 6,
+      iconAnchorY = 1
+      ),
+    crow_yellow = makeIcon(
+      iconUrl = "input_data/crow_yellow.svg",
+      iconWidth = 8.33,
+      iconHeight = 6.66,
+      iconAnchorX = 6,
+      iconAnchorY = 1
+      ),
+    crow_green = makeIcon(
+      iconUrl = "input_data/crow_green.svg",
+      iconWidth = 8.33,
+      iconHeight = 6.66,
+      iconAnchorX = 6,
+      iconAnchorY = 1
+      ),
+    crow_teal = makeIcon(
+      iconUrl = "input_data/crow_teal.svg",
+      iconWidth = 8.33,
+      iconHeight = 6.66,
+      iconAnchorX = 6,
+      iconAnchorY = 1),
+    crow_blue = makeIcon(
+      iconUrl = "input_data/crow_blue.svg",
+      iconWidth = 8.33,
+      iconHeight = 6.66,
+      iconAnchorX = 6,
+      iconAnchorY = 1
+      ),
+    crow_purple = makeIcon(
+      iconUrl = "input_data/crow_purple.svg",
+      iconWidth = 8.33,
+      iconHeight = 6.66,
+      iconAnchorX = 6,
+      iconAnchorY = 1
+      )
+    )
   
-  # # add "confirm_color" column as a variable : this will be associated to the icons' list
-  # pb_map <- pb_map %>%
-  #   mutate(confirm_colors = case_when(
-  #     PctConfirm == 0 ~ "crow_grey",
-  #     PctConfirm <= 5 ~ "crow_red",
-  #     PctConfirm <= 10 ~ "crow_yellow",
-  #     PctConfirm <= 15 ~ "crow_green",
-  #     PctConfirm <= 20 ~ "crow_teal",
-  #     PctConfirm <= 25 ~ "crow_blue",
-  #     PctConfirm > 25 ~ "crow_purple"))
+  # add "confirm_color" column as a variable : this will be associated to the icons' list
+  pb_map <- pb_map %>%
+    mutate(
+      confirm_colors = case_when(
+        PctConfirm == 0 ~ "crow_grey",
+        PctConfirm <= 5 ~ "crow_red",
+        PctConfirm <= 10 ~ "crow_yellow",
+        PctConfirm <= 15 ~ "crow_green",
+        PctConfirm <= 20 ~ "crow_teal",
+        PctConfirm <= 25 ~ "crow_blue",
+        PctConfirm > 25 ~ "crow_purple")
+      )
   
-  # ### palette for Diurnal Hours
-  # ### Grey = #808080FF, Yellow = #FDE725FF, Green = #5DC863FF, Teal = #21908DFF,  Blue = #3B528BFF, Purple = #440154FF
+  ### palette for Diurnal Hours
+  ### Grey = #808080FF, Yellow = #FDE725FF, Green = #5DC863FF, Teal = #21908DFF,  Blue = #3B528BFF, Purple = #440154FF
            
-  # breedingpal <- colorBin("viridis", pb_map$portal_breeding_hrsDiurnal, bins = c(0.1,5,10,15,20,Inf), reverse = TRUE)
-  # breedingpalnum <- colorNumeric("viridis", pb_map$portal_breeding_hrsDiurnal, reverse = TRUE)
+  breedingpal <- colorBin(
+    "viridis",
+    pb_map$breedHrsDiurnal,
+    bins = c(0.1,5,10,15,20,Inf),
+    reverse = TRUE
+    )
+  breedingpalnum <- colorNumeric(
+    "viridis",
+    pb_map$breedHrsDiurnal,
+    reverse = TRUE
+    )
 
   
-  # winterbinpal <- colorBin("viridis", pb_map$portal_wintering_hrsDiurnal, bins = c(0.1,2.5,5,7.5,10,Inf), reverse = TRUE)
+  winterbinpal <- colorBin(
+    "viridis",
+    pb_map$winterHrsDiurnal,
+    bins = c(0.1,2.5,5,7.5,10,Inf),
+    reverse = TRUE
+    )
   
-  # ### palette for Nocturnal Hours
-  # binpalnight <- colorBin("viridis", pb_map$portal_breeding_hrsNocturnal, bins = c(0.1,0.5,1,1.5,2,Inf), reverse = TRUE)
+  ### palette for Nocturnal Hours
+  binpalnight <- colorBin(
+    "viridis",
+    pb_map$breedHrsNocturnal,
+    bins = c(0.1,0.5,1,1.5,2,Inf),
+    reverse = TRUE
+    )
+  ### legend components for breeding diurnal hours
+  diurnal_shapes <- c('rect','rect','rect','rect','rect','rect')
+  diurnal_colors <- c(
+    "#808080FF",
+    "#FDE725FF",
+    "#5DC863FF",
+    "#21908DFF",
+    "#3B528BFF",
+    " #440154FF"
+    )
+  diurnal_symbols <- Map(
+    f = makeSymbol,
+    shape = diurnal_shapes,
+    fillColor = diurnal_colors,
+    color = diurnal_colors,
+    opacity = 1,
+    fillOpacity = 0,
+    width = 20,
+    `stroke-width` = 2
+    )
   
+  ### legend for winter diurnal hours
+  winter_shapes <- c('circle','circle','circle','circle','circle','circle')
+  winter_diurnal_symbols <- Map(
+    f = makeSymbol,
+    shape = winter_shapes,
+    fillColor = diurnal_colors,
+    color = diurnal_colors,
+    opacity = 1,
+    fillOpacity = 1,
+    width = 20,
+    `stroke-width` = 2
+    )
   
-  # ### legend components for breeding diurnal hours
-  # diurnal_shapes <- c('rect','rect','rect','rect','rect','rect')
-  # diurnal_colors <- c("#808080FF", "#FDE725FF", "#5DC863FF", "#21908DFF", "#3B528BFF", " #440154FF")
-  # diurnal_symbols <- Map(f = makeSymbol, shape = diurnal_shapes, fillColor = diurnal_colors, 
-  #                                       color = diurnal_colors, opacity = 1, fillOpacity = 0, width = 20,
-  #                                       `stroke-width` = 2)
-  
-  # ### legend for winter diurnal hours
-  # winter_shapes <- c('circle','circle','circle','circle','circle','circle')
-  # winter_diurnal_symbols <- Map(f = makeSymbol, shape = winter_shapes, fillColor = diurnal_colors, 
-  #                        color = diurnal_colors, opacity = 1, fillOpacity = 1, width = 20,
-  #                        `stroke-width` = 2)
-  
-  # ### legend for breeding nocturnal symbols
-  # winter_shapes <- c('circle','circle','circle','circle','circle','circle')
-  # breeding_nocturnal_symbols <- Map(f = makeSymbol, shape = winter_shapes, fillColor = diurnal_colors, 
-  #                               color = diurnal_colors, opacity = 1, fillOpacity = 0, width = 20,
-  #                               `stroke-width` = 2)
+  ### legend for breeding nocturnal symbols
+  winter_shapes <- c('circle','circle','circle','circle','circle','circle')
+  breeding_nocturnal_symbols <- Map(
+    f = makeSymbol,
+    shape = winter_shapes,
+    fillColor = diurnal_colors,
+    color = diurnal_colors,
+    opacity = 1,
+    fillOpacity = 0,
+    width = 20,
+    `stroke-width` = 2
+    )
   
  
 
