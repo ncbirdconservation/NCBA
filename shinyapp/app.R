@@ -92,12 +92,6 @@ ui <- bootstrapPage(
     tags$head(tags$link(rel="icon", href="/input_data/ncba_blue_wbnu.ico")),
     tabPanel("Blocks",
       div(class="col-md-2 panel sidebar", id = "block_controls",
-
-          # span(
-          #   tags$i(h6("Checklists submitted to the NC Bird Atlas.")),
-          #   style="color:#045a8d"
-          #   ),
-          # h4("Map Controls"),
           h3("Block Explorer", class="tab-control-title"),
           tags$p(
             "Summary statistics page for block-level data.",
@@ -130,12 +124,7 @@ ui <- bootstrapPage(
                               choices = c(1,2,3,4,5,6,7,8,9,10,11,12),
                               selected = c(1,2,3,4,5,6,7,8,9,10,11,12),
                               multiple = TRUE)
-           ),
-              # bsTooltip(
-              #   "season_radio",
-              #   paste0("Seasons calculated from species-specific",
-              #   " safe dates (where available)."),
-              #   "right", options = list(container="body"))
+           )
           )
         ),
         div(class="col-md-10 panel",
@@ -143,15 +132,8 @@ ui <- bootstrapPage(
         ),
         div(class="col-md-3 panel",
           h4("Block Statistics"),
-          # h5("Breeding"),
           htmlOutput("block_breeding_stats"),
           downloadButton("download_block_checklists", "Download Checklists")
-          #should include all the requirements for completing
-          # color coded if hit metric or not
-          # also build/require block_status table in AtlasCache
-
-          # h5("Non-Breeding"),
-          # htmlOutput("block_nonbreeding_stats")
         ),
         div(class="col-md-3 panel",
           h4("Block Hours"),
@@ -163,24 +145,14 @@ ui <- bootstrapPage(
         ),
         div(class="col-md-6 panel",
           h4("Species"),
-          # div(
-          #   tableOutput("spp_observed"),
-          #   style="font-size:85%; height:442.995px; overflow-y:scroll;")
           dataTableOutput("spp_observed"),
           downloadButton("download_spplist", "Download")
 
         )
-        # ,
-        # div(class="col-md-12 panel",
-        #   h4("Test Panel"),
-        #   div(tableOutput("testing_output"), style="font-size:60%")
-        # )
-
     ),
     tabPanel("Species",
       div(class="container-fluid", tags$head(includeCSS("styles.css")),
         div(class="col-md-3",
-          # selectInput("spp_select", h3("Species"),
           selectizeInput("spp_select", h3("Species"),
           choices = species_list, options=list(
             placeholder = 'Select species',
@@ -190,37 +162,39 @@ ui <- bootstrapPage(
         div(class="col-md-9",
           plotOutput("spp_breedingbox_plot"),
           div(tableOutput("breeding_code_legend"), style="font-size:60%")
-          # plotOutput("spp_coords_plot"),
-          # plotOutput("spp_starttimes_plot"),
-          # plotOutput("spp_traveldist_plot"),
-          # plotOutput("spp_mineffort_plot"),
-          # plotOutput("spp_localitytype_plot")
       )
     )
     ),
     tabPanel("Species Map",
-
-        div(class = "col-md-2",
-          div(selectizeInput("sppmap_select", h3("Species"),
-          choices = species_list, options = list(
-            placeholder = 'Select species',
-            onInitialize = I('function() {this.setValue(""); }')
-          ))),
+        div(
+          class = "col-md-2",
+          div(
+            selectizeInput(
+              "sppmap_select",
+              h3("Species"),
+            choices = species_list, options = list(
+              placeholder = 'Select species',
+              onInitialize = I('function() {this.setValue(""); }')
+              )
+            )
+          ),
           div(tableOutput("block_breedcode_table"))
         ),
-        div(class = "col-md-10",
-            id = "spp-block-map",
-            leafletOutput("mysppmap")
+        div(
+          class = "col-md-10",
+          id = "spp-block-map",
+          leafletOutput("mysppmap")
           )
     ),
-    tabPanel("Overview",
-      # div(class="container-fluid", tags$head(includeCSS("styles.css")),
-        div(class = "col-md-12",
-          leafletOutput("overview_map", height = "70vh")
-      # )
-    )
+    tabPanel(
+      "Overview",
+      div(
+        class = "col-md-12",
+        leafletOutput("overview_map", height = "70vh")
+      )
     ),
-    tabPanel("About",
+    tabPanel(
+      "About",
       tags$div(
         tags$h4("NC Bird Atlas Data Explorer"),
         tags$p(
@@ -246,32 +220,6 @@ server <- function(input, output, session) {
 ## BLOCK TAB  ----------------------------------------------------
 
   # CHECKLISTS
-  ## reactive listener for show checklist checkboxInput
-  # show_checklists = reactive({
-  #   paste(input$show_checklists)
-  # })
-  #
-  # ## reactive listener for portal checkboxInput
-  # show_portal_only = reactive({
-  #   paste(input$portal_records)
-  # })
-
-  #reactive function that listens for all sidget changes
-  # checklist_events <- reactive({
-  #   # list(input$show_checklists, input$portal_records, current_block_r())
-  #   list(input$portal_records, current_block_r(), input$season_radio)
-  # })
-
-  # listens for changes in the checklist filters:
-  #   portal_records and season_radio
-  # criteria_changes <- reactive({
-  #   # add other criteria here
-  #   list(input$portal_records, input$season_radio)
-  # })
-
-  # listens for changes in the checklist filters: 
-  #   portal_records and season_radio
-  # used to ensure there is at least one record to query
   checklist_count <- reactive({
     unique_sei <- unique(current_block_ebd()$SAMPLING_EVENT_IDENTIFIER)
     length(unique_sei)
@@ -308,7 +256,8 @@ server <- function(input, output, session) {
   })
 
   # when map block clicked, update select input drop down list
-  # and when clicking current block it doesn't clear the name from the drop down list
+  # and when clicking current block it doesn't clear the name
+  # from the drop down list
   observeEvent(input$mymap_shape_click, {
     print("Updating drop down list to match clicked block")
     click <- input$mymap_shape_click
@@ -372,9 +321,6 @@ server <- function(input, output, session) {
       need(checklist_count()>0,"")
     )
     print("applying filters to block records")
-
-    # current_block_ebd()
-
       current_block_ebd() %>%
         filter(
           if(input$portal_records)
@@ -389,10 +335,6 @@ server <- function(input, output, session) {
              MONTH %in% input$month_range
           else TRUE
         )
-          # if(input$season_radio != "All")
-          # SEASON == input$season_radio
-          # else TRUE)
-
   })
 
 
@@ -456,15 +398,7 @@ server <- function(input, output, session) {
 
 
   # # POPULATE LABEL FOR CURRENT BLOCK
-  # output$selected_block <-renderText({
-  #   req(current_block_r())
-  #   blockname <- current_block_r()
-  #
-  #   strHTML <- str_interp('<strong>${blockname}</strong>')
-  #   HTML(strHTML)
 
-    # paste(current_block_r())
-  # })
   output$download_block_checklists <- downloadHandler(
     filename = function() {
       p <- ""
@@ -475,12 +409,8 @@ server <- function(input, output, session) {
         input$season_radio,p,
         "blockchecklists.csv",
         sep = "_")
-      # paste("test.RData")
     },
     content = function(file) (
-      # save(current_block_ebd_checklistsonly_filtered(), file)
-      # save(current_block_ebd_checklistsonly_filtered(), file)
-      # load(file, verbose=T)
       write.csv(
         current_block_ebd_checklistsonly_filtered(),
         file,
@@ -490,18 +420,6 @@ server <- function(input, output, session) {
   )
 
 ### For downloading testing datasets when conditions change (Deprecated?) ####
-# observeEvent(current_block_ebd_checklistsonly_filtered(),{
-#   # req(current_block_ebd_checklistsonly_filtered())
-#   print("saving data to file...")
-#   recs <- current_block_ebd_checklistsonly_filtered()
-#   p <- ""
-#   if (input$portal_records){ p <- "portal"}
-#
-#   fn <- paste(current_block_r(), input$season_radio,p,
-#     "blockchecklists.RData", sep = "_")
-#   save(recs, file=fn, compress="gzip")
-#   print("successfullly saved data")
-# })
 
   ## BREEDING STATS ----------------------------------------------------
   output$block_breeding_stats <- renderUI({
@@ -514,7 +432,7 @@ server <- function(input, output, session) {
 
     HTML(paste0(
       "<h4>Breeding</h4>",
-      "Observed: ",
+      "<p>Observed: ",
       current_block_summary()$breedCountDetected + current_block_summary()$breedCountCoded,
       "<br/>Coded: ",
       current_block_summary()$breedCountCoded,
@@ -538,131 +456,21 @@ server <- function(input, output, session) {
       current_block_summary()$breedCountDiurnalChecklists,
       "<br/>Nocturnal Hours: ",
       current_block_summary()$breedCountNocturnalChecklists,
+      "</p>",
       "<h4>Winter</h4>",
-      "Observed: ",
+      "<p>Observed: ",
       current_block_summary()$winterCountDetected,
       "<br/>Daytime Hrs: ",
         round(current_block_summary()$winterHrsDiurnal, 1),
       "<br/>Daytime Visits: ",
       current_block_summary()$winterCountDiurnalChecklists,
       "<br/>Nocturnal Hrs: ",
-      current_block_summary()$winterCountDiurnalChecklists
-
+      current_block_summary()$winterCountDiurnalChecklists,
+      "</p>"
     ))
 
   })
-  # output$block_breeding_stats <- renderUI({
-  #   req(current_block_ebd(), current_block_ebd_filtered())
-  #   print("rendering block stats")
-  #   #ensure records returned
-  #   validate(
-  #     need(current_block_ebd(), "No checklists submitted.")
-  #   )
-
-
-  #   ### Block Species ----------------------------------------------------
-  #   sa_list <- spp_accumulation_results()$spp_unique
-
-  #   spp_total <- nrow(sa_list["spp"])
-  #   # confirmed_total <- nrow(filter(sa_list, bcat == "C4" ))
-  #   # if ((spp_total*0.5)<confirmed_total) {
-  #   #   confirmed_class = "success"
-  #   # } else {
-  #   #   confirmed_class = "failed"
-  #   # }
-
-  #   # add conditional formatting if criteria met
-  #   num_spp_total = paste("Species: ", nrow(sa_list["spp"]) )
-  #   print(num_spp_total)
-  #   num_c = nrow(filter(sa_list, bcat == "C4" ))
-  #   num_r = nrow(filter(sa_list, bcat == "C3"))
-  #   num_p = nrow(filter(sa_list, bcat == "C2"))
-  #   num_coded = num_c + num_r + num_p
-  #   print(num_coded)
-  #   num_coded <- num_coded %>% replace(is.na(.),0)
-  #   # num_o = num_spp_total - num_coded
-  #   pct_c = (num_c/num_coded)*100
-  #   pct_r = (num_r/num_coded)*100
-  #   pct_p = (num_p/num_coded)*100
-  #   print(pct_c)
-  #   print(pct_r)
-  #   print(pct_p)
-  #   # leg_p = paste0('Possible (', pct_p , '%)')
-  #   # leg_r = paste0('Probable (', pct_r , '%)')
-  #   # leg_c = paste0('Confirmed (', pct_c , '%)')
-
-  #   num_breed_confirm <- paste(
-  #     "Confirmed (C4):", num_c,  " (", format(pct_c, digits=1), "%)")
-  #   num_breed_prob <- paste(
-  #     "Probable (C3):", num_r, " (", format(pct_r,digits=1) , "%)")
-  #   num_breed_poss <- paste(
-  #     "Possible (C2):", num_p, " (", format(pct_p,digits=1), "%)")
-    
-  #   spp_crp <- c('Possible' = num_p, 'Probable' = num_r, 'Confirmed' = num_c)
-  #   # waf <- waffle(
-  #   #       spp_crp,
-  #   #       rows = 5,
-  #   #       size = 1,
-  #   #       colors = c('#BF78EB',alpha('#7E2AB3', 1/3),'#300C56'),
-  #   #       title = "Species Breeding Status",
-  #   #       legend_pos = "bottom"
-  #   #   )
-  #   # print(waf)
-
-  #   ### Block Hours ----------------------------------------------------
-  #   diurnal_hours <- block_hrs_results()$total_hr - block_hrs_results()$noc_hr
-
-  #   diurnal_hours_target <- 20
-  #   if (input$season_radio == "Non-Breeding") {
-  #     diurnal_hours_target <- 10
-  #   }
-
-  #   diurnal_hours_class <- "failed"
-  #   if (diurnal_hours >= diurnal_hours_target) {
-  #     diurnal_hours_class <- "success"
-  #   }
-
-  #   nocturnal_hours_class <- "failed"
-  #   if (block_hrs_results()$noc_hr >= 2) {
-  #     nocturnal_hours_class <- "success"
-  #   }
-
-  #   num_diurnal_hours <- paste(
-  #     "Diurnal:<span class='",diurnal_hours_class, "'>",
-  #     format(diurnal_hours, trim=TRUE, digits=1),
-  #     " hrs</span>")
-  #   num_nocturnal_hours <- paste(
-  #     "Nocturnal:<span class='", nocturnal_hours_class, "'>",
-  #     format(block_hrs_results()$noc_hr, trim=TRUE, digits=1),
-  #     " hrs</span>")
-  #   num_total_hours <- paste(
-  #     "Total:<span class=''>",
-  #     format(block_hrs_results()$total_hr, trim=TRUE, digits=1),
-  #     " hrs</span>")
-
-  #   print("troubleshooting duplicate block stats:")
-  #   # print("block hrs results:total_hr", 
-  #   #   format(block_hrs_results()$total_hr, trim=TRUE, digits=1))
-  #   # print(block_hrs_results())
-
-  #   # HTML(paste(
-  #   #   num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss,
-  #   #   num_breed_hours, sep='<br/>'))
-  #   HTML(paste(
-  #     "<h4>Species</h4>",
-  #     num_spp_total,
-  #     num_breed_confirm,
-  #     num_breed_prob,
-  #     num_breed_poss,
-  #     "<h4>Hours</h4>",
-  #     num_diurnal_hours,
-  #     num_nocturnal_hours,
-  #     num_total_hours,
-  #     sep='<br/>'))
-
-  # })
-
-
+  
   #### DISPLAY BLOCK HOURS SUMMARY PLOT ------
   block_hrs_results <- reactive({
     req(current_block_ebd_checklistsonly_filtered())
@@ -700,27 +508,6 @@ server <- function(input, output, session) {
       '"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]'
       ))
 
-    print(pipeline)
-    # pipeline <- str_interp(
-    #   paste0('[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
-    #   '{"$unwind": {"path": "$OBSERVATIONS"}},',
-    #   '{"$group": {"_id": {"blockName": "$ID_NCBA_BLOCK",',
-    #   '"spp": "$OBSERVATIONS.COMMON_NAME"},',
-    #   '"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]')
-    #   )
-
-    # pipeline <- str_interp(
-    #   paste0(
-    #     '[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
-    #     '{"$unwind": {"path": "$OBSERVATIONS"}},',
-    #     '{"$group":',
-    #     '{"_id": {"block": "$ID_BLOCK_CODE",',
-    #     '"blockName": "$ID_NCBA_BLOCK","spp": "$OBSERVATIONS.COMMON_NAME",',
-    #     '"taxon": "$OBSERVATIONS.SCIENTIFIC_NAME"},',
-    #     '"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"},',
-    #     '"bcList": {"$push": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]')
-    #     )
-
     spp_bcs <- aggregate_ebd_data(pipeline)
     plot_spp_accumulation(sa, spp_bcs)
 
@@ -749,8 +536,6 @@ server <- function(input, output, session) {
     )
   )
 
-
-
   ## MAP  ----------------------------------------------------
   ### SETUP LEAFLET MAP, RENDER BASEMAP ------
   output$mymap <- renderLeaflet({
@@ -765,16 +550,6 @@ server <- function(input, output, session) {
         zoom = nc_center_zoom) %>%
       # addTiles() %>%
       addProviderTiles(providers$Esri.WorldImagery) %>%
-      # addProviderTiles(providers$CartoDB.Positron) %>%
-      # addGeoJSON(
-        # priority_block_geojson,
-        # weight= 1,
-        # color=ncba_blue,
-        # opacity=0.6,
-        # fillColor="#777777',
-        # fillOpacity = 0.05,
-        # fill = TRUE
-        # )
 
       addRectangles(
         data = priority_block_data,
@@ -791,29 +566,6 @@ server <- function(input, output, session) {
         fill = TRUE,
         label = ~ ID_NCBA_BLOCK
         )
-      # addRectangles(
-      #   data = priority_block_data,
-      #   layerId = ~ ID_NCBA_BLOCK,
-      #   lng1 = ~ NW_X,
-      #   lat1 = ~ NW_Y,
-      #   lng2 = ~ SE_X,
-      #   lat2 = ~ SE_Y,
-      #   weight= 1,
-      #   color=ncba_blue,
-      #   opacity=0.6,
-      #   fillColor='#777777',
-      #   fillOpacity = 0.05,
-      #   fill = TRUE,
-      #   label = ~ ID_NCBA_BLOCK,
-      #   labelOptions = labelOptions(
-      #     noHide = T,
-      #     textOnly = TRUE,
-      #     offset(c(-30, 30)),
-      #   style = list(
-      #     "color" = "#444444",
-      #     "font-size" = "8px"
-      #   ))
-      #   )
   })
 
   ### ZOOM MAP TO SELECTED BLOCK ------
@@ -847,25 +599,7 @@ server <- function(input, output, session) {
         lng = -79.0,
         lat = 35.7,
         zoom = 7) %>%
-      # addTiles() %>%
       addProviderTiles(providers$Esri.WorldTopoMap)
-      # addProviderTiles(providers$Esri.NatGeoWorldMap) %>%
-
-      # addRectangles(
-      #   data = priority_block_data,
-      #   layerId = ~ ID_NCBA_BLOCK,
-      #   lng1 = ~ NW_X,
-      #   lat1 = ~ NW_Y,
-      #   lng2 = ~ SE_X,
-      #   lat2 = ~ SE_Y,
-      #   weight= 2,
-      #   color=ncba_blue,
-      #   opacity = 0.9,
-      #   fillColor='#777777',
-      #   fillOpacity = 0.05,
-      #   fill = TRUE,
-      #   label = ~ ID_NCBA_BLOCK
-      #   )
 
   })
   ### ADD SYMBOLOGY FOR SELECTED SPECIES ------
@@ -879,18 +613,14 @@ server <- function(input, output, session) {
       print("retrieving spp block data")
       sppblockmap_data <- sppblock_data()
       print("spp block data retrieved")
-      # colnames(sppblockmap_data)[1] = "ID_NCBA_BLOCK"
-      # print(head(sppblockmap_data))
 
       if (nrow(sppblockmap_data) > 0){
-      # print(head(priority_block_data))
       print (paste0("spp by block len = ",nrow(sppblockmap_data)))
       spp_blocks <- merge(
         priority_block_data,
         sppblockmap_data,
         by = "ID_NCBA_BLOCK"
         )
-      # print(head(spp_blocks))
       print(paste0("spp block len = ",nrow(spp_blocks)))
 
 
@@ -908,21 +638,10 @@ server <- function(input, output, session) {
         spp_blocks,
         blocklink = sprintf('https://ebird.org/atlasnc/block/%s', spp_blocks$ID_BLOCK_CODE)
       )
-      # print(table(t(spp_blocks$breedcat)))
       output$block_breedcode_table <- renderTable(table(spp_blocks$breedcat))
 
-      # breedcat_order <- factor(
-      #   spp_blocks$breedcat,
-      #   labels = c('Confirmed', 'Probable', 'Possible','Observed')
-      #   )
-      # print(breedcat_order)
-      
       block_colors <- colorFactor(
         palette = brewer.pal(4, 'Purples'),
-        # palette = 'Blues',
-        # levels = c('Confirmed', 'Probable', 'Possible','Observed'),
-        # levels = breedcat_order,
-        # ordered = FALSE
         domain = spp_blocks$breedcat
         )
 
@@ -983,7 +702,6 @@ server <- function(input, output, session) {
 
  # popup menu on hover over checklist
 
-
   ### DISPLAY CHECKLISTS ON THE MAP ------
   observeEvent(
     current_block_ebd_checklistsonly_filtered(),
@@ -1029,11 +747,6 @@ server <- function(input, output, session) {
   # SPECIES TAB  ----------------------------------------------------
 
   # Species info
-
-  # current_spp_r <- reactive({
-  #   # get(input$block_select)
-  #   current_spp <- input$spp_select
-  # })
 
   output$breeding_code_legend <- renderTable(
     breeding_codes_key,
@@ -1081,15 +794,11 @@ server <- function(input, output, session) {
     ]' ,
       spp)
 
-  # print(pipeline)
-  ebird <- aggregate_spp_data(pipeline)
+    ebird <- aggregate_spp_data(pipeline)
 
   print("aggregate pipeline completed.")
-  # print(ebird)
-  ##### END EXPERIMENT
-
+  
   print("ebd records retrieved, plotting data")
-  # grid::current.viewport()
   breeding_boxplot(
     spp,
     ebird,
@@ -1117,7 +826,6 @@ winterVisitsNocturnalCriteriaMin <- 1
 
 insideBlockAdj <- 0.003
 
-# output$overview_map <- renderLeaflet({
   ### SETUP LEAFLET MAP, RENDER BASEMAP 
   print("loading overview_map")
   output$overview_map <- renderLeaflet({
@@ -1131,14 +839,14 @@ insideBlockAdj <- 0.003
       ) %>%
       ### Base Groups (Satellite Imagery and Blocks )
       addProviderTiles(
-        "OpenStreetMap.Mapnik",
-        options = providerTileOptions(opacity = 1),
-        group = "Street Map"
-      ) %>%
-      addProviderTiles(
         "CartoDB.DarkMatterNoLabels",
         options = providerTileOptions(opacity = 1),
         group = "Dark No Labels"
+      ) %>%
+      addProviderTiles(
+        "OpenStreetMap.Mapnik",
+        options = providerTileOptions(opacity = 1),
+        group = "Street Map"
       ) %>%
       #add block outlines
       addRectangles(
@@ -1151,12 +859,6 @@ insideBlockAdj <- 0.003
         stroke = TRUE,
         weight = 2.5,
         color = ncba_gray,
-        # color = ~breedingpal(breedHrsDiurnal),
-        # fillColor= ~binpal(breeding_hrsDiurnal),
-        # fillOpacity = 0.8,
-        # fillColor = ncba_blue,
-        # fillOpacity = max(1, breedHrsDiurnal/breedHrsDiurnalCriteriaMin),
-        # fill = FALSE,
         label = ~paste0(
             "<strong>",
             ID_NCBA_BLOCK,
@@ -1182,7 +884,7 @@ insideBlockAdj <- 0.003
           lapply(htmltools::HTML),
           group = "Breeding Diurnal Hours"
       ) %>%
-      ### Overlay Groups 
+      ### Overlay Groups
       ## Breeding Diurnal Hours (top bar)
       addRectangles(
         data = pb_map,
@@ -1191,7 +893,6 @@ insideBlockAdj <- 0.003
         lng2 = ~ SE_X,
         lat2 = ~ NW_Y,
         color = ~breedingpal(breedHrsDiurnal),
-        # color = ncba_blue,
         stroke = TRUE,
         weight = 5,
         fill = FALSE,
@@ -1205,7 +906,6 @@ insideBlockAdj <- 0.003
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
         color = ~breedingcodedpal(breedCountCoded),
-        # color = ncba_blue,
         stroke = TRUE,
         weight = 5,
         fill = FALSE,
@@ -1219,7 +919,6 @@ insideBlockAdj <- 0.003
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
         color = ~breedingconfpal(breedPctConfirmed),
-        # color = ncba_blue,
         stroke = TRUE,
         weight = 5,
         fill = FALSE,
@@ -1233,7 +932,6 @@ insideBlockAdj <- 0.003
         lng2 = ~ NW_X,
         lat2 = ~ SE_Y,
         color = ~breedingposspal(breedPctPossible),
-        # color = ncba_blue,
         stroke = TRUE,
         weight = 5,
         fill = FALSE,
@@ -1247,90 +945,12 @@ insideBlockAdj <- 0.003
         lng2 = ~ SE_X - insideBlockAdj,
         lat2 = ~ NW_Y - insideBlockAdj,
         color = ~winterpal(winterHrsDiurnal),
-        # color = ncba_blue,
         stroke = TRUE,
         weight = 5,
         fill = FALSE,
         group = "Winter Diurnal Hrs"
       ) %>%
       ## winter Species (right bar)
-
-      # addCircles(
-      #   data = pb_map,
-      #   lng = ~ SE_X,
-      #   lat = ~ centr_y,
-      #   radius = 400,
-      #   color = ~binpalnight(breedHrsDiurnal),
-      #   stroke = TRUE,
-      #   weight = 2,
-      #   fill = FALSE,
-      #   label = ~paste(
-      #     "<strong>",
-      #     ID_NCBA_BLOCK,
-      #     "</strong><br>Diurnal Breeding Hours:",
-      #     round(breedHrsNocturnal, 1)
-      #   ) %>%
-      #   lapply(htmltools::HTML),
-      #   group = "Breeding Diurnal Hrs"
-      # ) %>%
-      # ## Winter Diurnal Hours - Circle Outlines
-      # addCircles(
-      #   data = pb_map,
-      #   lng = ~ SE_X,
-      #   lat = ~ centr_y,
-      #   radius = 400,
-      #   color = ~binpalnight(breedHrsNocturnal),
-      #   stroke = TRUE,
-      #   weight = 2,
-      #   fill = FALSE,
-      #   label = ~paste(
-      #     "<strong>",
-      #     ID_NCBA_BLOCK,
-      #     "</strong><br>Nocturnal Breeding Hours:",
-      #     signif(breedHrsNocturnal, 2)
-      #   ) %>%
-      #   lapply(htmltools::HTML),
-      #   group = "Winter Diurnal Hrs"
-      # ) %>%
-      # ## change to 
-      # ## Number of Confirmed Species, Custom Crow Icon from Font Awesome
-      # addMarkers(data = pb_map,
-      #            lng = ~centr_x,
-      #            lat = ~centr_y,
-      #            icon = ~confirm_icons[confirm_colors],
-      #            label = ~paste(
-      #             "<strong>",
-      #             ID_NCBA_BLOCK,
-      #             "<br>% Confirmed:",
-      #             PctConfirm,
-      #             "</strong><br> # Confirmed:",
-      #             breedCountConfirmed,
-      #             "<br> # Probable:",
-      #             breedCountProbable,
-      #             "<br> # Possible:",
-      #             breedCountPossible
-      #             ) %>%
-      #             lapply(htmltools::HTML),
-      #            group = "% Species Confirmed"
-      # ) %>%
-      # ## Wintering Diurnal Hours - Filled Circles
-      # addCircles(data = pb_map,
-      #   lng = ~ centr_x,
-      #   lat = ~ NW_Y,
-      #   radius = 600,
-      #   stroke = FALSE,
-      #   fill = TRUE,
-      #   fillOpacity = 1,
-      #   fillColor = ~winterbinpal(winterHrsDiurnal),
-      #   label = ~paste(
-      #     "<strong>",
-      #     ID_NCBA_BLOCK,
-      #     "</strong><br>Wintering Diurnal Hours:",
-      #     signif(winterHrsDiurnal, 2)
-      #     ) %>%
-      #     lapply(htmltools::HTML),
-      #     group = "Wintering Diurnal Hours"
-      # ) %>%
       # Layers Control (Making Icons as Overlay Layers)
       addLayersControl(data = pb_map,
         baseGroups = c("Dark No Labels", "Street Map"),
@@ -1339,8 +959,6 @@ insideBlockAdj <- 0.003
           "Breeding Coded",
           "Breeding Confirmed",
           "Breeding Possible",
-          # "% Species Confirmed",
-          # "Breeding Nocturnal Hours",
           "Winter Diurnal Hrs"
           ),
         options = layersControlOptions(collapsed = FALSE)
@@ -1349,8 +967,6 @@ insideBlockAdj <- 0.003
       hideGroup(
         c(
           "Winter Diurnal Hours"
-          # "% Species Confirmed",
-          # "Breeding Nocturnal Hours"
           )
         ) %>%
       # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
@@ -1370,7 +986,6 @@ insideBlockAdj <- 0.003
       ) %>%
       addLegendImage(
         images = diurnal_symbols,
-        # labels = c("0", "≤0.5", "0.5-1.0", "1.0-1.5", "1.5-2.0", "≥2.0"),
         labels = c(
           "0",
           paste("<", winterHrsDiurnalCriteriaMin),
@@ -1390,7 +1005,6 @@ insideBlockAdj <- 0.003
           paste("<", round(100 * breedPctConfirmedCriteriaMin, 1)),
           paste("≥", round(100 * breedPctConfirmedCriteriaMin, 1))
           ),
-        # labels = c("1-5", "5-10", "10-15", "15-20", "20-25", ">25"),
         labelStyle = "font-size: 14px; vertical-align: center;",
         title = "% Species Confirmed",
         orientation = "vertical",
@@ -1405,7 +1019,6 @@ insideBlockAdj <- 0.003
           paste("<", round(100 * breedPctPossibleCriteriaMax, 1)),
           paste("≥", round(100 * breedPctPossibleCriteriaMax, 1))
           ),
-        # labels = c("1-5", "5-10", "10-15", "15-20", "20-25", ">25"),
         labelStyle = "font-size: 14px; vertical-align: center;",
         title = "% Species Possible",
         orientation = "vertical",
@@ -1413,38 +1026,6 @@ insideBlockAdj <- 0.003
         height = 16.44,
         position = "bottomright"
       )
-      # addLegendImage(
-      #   images = diurnal_symbols,
-      #   labels = c(
-      #     "0.01",
-      #     paste("<", winterHrsDiurnalCriteriaMin),
-      #     paste("≥", winterHrsDiurnalCriteriaMin)
-      #     ),
-      #   orientation = "vertical",
-      #   title = "Wintering Diurnal Hours",
-      #   position = "topleft",
-      #   width = 16.44,
-      #   height = 16.44,
-      #   labelStyle = "font-size: 14px; vertical-align: center;"
-      #   )
-      # addLegendImage(
-      #   images = c(
-      #     "input_data/crow_red.png",
-      #     "input_data/crow_yellow.png",
-      #     "input_data/crow_green.png",
-      #     "input_data/crow_teal.png",
-      #     "input_data/crow_blue.png",
-      #     "input_data/crow_purple.png"
-      #     ),
-      #   labels = c("1-5", "5-10", "10-15", "15-20", "20-25", ">25"),
-      #   labelStyle = "font-size: 14px; vertical-align: center;",
-      #   title = "% Species Confirmed",
-      #   orientation = "vertical",
-      #   width = 13.32,
-      #   height = 16.44,
-      #   position = "bottomright",
-      #   group = "Confirmed Species Legend"
-      # )
     })
   
   ### Merging Block Shapes for mapping and Summary Table
@@ -1456,7 +1037,6 @@ insideBlockAdj <- 0.003
   
   ## Convert percentages to numbers instead of decimals
   pb_map <- pb_map %>%
-    # mutate(PctConfirm = signif(breedHrsDiurnal*100,4))
     mutate(PctConfirm = round( breedPctConfirmed * 100, 1))
 
   ### Centroids of Priority Blocks
@@ -1466,76 +1046,8 @@ insideBlockAdj <- 0.003
   mutate(pb_map, centr_y)
   
   ### Custom Crow icon is from Font Awesome (https://fontawesome.com/icons)
-  ### "fa-solid fa-crow"
-
-  ## Make a list of icons. We'll index into it based on name.
-  confirm_icons <- iconList(
-    crow_grey = makeIcon(
-      iconUrl = "input_data/crow_grey.svg",
-      iconWidth = 4.16,
-      iconHeight = 3.33,
-      iconAnchorX = 6,
-      iconAnchorY = 1
-      ),
-    crow_red = makeIcon(
-      iconUrl = "input_data/crow_red.svg",
-      iconWidth = 8.33,
-      iconHeight = 6.66,
-      iconAnchorX = 6,
-      iconAnchorY = 1
-      ),
-    crow_yellow = makeIcon(
-      iconUrl = "input_data/crow_yellow.svg",
-      iconWidth = 8.33,
-      iconHeight = 6.66,
-      iconAnchorX = 6,
-      iconAnchorY = 1
-      ),
-    crow_green = makeIcon(
-      iconUrl = "input_data/crow_green.svg",
-      iconWidth = 8.33,
-      iconHeight = 6.66,
-      iconAnchorX = 6,
-      iconAnchorY = 1
-      ),
-    crow_teal = makeIcon(
-      iconUrl = "input_data/crow_teal.svg",
-      iconWidth = 8.33,
-      iconHeight = 6.66,
-      iconAnchorX = 6,
-      iconAnchorY = 1),
-    crow_blue = makeIcon(
-      iconUrl = "input_data/crow_blue.svg",
-      iconWidth = 8.33,
-      iconHeight = 6.66,
-      iconAnchorX = 6,
-      iconAnchorY = 1
-      ),
-    crow_purple = makeIcon(
-      iconUrl = "input_data/crow_purple.svg",
-      iconWidth = 8.33,
-      iconHeight = 6.66,
-      iconAnchorX = 6,
-      iconAnchorY = 1
-      )
-    )
-  
-  # add "confirm_color" column as a variable : this will be associated to the icons' list
-  pb_map <- pb_map %>%
-    mutate(
-      confirm_colors = case_when(
-        PctConfirm == 0 ~ "crow_grey",
-        PctConfirm <= 5 ~ "crow_red",
-        PctConfirm <= 10 ~ "crow_yellow",
-        PctConfirm <= 15 ~ "crow_green",
-        PctConfirm <= 20 ~ "crow_teal",
-        PctConfirm <= 25 ~ "crow_blue",
-        PctConfirm > 25 ~ "crow_purple")
-      )
   
   ### palette for Diurnal Hours
-  ### Grey = #808080FF, Yellow = #FDE725FF, Green = #5DC863FF, Teal = #21908DFF,  Blue = #3B528BFF, Purple = #440154FF
-           
   
   breedingpal <- colorBin(
     "viridis",
@@ -1567,12 +1079,7 @@ insideBlockAdj <- 0.003
     bins = c(0.1, winterHrsDiurnalCriteriaMin, Inf),
     reverse = TRUE
     )
-  # breedingpal <- colorBin(
-  #   "viridis",
-  #   pb_map$breedHrsDiurnal,
-  #   bins = c(0.1,5,10,15,breedHrsDiurnalCriteriaMin,Inf),
-  #   reverse = TRUE
-  #   )
+
   breedingpalnum <- colorNumeric(
     "viridis",
     pb_map$breedHrsDiurnal,
@@ -1600,15 +1107,7 @@ insideBlockAdj <- 0.003
     "#808080FF",
     "#FDE725FF",
     "#5DC863FF"
-    # "#21908DFF",
-    # "#3B528BFF",
-    # " #440154FF"
     )
-  # diurnal_colors <- c(
-  #   "ncba_white",
-  #   "ncba_gray",
-  #   "ncba_blue"
-  #   )
   diurnal_symbols <- Map(
     f = makeSymbol,
     shape = diurnal_shapes,

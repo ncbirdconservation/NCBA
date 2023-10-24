@@ -373,41 +373,6 @@ get_block_gap_spp <- function(blockid){
 
 }
 
-# DEPRECATED
-# get_block_checklists <- function(block = "", portal = FALSE) (
-#   # Retrieves data from MongoDB Atlas implementation
-#   #
-#   # Description:
-#   #   Returns a dataframe of records from the NC Bird Atlas MongoDB 
-#       implementation in a format to plot on the map.
-#   #
-#   # Arguments:
-#   # block -- string that corresponds to the ID_NCBA_BLOCK field
-#   #
-#   # Examples:
-#   #   1. Retrieve checklists submitted to the portal
-#           from the GRIMESLAND-CW block
-#   #     get_block_checklists('GRIMESLAND-CW', TRUE)
-#
-#   if (block != ""){
-#     if (portal) {
-#       query <- 
-#           str_interp(
-  #           '{"ID_NCBA_BLOCK":"${block}", "PROJECT_CODE":"EBIRD_ATL_NC"}')
-#     } else {
-#       query <- str_interp('{"ID_NCBA_BLOCK":"${block}"}')
-#     }
-#     print(query)
-#
-#     filter <- str_interp('{"LATITUDE":1, "LONGITUDE":1, ',
-#       '"SAMPLING_EVENT_IDENTIFIER":1, "LOCALITY_ID":1, ',
-#       '"OBSERVATION_DATE":1}'
-#     print(filter)
-#
-#     return(get_ebd_data(query, filter))
-#   }
-#
-# )
 #############################################################################
 # Species
 get_spp_obs <- function(species, filter){
@@ -504,24 +469,11 @@ get_block_summary <- function(id_ncba_block) {
 
 ## for overview map
 get_block_summaries <- function() {
-  # blocksum <- m_blocksum$find(
-  #   fields = '{ "ID_NCBA_BLOCK": true, "county": true, "region": true, "portal.breeding.hrsDiurnal": true, "portal.breeding.hrsNocturnal": true,
-  #               "portal.wintering.hrsDiurnal": true, "portal.wintering.hrsNocturnal": true, "portal.breeding.sppCountConfirmed": true, "portal.breeding.sppPctConfirmed":true,
-  #               "portal.breeding.sppCountProbable": true, "portal.breeding.sppCountPossible": true, "portal.breeding.sppCountCoded": true, "portal.breeding.sppCountDetected": true }',)
   blocksum_filter <- '{"sppList": 0}'
 
   blocksum <- m_block_summaries$find("{}", blocksum_filter)
 
-  # blocksum <-  tibble(blocksum)
-
-  # names(blocksum)
-
-  # blocksum <- blocksum %>%
-  #   unnest_wider("portal", names_sep = "_") %>% 
-  #   unnest_wider("portal_breeding", names_sep = "_") %>% 
-  #   unnest_wider("portal_wintering", names_sep = "_")
-
   blocksum <- as.data.frame(blocksum)
-  print(head(blocksum))
+  # print(head(blocksum))
   return(blocksum)
 }
