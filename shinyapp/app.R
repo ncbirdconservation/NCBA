@@ -636,7 +636,10 @@ server <- function(input, output, session) {
 
       spp_blocks <- mutate(
         spp_blocks,
-        blocklink = sprintf('https://ebird.org/atlasnc/block/%s', spp_blocks$ID_BLOCK_CODE)
+        blocklink = sprintf(
+          'https://ebird.org/atlasnc/block/%s',
+          spp_blocks$ID_BLOCK_CODE
+          )
       )
       output$block_breedcode_table <- renderTable(table(spp_blocks$breedcat))
 
@@ -953,7 +956,7 @@ insideBlockAdj <- 0.003
       ## winter Species (right bar)
       # Layers Control (Making Icons as Overlay Layers)
       addLayersControl(data = pb_map,
-        baseGroups = c("Dark No Labels", "Street Map"),
+        baseGroups = c("Street Map", "Dark No Labels"),
         overlayGroups = c(
           "Breeding Diurnal Hours",
           "Breeding Coded",
