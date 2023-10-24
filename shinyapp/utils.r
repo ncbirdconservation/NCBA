@@ -451,7 +451,6 @@ print(head(species_list))
 
 ###############################################################################
 # Block level summaries
-
 # block_data <- read.csv("input_data/blocks.csv") %>% filter(COUNTY == "WAKE")
 block_data <- get_block_data()
 # priority_block_geojson <- readLines("input_data/blocks_priority.geojson")
@@ -498,6 +497,10 @@ get_block_hours <- function(id_ncba_block) {
   }
 }
 
+get_block_summary <- function(id_ncba_block) {
+
+    q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}"}')
+}
 
 ## for overview map
 get_block_summaries <- function() {

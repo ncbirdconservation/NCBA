@@ -53,7 +53,7 @@ source("blocks.r")
 source("utils.r") #utilities file
 source("spp.r") #species function file
 source("blkcumhrfunc.r") #block hour graph
-source("ncba_functions_shiny.r") #add this later to sync with Nathan work
+source("ncba_functions_shiny.R") #add this later to sync with Nathan work
 
 # MAP CONSTANTS
 nc_center_lat = 35.5
@@ -353,7 +353,15 @@ server <- function(input, output, session) {
     get_ebd_data(q, "{}") #get all fields
 
   })
+  current_block_summary <- reactive({
+    req(current_block_r())
+    cblock <- rv_block$id
 
+    q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}"}')
+
+    m_block_summaries$find(q, "{}") #get all fields
+
+  })
 
   # Applies filter WHEN CRITERIA CHANGES
   current_block_ebd_filtered <- reactive({
@@ -497,115 +505,162 @@ server <- function(input, output, session) {
 
   ## BREEDING STATS ----------------------------------------------------
   output$block_breeding_stats <- renderUI({
-    req(current_block_ebd(), current_block_ebd_filtered())
+    req(current_block_summary())
     print("rendering block stats")
     #ensure records returned
     validate(
-      need(current_block_ebd(), "No checklists submitted.")
+      need(current_block_summary(), "No checklists submitted.")
     )
 
+    HTML(paste0(
+      "<h4>Breeding</h4>",
+      "Observed: ",
+      current_block_summary()$breedCountDetected + current_block_summary()$breedCountCoded,
+      "<br/>Coded: ",
+      current_block_summary()$breedCountCoded,
+      "<br/>Confirmed: ",
+      paste0(
+        current_block_summary()$breedCountConfirmed,
+        " (",
+        round(100 * current_block_summary()$breedPctConfirmed, 1),
+        "%)"
+        ),
+      "<br/>Possible: ",
+      paste0(
+        current_block_summary()$breedCountPossible,
+        " (",
+        round(100 * current_block_summary()$breedPctPossible, 1),
+        "%)"
+        ),
+      "<br/>Daytime Hours: ",
+      round(current_block_summary()$breedHrsDiurnal, 1),
+      "<br/>Daytime Visits: ",
+      current_block_summary()$breedCountDiurnalChecklists,
+      "<br/>Nocturnal Hours: ",
+      current_block_summary()$breedCountNocturnalChecklists,
+      "<h4>Winter</h4>",
+      "Observed: ",
+      current_block_summary()$winterCountDetected,
+      "<br/>Daytime Hrs: ",
+        round(current_block_summary()$winterHrsDiurnal, 1),
+      "<br/>Daytime Visits: ",
+      current_block_summary()$winterCountDiurnalChecklists,
+      "<br/>Nocturnal Hrs: ",
+      current_block_summary()$winterCountDiurnalChecklists
 
-    ### Block Species ----------------------------------------------------
-    sa_list <- spp_accumulation_results()$spp_unique
-
-    spp_total <- nrow(sa_list["spp"])
-    # confirmed_total <- nrow(filter(sa_list, bcat == "C4" ))
-    # if ((spp_total*0.5)<confirmed_total) {
-    #   confirmed_class = "success"
-    # } else {
-    #   confirmed_class = "failed"
-    # }
-
-    # add conditional formatting if criteria met
-    num_spp_total = paste("Species: ", nrow(sa_list["spp"]) )
-    print(num_spp_total)
-    num_c = nrow(filter(sa_list, bcat == "C4" ))
-    num_r = nrow(filter(sa_list, bcat == "C3"))
-    num_p = nrow(filter(sa_list, bcat == "C2"))
-    num_coded = num_c + num_r + num_p
-    print(num_coded)
-    num_coded <- num_coded %>% replace(is.na(.),0)
-    # num_o = num_spp_total - num_coded
-    pct_c = (num_c/num_coded)*100
-    pct_r = (num_r/num_coded)*100
-    pct_p = (num_p/num_coded)*100
-    print(pct_c)
-    print(pct_r)
-    print(pct_p)
-    # leg_p = paste0('Possible (', pct_p , '%)')
-    # leg_r = paste0('Probable (', pct_r , '%)')
-    # leg_c = paste0('Confirmed (', pct_c , '%)')
-
-    num_breed_confirm <- paste(
-      "Confirmed (C4):", num_c,  " (", format(pct_c, digits=1), "%)")
-    num_breed_prob <- paste(
-      "Probable (C3):", num_r, " (", format(pct_r,digits=1) , "%)")
-    num_breed_poss <- paste(
-      "Possible (C2):", num_p, " (", format(pct_p,digits=1), "%)")
-    
-    spp_crp <- c('Possible' = num_p, 'Probable' = num_r, 'Confirmed' = num_c)
-    # waf <- waffle(
-    #       spp_crp,
-    #       rows = 5,
-    #       size = 1,
-    #       colors = c('#BF78EB',alpha('#7E2AB3', 1/3),'#300C56'),
-    #       title = "Species Breeding Status",
-    #       legend_pos = "bottom"
-    #   )
-    # print(waf)
-
-    ### Block Hours ----------------------------------------------------
-    diurnal_hours <- block_hrs_results()$total_hr - block_hrs_results()$noc_hr
-
-    diurnal_hours_target <- 20
-    if (input$season_radio == "Non-Breeding") {
-      diurnal_hours_target <- 10
-    }
-
-    diurnal_hours_class <- "failed"
-    if (diurnal_hours >= diurnal_hours_target) {
-      diurnal_hours_class <- "success"
-    }
-
-    nocturnal_hours_class <- "failed"
-    if (block_hrs_results()$noc_hr >= 2) {
-      nocturnal_hours_class <- "success"
-    }
-
-    num_diurnal_hours <- paste(
-      "Diurnal:<span class='",diurnal_hours_class, "'>",
-      format(diurnal_hours, trim=TRUE, digits=1),
-      " hrs</span>")
-    num_nocturnal_hours <- paste(
-      "Nocturnal:<span class='", nocturnal_hours_class, "'>",
-      format(block_hrs_results()$noc_hr, trim=TRUE, digits=1),
-      " hrs</span>")
-    num_total_hours <- paste(
-      "Total:<span class=''>",
-      format(block_hrs_results()$total_hr, trim=TRUE, digits=1),
-      " hrs</span>")
-
-    print("troubleshooting duplicate block stats:")
-    # print("block hrs results:total_hr", 
-    #   format(block_hrs_results()$total_hr, trim=TRUE, digits=1))
-    # print(block_hrs_results())
-
-    # HTML(paste(
-    #   num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss,
-    #   num_breed_hours, sep='<br/>'))
-    HTML(paste(
-      "<h4>Species</h4>",
-      num_spp_total,
-      num_breed_confirm,
-      num_breed_prob,
-      num_breed_poss,
-      "<h4>Hours</h4>",
-      num_diurnal_hours,
-      num_nocturnal_hours,
-      num_total_hours,
-      sep='<br/>'))
+    ))
 
   })
+  # output$block_breeding_stats <- renderUI({
+  #   req(current_block_ebd(), current_block_ebd_filtered())
+  #   print("rendering block stats")
+  #   #ensure records returned
+  #   validate(
+  #     need(current_block_ebd(), "No checklists submitted.")
+  #   )
+
+
+  #   ### Block Species ----------------------------------------------------
+  #   sa_list <- spp_accumulation_results()$spp_unique
+
+  #   spp_total <- nrow(sa_list["spp"])
+  #   # confirmed_total <- nrow(filter(sa_list, bcat == "C4" ))
+  #   # if ((spp_total*0.5)<confirmed_total) {
+  #   #   confirmed_class = "success"
+  #   # } else {
+  #   #   confirmed_class = "failed"
+  #   # }
+
+  #   # add conditional formatting if criteria met
+  #   num_spp_total = paste("Species: ", nrow(sa_list["spp"]) )
+  #   print(num_spp_total)
+  #   num_c = nrow(filter(sa_list, bcat == "C4" ))
+  #   num_r = nrow(filter(sa_list, bcat == "C3"))
+  #   num_p = nrow(filter(sa_list, bcat == "C2"))
+  #   num_coded = num_c + num_r + num_p
+  #   print(num_coded)
+  #   num_coded <- num_coded %>% replace(is.na(.),0)
+  #   # num_o = num_spp_total - num_coded
+  #   pct_c = (num_c/num_coded)*100
+  #   pct_r = (num_r/num_coded)*100
+  #   pct_p = (num_p/num_coded)*100
+  #   print(pct_c)
+  #   print(pct_r)
+  #   print(pct_p)
+  #   # leg_p = paste0('Possible (', pct_p , '%)')
+  #   # leg_r = paste0('Probable (', pct_r , '%)')
+  #   # leg_c = paste0('Confirmed (', pct_c , '%)')
+
+  #   num_breed_confirm <- paste(
+  #     "Confirmed (C4):", num_c,  " (", format(pct_c, digits=1), "%)")
+  #   num_breed_prob <- paste(
+  #     "Probable (C3):", num_r, " (", format(pct_r,digits=1) , "%)")
+  #   num_breed_poss <- paste(
+  #     "Possible (C2):", num_p, " (", format(pct_p,digits=1), "%)")
+    
+  #   spp_crp <- c('Possible' = num_p, 'Probable' = num_r, 'Confirmed' = num_c)
+  #   # waf <- waffle(
+  #   #       spp_crp,
+  #   #       rows = 5,
+  #   #       size = 1,
+  #   #       colors = c('#BF78EB',alpha('#7E2AB3', 1/3),'#300C56'),
+  #   #       title = "Species Breeding Status",
+  #   #       legend_pos = "bottom"
+  #   #   )
+  #   # print(waf)
+
+  #   ### Block Hours ----------------------------------------------------
+  #   diurnal_hours <- block_hrs_results()$total_hr - block_hrs_results()$noc_hr
+
+  #   diurnal_hours_target <- 20
+  #   if (input$season_radio == "Non-Breeding") {
+  #     diurnal_hours_target <- 10
+  #   }
+
+  #   diurnal_hours_class <- "failed"
+  #   if (diurnal_hours >= diurnal_hours_target) {
+  #     diurnal_hours_class <- "success"
+  #   }
+
+  #   nocturnal_hours_class <- "failed"
+  #   if (block_hrs_results()$noc_hr >= 2) {
+  #     nocturnal_hours_class <- "success"
+  #   }
+
+  #   num_diurnal_hours <- paste(
+  #     "Diurnal:<span class='",diurnal_hours_class, "'>",
+  #     format(diurnal_hours, trim=TRUE, digits=1),
+  #     " hrs</span>")
+  #   num_nocturnal_hours <- paste(
+  #     "Nocturnal:<span class='", nocturnal_hours_class, "'>",
+  #     format(block_hrs_results()$noc_hr, trim=TRUE, digits=1),
+  #     " hrs</span>")
+  #   num_total_hours <- paste(
+  #     "Total:<span class=''>",
+  #     format(block_hrs_results()$total_hr, trim=TRUE, digits=1),
+  #     " hrs</span>")
+
+  #   print("troubleshooting duplicate block stats:")
+  #   # print("block hrs results:total_hr", 
+  #   #   format(block_hrs_results()$total_hr, trim=TRUE, digits=1))
+  #   # print(block_hrs_results())
+
+  #   # HTML(paste(
+  #   #   num_spp_total, num_breed_confirm, num_breed_prob, num_breed_poss,
+  #   #   num_breed_hours, sep='<br/>'))
+  #   HTML(paste(
+  #     "<h4>Species</h4>",
+  #     num_spp_total,
+  #     num_breed_confirm,
+  #     num_breed_prob,
+  #     num_breed_poss,
+  #     "<h4>Hours</h4>",
+  #     num_diurnal_hours,
+  #     num_nocturnal_hours,
+  #     num_total_hours,
+  #     sep='<br/>'))
+
+  # })
 
 
   #### DISPLAY BLOCK HOURS SUMMARY PLOT ------
@@ -1076,14 +1131,14 @@ insideBlockAdj <- 0.003
       ) %>%
       ### Base Groups (Satellite Imagery and Blocks )
       addProviderTiles(
-        "CartoDB.DarkMatterNoLabels",
-        options = providerTileOptions(opacity = 1),
-        group = "Dark No Labels"
-      ) %>%
-      addProviderTiles(
         "OpenStreetMap.Mapnik",
         options = providerTileOptions(opacity = 1),
         group = "Street Map"
+      ) %>%
+      addProviderTiles(
+        "CartoDB.DarkMatterNoLabels",
+        options = providerTileOptions(opacity = 1),
+        group = "Dark No Labels"
       ) %>%
       #add block outlines
       addRectangles(
