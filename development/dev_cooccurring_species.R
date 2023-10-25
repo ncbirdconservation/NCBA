@@ -32,5 +32,3 @@ summ <- records %>%
   arrange(desc(count))
 
 print(summ)
-
-
