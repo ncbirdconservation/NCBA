@@ -429,8 +429,13 @@ server <- function(input, output, session) {
     validate(
       need(current_block_summary(), "No checklists submitted.")
     )
-
+    complete_text <- ifelse(
+      current_block_summary()$STATUS == "Complete",
+      "<h2>COMPLETED!</h2>",
+      ""
+    )
     HTML(paste0(
+      complete_text,
       "<h4>Breeding</h4>",
       "<p>Observed: ",
       current_block_summary()$breedCountDetected + current_block_summary()$breedCountCoded,
@@ -543,14 +548,40 @@ server <- function(input, output, session) {
     #setup block geojson layer
     print("starting map, adding blocks")
 
+    ## Add fill value based on block status
+    priority_block_data <- priority_block_data %>%
+    mutate(
+      fillComplete = ifelse(
+        STATUS == "Complete", ncba_white, "#777777"
+      )
+    ) %>%
+    mutate(
+      colorComplete = ifelse(
+        STATUS == "Complete", ncba_blue, ncba_white
+      )
+    ) %>%
+    mutate(
+      fillOpac = ifelse(
+        STATUS == "Complete", 1, 0.05
+      )
+    )
+
     leaflet() %>%
       setView(
         lng = nc_center_lng,
         lat = nc_center_lat,
         zoom = nc_center_zoom) %>%
       # addTiles() %>%
-      addProviderTiles(providers$Esri.WorldImagery) %>%
-
+      addProviderTiles(
+        providers$Esri.WorldImagery,
+        options = providerTileOptions(opacity = 1),
+        group = "Aerial Map"
+        ) %>%
+      addProviderTiles(
+        "OpenStreetMap.Mapnik",
+        options = providerTileOptions(opacity = 1),
+        group = "Street Map"
+      ) %>%
       addRectangles(
         data = priority_block_data,
         layerId = ~ ID_NCBA_BLOCK,
@@ -558,14 +589,22 @@ server <- function(input, output, session) {
         lat1 = ~ NW_Y,
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
-        weight= 2,
-        color=ncba_white,
+        weight = 2,
+        color = ncba_white,
+        # color = ~ colorComplete,
         opacity = 0.9,
-        fillColor='#777777',
-        fillOpacity = 0.05,
+        # fillColor = "#777777",
+        fillColor = ~ fillComplete,
+        # fillOpacity = 0.05,
+        fillOpacity = ~ fillOpac,
         fill = TRUE,
         label = ~ ID_NCBA_BLOCK
-        )
+        ) %>%
+        addLayersControl(
+          data = priority_block_data,
+          baseGroups = c("Street Map", "Aerial Map"),
+          options = layersControlOptions(collapsed = FALSE)
+          )
   })
 
   ### ZOOM MAP TO SELECTED BLOCK ------
@@ -860,6 +899,9 @@ insideBlockAdj <- 0.003
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
         stroke = TRUE,
+        fillColor = ~ fillComplete,
+        fill = TRUE,
+        fillOpacity = ~ fillOpac,
         weight = 2.5,
         color = ncba_gray,
         label = ~paste0(
@@ -895,9 +937,11 @@ insideBlockAdj <- 0.003
         lat1 = ~ NW_Y,
         lng2 = ~ SE_X,
         lat2 = ~ NW_Y,
-        color = ~breedingcodedpal(breedCountCoded),
-        stroke = TRUE,
+        color = ~ncbapal(bbcgCoded),
+        # color = ~breedingcodedpal(breedCountCoded),
+        stroke = ~ !fillBool,
         weight = 5,
+        opacity = 1,
         fill = FALSE,
         group = "Breeding Coded"
       ) %>%
@@ -908,9 +952,10 @@ insideBlockAdj <- 0.003
         lat1 = ~ NW_Y,
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
-        color = ~breedingconfpal(breedPctConfirmed),
-        stroke = TRUE,
+        color = ~ ncbapal(bbcgConfirmed),
+        stroke = ~ !fillBool,
         weight = 5,
+        opacity = 1,
         fill = FALSE,
         group = "Breeding Confirmed"
       ) %>%
@@ -921,9 +966,10 @@ insideBlockAdj <- 0.003
         lat1 = ~ SE_Y,
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
-        color = ~breedingposspal(breedPctPossible),
-        stroke = TRUE,
+        color = ~ ncbapal(bbcgPossible),
+        stroke = ~ !fillBool,
         weight = 5,
+        opacity = 1,
         fill = FALSE,
         group = "Breeding Possible"
       ) %>%
@@ -934,9 +980,10 @@ insideBlockAdj <- 0.003
         lat1 = ~ NW_Y,
         lng2 = ~ NW_X,
         lat2 = ~ SE_Y,
-        color = ~breedingpal(breedHrsDiurnal),
-        stroke = TRUE,
+        color = ~ ncbapal(bbcgPossible),
+        stroke = ~ !fillBool,
         weight = 5,
+        opacity = 1,
         fill = FALSE,
         group = "Breeding Diurnal Hrs"
       ) %>%
@@ -950,6 +997,7 @@ insideBlockAdj <- 0.003
         color = ~winterpal(winterHrsDiurnal),
         stroke = TRUE,
         weight = 5,
+        opacity = 1,
         fill = FALSE,
         group = "Winter Diurnal Hrs"
       ) %>%
@@ -977,8 +1025,7 @@ insideBlockAdj <- 0.003
         images = diurnal_symbols,
         labels = c(
           "0",
-          paste("<", breedCountCodedCriteriaMin),
-          paste("≥", breedCountCodedCriteriaMin)
+          paste(">", breedCountCodedCriteriaMin)
           ),
         orientation = "vertical",
         title = "Breeding Coded Species (top)",
@@ -991,8 +1038,7 @@ insideBlockAdj <- 0.003
         images = diurnal_symbols,
         labels = c(
           "0",
-          paste("<", round(100 * breedPctConfirmedCriteriaMin, 1)),
-          paste("≥", round(100 * breedPctConfirmedCriteriaMin, 1))
+          paste(">", round(100 * breedPctConfirmedCriteriaMin, 1))
           ),
         labelStyle = "font-size: 14px; vertical-align: center;",
         title = "% Species Confirmed (right)",
@@ -1004,9 +1050,8 @@ insideBlockAdj <- 0.003
       addLegendImage(
         images = diurnal_symbols,
         labels = c(
-          "0",
-          paste("≥", round(100 * breedPctPossibleCriteriaMax, 1)),
-          paste("<", round(100 * breedPctPossibleCriteriaMax, 1))
+          "",
+          paste("<", round(100 * breedPctPossibleCriteriaMax, 1), "%")
           ),
         labelStyle = "font-size: 14px; vertical-align: center;",
         title = "% Species Possible (bottom)",
@@ -1018,9 +1063,8 @@ insideBlockAdj <- 0.003
       addLegendImage(
         images = diurnal_symbols,
         labels = c(
-          "0.01",
-          paste("<", breedHrsDiurnalCriteriaMin),
-          breedHrsDiurnalCriteriaMin
+          "0",
+          paste(">", breedHrsDiurnalCriteriaMin)
           ), 
         orientation = "vertical",
         title = "Breeding Diurnal Hrs (left)",
@@ -1037,10 +1081,30 @@ insideBlockAdj <- 0.003
     get_block_summaries(),
     all = TRUE
     )
+  print(head(pb_map))
   
   ## Convert percentages to numbers instead of decimals
   pb_map <- pb_map %>%
-    mutate(PctConfirm = round( breedPctConfirmed * 100, 1))
+    mutate(PctConfirm = round( breedPctConfirmed * 100, 1)) %>%
+  ## Add fill value based on block status
+    mutate(
+      fillComplete = ifelse(
+        STATUS == "Complete", ncba_blue,
+        ncba_white
+      )
+    ) %>%
+    mutate(
+      fillOpac = ifelse(
+        STATUS == "Complete", 1,
+        0.05
+      )
+    ) %>%
+    mutate(
+      fillBool = ifelse(
+        STATUS == "Complete", TRUE,
+        FALSE
+      )
+    )
 
   ### Centroids of Priority Blocks
   centr_x <- (pb_map$NW_X + pb_map$SE_X)/2
@@ -1051,13 +1115,23 @@ insideBlockAdj <- 0.003
   ### Custom Crow icon is from Font Awesome (https://fontawesome.com/icons)
   
   ### legend components for breeding diurnal hours
-  diurnal_shapes <- c('rect','rect','rect')
+  # diurnal_shapes <- c('rect','rect','rect')
+  # diurnal_colors <- c(
+  #   "#b3b3b3",
+  #   "#FDE725FF",
+  #   "#3c8d40"
+  #   )
+  diurnal_shapes <- c('rect','rect')
   diurnal_colors <- c(
     "#b3b3b3",
-    "#FDE725FF",
-    "#3c8d40"
+    ncba_blue
     )
   diurnal_palette <- palette(diurnal_colors)
+  ncba_colors <- c(
+    "#b3b3b3",
+    ncba_blue
+    )
+  ncba_palette <- palette(ncba_colors)
   diurnal_symbols <- Map(
     f = makeSymbol,
     shape = diurnal_shapes,
@@ -1068,60 +1142,66 @@ insideBlockAdj <- 0.003
     width = 20,
     `stroke-width` = 2
     )
+
   ### palette for Diurnal Hours
   
+  ncbapal <- colorFactor(
+    ncba_palette,
+    levels = c(0, 1)
+    )
   breedingcodedpal <- colorBin(
     diurnal_palette,
     pb_map$breedCountCoded,
-    bins = c(0.1, (breedCountCodedCriteriaMin - 1), Inf),
-    reverse = FALSE
+    bins = c(0, (breedCountCodedCriteriaMin + 1)),
+    # bins = c(0.1, (breedCountCodedCriteriaMin - 1), Inf),
+    reverse = TRUE
     )
   breedingconfpal <- colorBin(
     diurnal_palette,
     pb_map$breedPctConfirmed,
-    bins = c(0.01, breedPctConfirmedCriteriaMin, Inf),
-    reverse = FALSE
+    bins = c(0, (breedPctConfirmedCriteriaMin - 0.1), Inf),
+    reverse = TRUE
     )
   breedingposspal <- colorBin(
     diurnal_palette,
     pb_map$breedPctPossible,
-    bins = c(0.01, breedPctPossibleCriteriaMax, Inf),
+    bins = c(0, (breedPctPossibleCriteriaMax - 0.1), Inf),
     reverse = TRUE
     )
   breedingpal <- colorBin(
     diurnal_palette,
     pb_map$breedHrsDiurnal,
-    bins = c(0.01, breedHrsDiurnalCriteriaMin, Inf),
+    bins = c(0, (breedHrsDiurnalCriteriaMin - 0.1), Inf),
     reverse = FALSE
     )
   winterpal <- colorBin(
     diurnal_palette,
     pb_map$winterHrsDiurnal,
-    bins = c(0.1, winterHrsDiurnalCriteriaMin, Inf),
+    bins = c(0, (winterHrsDiurnalCriteriaMin - 0.1), Inf),
     reverse = TRUE
     )
 
-  breedingpalnum <- colorNumeric(
-    diurnal_palette,
-    pb_map$breedHrsDiurnal,
-    reverse = TRUE
-    )
+  # breedingpalnum <- colorNumeric(
+  #   diurnal_palette,
+  #   pb_map$breedHrsDiurnal,
+  #   reverse = TRUE
+  #   )
 
   
-  winterbinpal <- colorBin(
-    diurnal_palette,
-    pb_map$winterHrsDiurnal,
-    bins = c(0.1,2.5,5,7.5,10,Inf),
-    reverse = TRUE
-    )
+  # winterbinpal <- colorBin(
+  #   diurnal_palette,
+  #   pb_map$winterHrsDiurnal,
+  #   bins = c(0.1,2.5,5,7.5,10,Inf),
+  #   reverse = TRUE
+  #   )
   
-  ### palette for Nocturnal Hours
-  binpalnight <- colorBin(
-    diurnal_palette,
-    pb_map$breedHrsNocturnal,
-    bins = c(0.1,0.5,1,1.5,2,Inf),
-    reverse = TRUE
-    )
+  # ### palette for Nocturnal Hours
+  # binpalnight <- colorBin(
+  #   diurnal_palette,
+  #   pb_map$breedHrsNocturnal,
+  #   bins = c(0.1,0.5,1,1.5,2,Inf),
+  #   reverse = TRUE
+  #   )
   
   # ### legend for winter diurnal hours
   # winter_shapes <- c('circle','circle','circle','circle','circle','circle')
