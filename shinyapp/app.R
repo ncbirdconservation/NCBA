@@ -907,7 +907,10 @@ insideBlockAdj <- 0.003
         label = ~paste0(
             "<strong>",
             ID_NCBA_BLOCK,
-            "</strong><br>Breeding Coded: ",
+            "<br/>",
+            STATUS,
+            "</strong>",
+            "<br/>Breeding Coded: ",
             breedCountCoded,
             "</strong><br>Breeding Confirmed: ",
             paste(round(100 * breedPctConfirmed, 1), "%", sep = ""),
@@ -980,27 +983,27 @@ insideBlockAdj <- 0.003
         lat1 = ~ NW_Y,
         lng2 = ~ NW_X,
         lat2 = ~ SE_Y,
-        color = ~ ncbapal(bbcgPossible),
+        color = ~ ncbapal(bbcgTotalEffortHrs),
         stroke = ~ !fillBool,
         weight = 5,
         opacity = 1,
         fill = FALSE,
         group = "Breeding Diurnal Hrs"
       ) %>%
-      ## Winter Diurnal Hours (top under bar)
-      addRectangles(
-        data = pb_map,
-        lng1 = ~ NW_X + insideBlockAdj,
-        lat1 = ~ NW_Y - insideBlockAdj,
-        lng2 = ~ SE_X - insideBlockAdj,
-        lat2 = ~ NW_Y - insideBlockAdj,
-        color = ~winterpal(winterHrsDiurnal),
-        stroke = TRUE,
-        weight = 5,
-        opacity = 1,
-        fill = FALSE,
-        group = "Winter Diurnal Hrs"
-      ) %>%
+      # ## Winter Diurnal Hours (top under bar)
+      # addRectangles(
+      #   data = pb_map,
+      #   lng1 = ~ NW_X + insideBlockAdj,
+      #   lat1 = ~ NW_Y - insideBlockAdj,
+      #   lng2 = ~ SE_X - insideBlockAdj,
+      #   lat2 = ~ NW_Y - insideBlockAdj,
+      #   color = ~winterpal(winterHrsDiurnal),
+      #   stroke = TRUE,
+      #   weight = 5,
+      #   opacity = 1,
+      #   fill = FALSE,
+      #   group = "Winter Diurnal Hrs"
+      # ) %>%
       ## winter Species (right bar)
       # Layers Control (Making Icons as Overlay Layers)
       addLayersControl(data = pb_map,
@@ -1009,17 +1012,17 @@ insideBlockAdj <- 0.003
           "Breeding Coded",
           "Breeding Confirmed",
           "Breeding Possible",
-          "Breeding Diurnal Hrs",
-          "Winter Diurnal Hrs"
+          "Breeding Diurnal Hrs"
+          # "Winter Diurnal Hrs"
           ),
         options = layersControlOptions(collapsed = FALSE)
       ) %>%
       # # Hide Nocturnal Hours and Confirmed Species Icons upon Map Start
-      hideGroup(
-        c(
-          "Winter Diurnal Hrs"
-          )
-        ) %>%
+      # hideGroup(
+      #   c(
+      #     "Winter Diurnal Hrs"
+      #     )
+      #   ) %>%
       # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
       addLegendImage(
         images = diurnal_symbols,
