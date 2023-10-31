@@ -4,7 +4,8 @@
 # This script creates a data frame with tallies of diurnal and nocturnal
 # survey hours by block.  It also includes columns for priority/non-priority
 # block, diurnal progress (percent of the way to 20 hours), and a tally of the 
-# number of nocturnal checklists.  
+# number of nocturnal checklists by season (winter = nov 1 - feb 28 and summer =
+# mar 1- august 31.  
 #   Nocturnal status is based on the ncba_nocturnal field and nocturnal effort
 # is based upon ncba_nocturnal_duration.
 setwd("~/Code/NCBA/resources")
@@ -120,6 +121,7 @@ block_hours <- left_join(block_hours, blocks,
                          by = join_by("atlas_block" == "ID_BLOCK_CODE")) %>%
   select("ID_EBD_NAME", everything())
 
+# SAVE ------------------------------------------------------------------------
 # Save to csv file
 write.csv(block_hours, out_file)
 
