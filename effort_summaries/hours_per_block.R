@@ -69,7 +69,7 @@ nocturnal.N <- checklists %>%
 # Make a data frame with count of nocturnal SUMMER checklists
 nocturnal.N.S <- checklists %>%
   filter(ncba_nocturnal == 1,
-         yday(observation_date) >= 60 & yday(observation_date) <= 243) %>%
+         yday(observation_date) >= 59 & yday(observation_date) <= 243) %>%
   select(c("atlas_block", "ncba_nocturnal")) %>%
   group_by(atlas_block) %>%
   summarize(nocturnal_checklists_summer = n()) %>%
@@ -78,7 +78,7 @@ nocturnal.N.S <- checklists %>%
 # Make a data frame with count of nocturnal WINTER checklists
 nocturnal.N.W <- checklists %>%
   filter(ncba_nocturnal == 1,
-         yday(observation_date) >= 305 | yday(observation_date) <= 59) %>%
+         yday(observation_date) >= 304 | yday(observation_date) <= 58) %>%
   select(c("atlas_block", "ncba_nocturnal")) %>%
   group_by(atlas_block) %>%
   summarize(nocturnal_checklists_winter = n()) %>%
