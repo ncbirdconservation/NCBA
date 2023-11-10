@@ -1,0 +1,330 @@
+# NLCD land cover bias in NCBA sampling effort
+N. Tarr
+October 2023
+
+# Introduction
+This document details an approach for assessing the bias of NCBA effort in terms of the land cover types surveyed.  The assessment is performed on a per-block basis with the goal of answering questions such as, "which land cover types have been sufficiently sampled?"; "which land cover types should be prioritized for sampling in the future?"; and "what proportion of the surveyed area is urban (or any other class)?".  The approach is based upon the area covered by surveys, not the number or duration of surveys.  
+
+The general process is an intersection of NCBA point count and atlaser data with NLCD data.  In one summary, all survey data is dissolved into a single polygon that represents the total surveyed area within the block (the "footprint"), and land cover composition is summarized within the footprint as the area of each class within the footprint, as well as the proportion of the footprint in each class.  In addition, class area and proportion are calculated within the entire block.  Comparisons of land cover class composition within the footprint to the whole block reveal bias in land cover types visited.
+
+Without access to the paths of traveling surveys (eBird checklists), there is uncertainty about the survey footprints.  Additionally, uncertainty exists due to the non-fixed detection radius of checklists.  Therefore, I mapped individual survey footprints with two methods: a 100m and a 300m buffer around the checklist coordinate (locality).  Those polygons represent liberal (300m) and conservative (100m) approximations for stationary counts, but omit areas covered by traveling surveys.  Another option for traveling surveys would be to buffer their localities with distances of 100m and 300m plus the checklist travel distance.  However, that option could greatly overestimate coverage of land cover classes because many checklist paths are long.  Thus, decisions about how to represent the footprint of surveys involve a tradeoff between falsely assessing that certain classes have been undersampled (because they occurred more than 300 m from the locality coordinate of a traveling checklist) and falsely assessing that cover types have been sampled when they have not (because they are near the locality point, but off the observer's travel path).  
+
+# Methods
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+
+setwd("T:/Code/NCBA/resources")
+source("ncba_functions.R")
+setwd(work_dir)
+knitr::opts_knit$set(root.dir = work_dir)
+
+library(raster)
+library(auk)
+library(sf)
+library(tmap)
+library(tidyverse)
+library(geojsonsf)
+library(exactextractr)
+library(conflicted)
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::filter)
+```
+
+## Data
+The data needed for this assessment are 1) an atlas block dataset (simple features collection), 2) NCBA staff point count data, 3) and NLCD land cover data.
+
+### Blocks
+Atlas blocks can be obtained from the Atlas Cache as a data frame with geometries.
+```{r}
+blocks <- get_blocks(spatial = TRUE, crs = 5070,
+                     fields = c("GEOM", "ID_BLOCK_CODE", "ID_EBD_NAME"))
+
+# Preview
+plot <- ggplot() +
+  geom_sf(data = blocks, fill = "white", color = "darkgrey")
+
+show(plot)
+```
+
+### NLCD Data
+2021 NLCD data were acquired and clipped to NC.  Load that raster and create a data frame of the NLCD classification legend.
+```{r}
+nlcd <- raster("T:/BuddingProjects/LCMAP/nlcd2021_NC.tif", RAT = TRUE)
+
+# CRS test
+st_crs(blocks) == st_crs(nlcd)
+plot(nlcd)
+
+# NLCD legend data frame
+nlcd.legend <- data.frame (code = c(11, 12, 21, 22, 23, 24, 31, 41, 42, 43, 51, 52, 71, 72, 
+                                    73, 74, 81, 82, 90, 95),
+                  name = c("Open Water", "Perennial Ice/Snow", "Developed, Open Space",
+                           "Developed, Low Intensity", "Developed, Medium Intensity",
+                           "Developed, High Intensity", "Barren Land (Rock/Sand/Clay)",
+                           "Deciduous Forest", "Evergreen Forest", "Mixed Forest", "Dwarf Scrub",
+                           "Shrub/Scrub", "Grassland/Herbaceous", "Sedge/Herbaceous",
+                           "Lichens", "Moss", "Pasture/Hay", "Cultivated Crops", "Woody Wetlands",
+                           "Emergent Herbaceous Wetlands")
+                  )
+
+print(nlcd.legend)
+```
+
+### eBird Checklists and NCBA point counts
+NCBA point count data can be retrieved from the NC Bird Atlas Cache database.  Below, they are mapped and colored according to the block they are located within.
+```{r}
+setwd("T:/NCBA/species/")
+
+# connect to a specific collection (table)
+connection <- connect_ncba_db(database = "ebd_mgmt",
+                              collection = "point_counts")
+
+# retrieve point count data frame
+query <- '{}'
+  
+# Define a filter that excludes the observation column
+filter <- '{"OBSERVATIONS":0}'
+  
+# Retrieve the checklists
+point.counts <- connection$find(query = query, fields = filter) %>%
+  select(c(lat, lon, block)) %>%
+  distinct() %>%
+  # Make spatial frame
+  st_as_sf(coords=c("lon", "lat"), crs=4326) %>%
+  st_transform(5070)
+
+mutate(point.counts, temp_id = seq(1,nrow(point.counts),1))
+
+names(point.counts)[1] <- "atlas_block"
+
+# Preview
+plot(select(point.counts, atlas_block))
+```
+
+NCBA and eBird checklists can be retrieved from the Atlas Cache.  Note: if non-atlas records are retrieved, they will not have an atlas_block value.
+```{r}
+checklists <- get_checklists(project = "EBIRD_ATL_NC") %>%
+  to_EBD_format() %>%
+  auk_unique(checklists_only = TRUE) %>%
+  filter(effort_distance_km < 0.1,
+                all_species_reported == 1,
+                protocol_type %in% c("Stationary", "Traveling"),
+                str_length(atlas_block) != 0) %>%   # others should be added? !!
+   select(c(latitude, longitude, atlas_block)) %>%
+  distinct() %>%
+  st_as_sf(coords=c("longitude", "latitude"), crs=4326) %>%
+  st_transform(5070)
+
+# Preview
+plot(select(checklists, atlas_block))
+```
+
+Combine the point count and atlaser surveys.
+```{r}
+all.surveys <- checklists %>% 
+  rbind(point.counts)
+```
+
+## Analysis
+Survey footprint geometries need to be combined by block.  Use a union function to "dissolve" sites within the same block.  This produces an sf data frame with multipolygons for each block that was surveyed.  We are interested in summarizing at 100 and 300m from survey coordinates, so perform this transformation after buffering at 100m and 300m.
+```{r}
+survey.block.100 <- all.surveys %>%
+  st_buffer(100) %>%
+  group_by(atlas_block) %>%
+  summarize(st_union(geometry))
+
+# Preview
+plot(survey.block.100)
+print(head(survey.block.100))
+
+survey.block.300 <- all.surveys %>%
+  st_buffer(300) %>%
+  group_by(atlas_block) %>%
+  summarize(st_union(geometry))
+
+# Preview
+plot(survey.block.300)
+print(head(survey.block.300))
+```
+
+The exactextractr package can be used for zonal statistics, and custom summary function can be passed as an argument.  Define a function that suits our needs. 
+```{r}
+# Summarizing function, used repeatedly below
+class_in_polygon <- function(x){
+  # Computes area of each class within a polygon, as well as the 
+  # proportion of the polygon that is the class
+  list(x %>%
+    group_by(value) %>%
+    summarize(total_area = sum(coverage_area)) %>%
+    mutate(proportion = total_area/sum(total_area)))
+}
+```
+
+NLCD land cover composition of all point count survey sites within each block were computed, with both the 100m and 300m buffered survey sites.
+```{r}
+## With a 100 m buffer
+#extract the area of each raster cell covered by the footprints and summarize
+x <- exact_extract(nlcd, survey.block.100, coverage_area = TRUE, 
+                   summarize_df = TRUE, fun = class_in_polygon,
+                   progress = FALSE)
+
+#add plot names to the elements of the output list
+names(x) <- survey.block.100$atlas_block
+
+#merge the list elements into a df
+block.100.class.compo <- bind_rows(x, .id = "atlas_block") 
+names(block.100.class.compo) <- c("atlas_block", "nlcd_code", "survey_area_100", "survey_proportion_100")
+
+## Again With a 300 m buffer
+x <- exact_extract(nlcd, survey.block.300, coverage_area = TRUE, 
+                   summarize_df = TRUE, fun = class_in_polygon,
+                   progress = FALSE)
+
+names(x) <- survey.block.300$atlas_block
+
+block.300.class.compo <- bind_rows(x, .id = "atlas_block") 
+names(block.300.class.compo) <- c("atlas_block", "nlcd_code", "survey_area_300", "survey_proportion_300")
+
+## Join the tables together
+block.class.compo <- inner_join(block.100.class.compo, block.300.class.compo,
+                                by = c("atlas_block", "nlcd_code"))
+
+print(head(block.class.compo))
+```
+
+NLCD land cover composition of all blocks were computed for comparison. 
+```{r}
+#extract the area of each raster cell covered by the block and summarize
+x <- exact_extract(nlcd, blocks, coverage_area = TRUE, summarize_df = TRUE, 
+                   fun = class_in_polygon, progress = FALSE)
+
+#add plot names to the elements of the output list
+names(x) <- blocks$ID_BLOCK_CODE
+
+#merge the list elements into a df
+block.nlcd.compo <- bind_rows(x, .id = "name")
+names(block.nlcd.compo) <- c("atlas_block", "nlcd_code", "block_area", "block_proportion")
+print(head(block.nlcd.compo))
+```
+
+Combine the data frames to make a single table summarizing NLCD class composition (area and proportion of) for 100m buffer and 300m buffer footprints, as well as the entire block.
+```{r}
+block.class.summary <- merge(block.nlcd.compo, block.class.compo, by=c("atlas_block", "nlcd_code"), all.y=TRUE) %>%
+  replace(is.na(.), 0) %>%
+  merge(nlcd.legend, by.x = "nlcd_code", by.y = "code") %>%
+  left_join(select(blocks, c("ID_BLOCK_CODE", "ID_EBD_NAME")), 
+            by = join_by("atlas_block" == "ID_BLOCK_CODE"),
+            relationship = "many-to-one") %>%
+  arrange(atlas_block) %>%
+  select(c(name, everything())) %>%
+  select(c(atlas_block, ID_EBD_NAME, everything())) %>%
+  select(-c(wkt)) %>%
+  mutate_if(is.numeric, round, digits = 5)
+
+names(block.class.summary)[3] <- "class_name"
+
+print(head(block.class.summary))
+write.csv(block.class.summary, "T:/NCBA/Analyses/pc-block_nlcd_coverage_comparison.csv")
+```
+
+The proportional composition of NLCD classes can be compared between the block calculations and the dissolved survey site-block calculations to get a measure of bias because in an unbiased sample, the composition of land cover within sample sites would be the same as land cover composition within the entire block.  Here, bias was calculated as the difference between a class' prevalence within the survey sites and the entirety of blocks.
+
+* Negative values -- the class is underrepresented by the survey sites.
+* Zero -- the class representation in the survey sites is equal to that of the entire block.
+* Positive values -- the class is over represented by the survey sites.
+```{r}
+# Make a data frame of survey_proportion_100 and _300 to block_proportion
+nlcd.bias <- block.class.summary %>%
+  select(-c("survey_area_100", "survey_area_300", "nlcd_code"))
+
+# Add some columns
+nlcd.bias$bias_100 <- round(nlcd.bias$survey_proportion_100 - nlcd.bias$block_proportion, 1)
+nlcd.bias$bias_300 <- round(nlcd.bias$survey_proportion_300 - nlcd.bias$block_proportion, 1)
+nlcd.bias$block_area_km2 <- nlcd.bias$block_area/10000000
+
+# Reorganize columns
+nlcd.bias <- nlcd.bias %>%
+  select(-c("block_area", "survey_proportion_100", 
+                                  "survey_proportion_300")) %>%
+  select(c("atlas_block", "ID_EBD_NAME", "class_name", "block_area_km2", everything())) %>%
+  mutate(block_area_km2 = round(block_area_km2, digits = 2),
+         block_proportion = round(block_proportion, digits = 2))
+
+# Save
+write.csv(nlcd.bias, "T:/NCBA/Analyses/nlcd.bias.csv")
+
+# Preview
+print(head(nlcd.bias))
+```
+
+
+# Application
+For a block of interest, you can see which cover types to target in the future.
+```{r}
+# Set the block of interest
+pet.block <- "33077G8NW"
+
+# Find classes that are biased too low, based on 100 m buffer
+target100 <- nlcd.bias %>%
+  dplyr::filter(atlas_block == pet.block, bias_100 <= -0.1)
+
+# Find classes that are biased too low, based on 300 m buffer
+target300 <- nlcd.bias %>%
+  dplyr::filter(atlas_block == pet.block, bias_300 <= -0.1)
+
+# Make a list for output
+target <- list("conservative" = target100$class_name, 
+               "liberal" = target300$class_name)
+print(target)
+```
+
+...and what to avoid in the future.
+```{r}
+# Find classes that are biased too high, based on 100 m buffer
+avoid100 <- nlcd.bias %>%
+  dplyr::filter(atlas_block == pet.block, bias_100 >= 0.1)
+
+# Find classes that are biased too high, based on 300 m buffer
+avoid300 <- nlcd.bias %>%
+  dplyr::filter(atlas_block == pet.block, bias_300 >= 0.1)
+
+# Make a list for output
+avoid <- list("conservative" = avoid100$class_name, 
+               "liberal" = avoid300$class_name)
+print(avoid)
+```
+
+Bias of an individual class can also be mapped.  Here's an example with woody wetlands.
+```{r}
+evergreen <- blocks %>%
+  merge(nlcd.bias, by.x="ID_BLOCK_CODE", by.y="atlas_block", all.y=TRUE) %>%
+  filter(class_name == "Woody Wetlands") %>%
+  select(c("bias_100", "geometry"))
+
+#  Make a map
+tmap_mode("view")
+
+tm_shape(evergreen) + 
+  tm_fill(col="bias_100", n=10) +
+tm_layout(title="Woody Wetlands")
+```
+
+Developed, Open Space
+```{r}
+open <- blocks %>%
+  merge(nlcd.bias, by.x="ID_BLOCK_CODE", by.y="atlas_block", all.y=TRUE) %>%
+  filter(class_name == "Developed, Open Space") %>%
+  select(c("bias_100", "geometry"))
+
+#  Make a map
+tmap_mode("view")
+
+tm_shape(open) + 
+  tm_fill(col="bias_100", n=10) +
+tm_shape(all.surveys) +
+  tm_dots() +
+tm_layout(title="Developed, Open Space")
+```
