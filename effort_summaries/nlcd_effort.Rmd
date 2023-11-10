@@ -227,7 +227,7 @@ block.class.summary <- merge(block.nlcd.compo, block.class.compo, by=c("atlas_bl
 names(block.class.summary)[3] <- "class_name"
 
 print(head(block.class.summary))
-write.csv(block.class.summary, "T:/NCBA/Analyses/pc-block_nlcd_coverage_comparison.csv")
+write.csv(block.class.summary, "T:/NCBA/Analyses/ncba_nlcd_composition.csv")
 ```
 
 The proportional composition of NLCD classes can be compared between the block calculations and the dissolved survey site-block calculations to get a measure of bias because in an unbiased sample, the composition of land cover within sample sites would be the same as land cover composition within the entire block.  Here, bias was calculated as the difference between a class' prevalence within the survey sites and the entirety of blocks.
