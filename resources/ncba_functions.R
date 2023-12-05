@@ -2434,22 +2434,23 @@ breeding_codes <- function(lumped = TRUE){
   # Returns either a full or nested list of all breeding codes.
   
   # Arguments:
-  # collapsed -- TRUE or FALSE whether you want codes lumped into categories: 
+  # lumped -- TRUE or FALSE whether you want codes lumped into categories: 
   #   observed, possible, probable, confirmed.
   if (lumped == FALSE) {
-    list <- c("H", "S", "S7", "M", "T", "P", "C", "B", "CN", "NB", "A", "N",
+    codes <- c("H", "S", "S7", "M", "T", "P", "C", "B", "CN", "NB", "A", "N",
               "DD", "ON", "NE", "FS", "CF", "NY", "FY", "FL", "PE", "UN",
               "F", "O", "NC", "NULL")
   }
   
   if (lumped == TRUE) {
-    lists <- list(observed = c("F", "NULL", ""), 
+    codes <- list(observed = c("F", "NULL", ""), 
                   possible = c("H", "S"),
                   probable = c("S7", "M", "P", "T", "C", "N", "A", "B"), 
                   confirmed = c("PE", "CN", "NB", "DD", "UN", "ON", "FL", "CF",
                                 "FY", "FS", "CF", "NE", "NY")
                   )
   }
+  return(codes)
 }
 
 # ------------------------------------------------------------------------------

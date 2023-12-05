@@ -18,4 +18,3 @@ source("ncba_functions.R")
 connection <- connect_ncba_db(ncba_config = config, database = "ebd_mgmt", 
                               collection = "ebd")
 ```
-
