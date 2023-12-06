@@ -2674,6 +2674,15 @@ breeding_codes <- function(lumped = TRUE){
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+eBird_URL <- function(sampling_event_identifier) {
+  # Opens the webpage for a checklist.
+  ebirdURL <- 'https://ebird.org/checklist/'
+  ChecklistLink <- paste0(ebirdURL, sampling_event_identifier)
+  browseURL(ChecklistLink)
+}
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 nonEBD_fields <- function(case = "upper") {
   # Returns a list of NCBA only fields that are in the Atlas Cache EBD 
   #   collection.
