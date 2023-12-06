@@ -1273,6 +1273,225 @@ get_observations <- function(database = "AtlasCache", species = NULL,
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+get_breeding_records <- function(behaviors = NULL,
+                                 observer = NULL, block = NULL, 
+                                 project = "EBIRD_ATL_NC", 
+                                 EBD_fields_only = FALSE,
+                                 fields = NULL,
+                                 database = "AtlasCache") {
+  # Returns a data frame of observations with breeding/behavior codes
+  #
+  # Description:
+  #   Retrieves the observation records with breeding/behavior codes from either
+  #   the NCBA database or from a downloaded copy of the EBD.  Results can be 
+  #   limited to records with breeding/behavior codes of interest.  If data is 
+  #   requested from the Atlas Cache, then NCBA columns that are not found in 
+  #   the EBD databases can be dropped or retained.  Additionally, a customized 
+  #   list of fields can be specified to limit the columns that are included in
+  #   the output data frame.
+  #
+  # Arguments:
+  # behaviors -- a list of breeding/behavior codes of interest.  Setting this to
+  #   NULL will return records with any of the breeding/behavior codes.
+  # EBD_fields_only -- whether to include non-EBD, Atlas Cache fields in the output
+  #   data frame. TRUE or FALSE and defaults to FALSE. This argument is set to
+  #   FALSE if the fields argument in not NULL. When database is set to EBD,
+  #   this parameter is obsolete.
+  # project -- atlas project to access.  This argument
+  #   is set to FALSE if the fields argument in not NULL.
+  # fields -- a list of fields to return, excluding those not listed.  The field
+  #   names need to be entered in upper case.  This parameter offers no speed 
+  #   benefit with EBD sampling datasets due to the structure of auk.
+  # database -- either "EBD" for a downloaded eBird database or "AtlasCache" for
+  #   the NCBA mongodb.
+  #
+  # Notes:
+  # - Data frame output when setting database to "AtlasCache" may require
+  #     additional wrangling with the to_EBD_format function before subsequent
+  #     functions can be used.
+  
+  library(tidyverse)
+  library(auk)
+  
+  # SET UP ---------------------------------------------------------------------
+  # Set the working directory
+  if (is.null(work_dir) == FALSE) {
+    setwd(work_dir)
+  }
+  
+  # If a list of fields is provided, set EBD_fields_only to FALSE
+  if (is.null(fields) == FALSE) {
+    EBD_fields_only = FALSE
+    
+    # and make upper case
+    fields <- str_to_upper(fields)
+  }
+  
+  # Handle condition where behavior codes is NULL
+  if (is.null(behaviors) == TRUE) {
+    behaviors = breeding_codes(lumped = FALSE)
+  }
+  
+  # ATLAS CACHE ----------------------------------------------------------------
+  if (database == "AtlasCache") {
+    # Reformat behaviors argument as a string
+    behaviors_mongolite <- paste0('["', paste(behaviors, collapse = '", "'), '"]')
+    
+    # Connect to the NCBA database
+    connection <- connect_ncba_db("ebd_mgmt", "ebd")
+    
+    # ---------- QUERY DEFINITION ----------
+    # Define a query sequentially.  First, address project
+    if (is.null(project) == TRUE) {
+      query <- '{}'
+    } else {
+      query <- str_interp('{"PROJECT_CODE" : "${project}"}')
+    }
+    
+    # Next, address observer
+    if (is.null(observer) == FALSE) {
+      # Avoid a leading comma
+      if (query == '{}') {
+        new_end <- str_interp('"OBSERVER_ID" : "${observer}"}')
+      } else {
+        new_end <- str_interp(', "OBSERVER_ID" : "${observer}"}')
+      }
+      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
+    } else {
+      query <- query
+    }
+    
+    # Next, address block id
+    if (is.null(block) == FALSE) {
+      if (query == '{}') {
+        new_end <- str_interp('"ATLAS_BLOCK" : "${block}"}')
+      } else {
+        new_end <- str_interp(', "ATLAS_BLOCK" : "${block}"}')
+      }
+      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
+    } else {
+      query <- query
+    }
+    
+    # Next, address species
+    if (is.null(behaviors) == FALSE) {
+      if (query == '{}') {
+        new_end <- str_interp('"OBSERVATIONS.BEHAVIOR_CODE" : { "$in" : ${behaviors_mongolite} } }')
+      } else {
+        new_end <- str_interp(', "OBSERVATIONS.BEHAVIOR_CODE" : { "$in" : ${behaviors_mongolite} } }')
+      }
+      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
+    } else {
+      query <- query
+    }
+    
+    
+    # ---------- FIELDS ----------
+    # Define a fields filter for the desired columns...
+    if (is.null(fields) == TRUE) {
+      if (EBD_fields_only == TRUE) {
+        # Identify AC fields for omission
+        AC.fields <- nonEBD_fields()
+        
+        # Convert the list of field names to a mongolite filter string
+        #   this will allow observations field through which then gets unnested
+        #   but that is OK because all fields nested within OBSERVATIONS are
+        #   EBD fields
+        fields2 <- paste0('{', paste0('"', AC.fields, '" : false',
+                                      collapse = ', '), '}')
+      }
+      
+      if (EBD_fields_only == FALSE) {
+        fields2 <- "{}"
+      }
+    }
+    
+    # ... but if fields are provided, use those as a filter
+    if (is.null(fields) == FALSE) {
+      # Convert the list of field names to a mongolite filter string
+      fields_string <- paste0('{', paste0('"', fields, '" : true',
+                                          collapse = ', '))
+      
+      # Redefine fields so that it can be pasted with the filter string
+      fields2 <- ', "OBSERVATIONS" : true}'
+      
+      # Combine with the existing fields string
+      fields2 <- paste0(fields_string, fields2)
+    }
+    
+    # ---------- GET RECORDS ----------
+    # Retrieve the checklists #
+    records <- connection$find(fields = fields2, query = query) %>%
+      unnest(cols = (c(OBSERVATIONS))) %>% # Expands observations
+      filter(BEHAVIOR_CODE %in% behaviors) # Rows for non-target records detected along
+    # with target records exist and need to be dropped.
+    
+    # Second pass at dropping unwanted fields (needed because of nested fields).
+    if (is.null(fields) == FALSE) {
+      # Get a list of names from fields that are still in the columns of records
+      dropem <- intersect(names(records), fields)
+      
+      # Drop the unwanted columns
+      records <- records %>% select(any_of(dropem))
+    }
+  }
+  
+  # EBIRD BASIC DATASET --------------------------------------------------------
+  if (database == "EBD") {
+    library(auk)
+    
+    # Condition next action on whether a single species is specified.
+    if (is.null(behaviors) == FALSE) {
+      # Read in sampling data frame with auk
+      ebd <- EBD_observations %>%
+        auk_ebd() %>%
+        auk_breeding() %>%
+        auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
+        read_ebd() %>%
+        data.frame()
+    }
+    
+    if (is.null(behaviors) == TRUE) {
+      ebd <- EBD_observations %>%
+        auk_ebd() %>%
+        auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
+        read_ebd() %>%
+        data.frame()
+    }
+    
+    # Pull out desired project
+    if (is.null(project) == FALSE) {
+      ebd <- filter(ebd, project_code == project)
+    }
+    
+    # Pull out desired block
+    if (is.null(block) == FALSE) {
+      ebd <- filter(ebd, atlas_block == block)
+    }
+    
+    # Pull out desired observer
+    if (is.null(observer) == FALSE) {
+      ebd <- filter(ebd, observer_id == observer)
+    }
+    
+    # Remove unwanted codes
+    ebd <- filter(ebd, behavior_code %in% behaviors)
+    
+    # Subset the columns
+    if (is.null(fields) == FALSE) {
+      records <- select(ebd, str_to_lower(fields))
+    } else {
+      records <- ebd
+    }
+    
+    
+  }
+  return(records)
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 observer_priority_by_breeding <- function(observer, data) {
   # Returns a table with species or block tallies by block type and breeding
   #   category.

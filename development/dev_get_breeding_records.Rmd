@@ -19,292 +19,122 @@ knitr::opts_chunk$set(
 
 
 # Function
-Retrieves the observation records with breeding/behavior codes from either the NCBA database or from a downloaded copy of the EBD.  Results can be limited to records with breeding/behavior codes of interest if the Atlas Cache is being queried, but the auk package does not support limiting to specific codes so all records with a breeding code are returned if a copy of the EBD is being queried.  If data is requested from the Atlas Cache, then NCBA columns that are not found in the EBD databases can be dropped or retained.  Additionally, a customized list of fields can be specified to limit the columns that are included in the output data frame.
+Retrieves the observation records with breeding/behavior codes from either the NCBA database or from a downloaded copy of the EBD.  Results can be limited to records with breeding/behavior codes of interest.  If data is requested from the Atlas Cache, then NCBA columns that are not found in the EBD databases can be dropped or retained.  Additionally, a customized list of fields can be specified to limit the columns that are included in the output data frame.
 ```{r}
-get_breeding_records <- function(database = "AtlasCache", behaviors = NULL, 
-                                 observer = NULL, block = NULL, 
-                                 project = "EBIRD_ATL_NC", 
-                                 EBD_fields_only = FALSE,
-                                 fields = NULL) {
-
-  library(tidyverse)
-  library(auk)
-  
-  # SET UP ---------------------------------------------------------------------
-  # Set the working directory
-  if (is.null(work_dir) == FALSE) {
-    setwd(work_dir)
-  }
-  
-  # If a list of fields is provided, set EBD_fields_only to FALSE
-  if (is.null(fields) == FALSE) {
-    EBD_fields_only = FALSE
-    
-    # and make upper case
-    fields <- str_to_upper(fields)
-  }
-  
-  # Handle condition where behavior codes is NULL
-  if (is.null(behaviors) == TRUE) {
-    behaviors = breeding_codes(lumped = FALSE)
-  }
-  
-  # ATLAS CACHE ----------------------------------------------------------------
-  if (database == "AtlasCache") {
-    # Reformat behaviors argument as a string
-    behaviors_mongolite <- paste0('["', paste(behaviors, collapse = '", "'), '"]')
-  
-    # Connect to the NCBA database
-    connection <- connect_ncba_db("ebd_mgmt", "ebd")
-    
-    # ---------- QUERY DEFINITION ----------
-    # Define a query sequentially.  First, address project
-    if (is.null(project) == TRUE) {
-      query <- '{}'
-    } else {
-      query <- str_interp('{"PROJECT_CODE" : "${project}"}')
-    }
-    
-    # Next, address observer
-    if (is.null(observer) == FALSE) {
-      # Avoid a leading comma
-      if (query == '{}') {
-        new_end <- str_interp('"OBSERVER_ID" : "${observer}"}')
-      } else {
-        new_end <- str_interp(', "OBSERVER_ID" : "${observer}"}')
-      }
-      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
-    } else {
-      query <- query
-    }
-    
-    # Next, address block id
-    if (is.null(block) == FALSE) {
-      if (query == '{}') {
-        new_end <- str_interp('"ATLAS_BLOCK" : "${block}"}')
-      } else {
-        new_end <- str_interp(', "ATLAS_BLOCK" : "${block}"}')
-      }
-      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
-    } else {
-      query <- query
-    }
-    
-    # Next, address species
-    if (is.null(behaviors) == FALSE) {
-      if (query == '{}') {
-        new_end <- str_interp('"OBSERVATIONS.BEHAVIOR_CODE" : { "$in" : ${behaviors_mongolite} } }')
-      } else {
-        new_end <- str_interp(', "OBSERVATIONS.BEHAVIOR_CODE" : { "$in" : ${behaviors_mongolite} } }')
-      }
-      query <- paste0(substr(query, 1, nchar(query)-1), new_end)
-    } else {
-      query <- query
-    }
-  
-    
-    # ---------- FIELDS ----------
-    # Define a fields filter for the desired columns...
-    if (is.null(fields) == TRUE) {
-      if (EBD_fields_only == TRUE) {
-        # Identify AC fields for omission
-        AC.fields <- nonEBD_fields()
-        
-        # Convert the list of field names to a mongolite filter string
-        #   this will allow observations field through which then gets unnested
-        #   but that is OK because all fields nested within OBSERVATIONS are
-        #   EBD fields
-        fields2 <- paste0('{', paste0('"', AC.fields, '" : false',
-                                      collapse = ', '), '}')
-      }
-      
-      if (EBD_fields_only == FALSE) {
-        fields2 <- "{}"
-      }
-    }
-    
-    # ... but if fields are provided, use those as a filter
-    if (is.null(fields) == FALSE) {
-      # Convert the list of field names to a mongolite filter string
-      fields_string <- paste0('{', paste0('"', fields, '" : true',
-                                          collapse = ', '))
-      
-      # Redefine fields so that it can be pasted with the filter string
-      fields2 <- ', "OBSERVATIONS" : true}'
-      
-      # Combine with the existing fields string
-      fields2 <- paste0(fields_string, fields2)
-    }
-    
-    # ---------- GET RECORDS ----------
-    print(query)
-    # Retrieve the checklists #
-    records <- connection$find(fields = fields2, query = query) %>%
-        unnest(cols = (c(OBSERVATIONS))) %>% # Expands observations
-        filter(BEHAVIOR_CODE %in% behaviors) # Rows for non-target records detected along
-      # with target records exist and need to be dropped.
-    
-    # Second pass at dropping unwanted fields (needed because of nested fields).
-    if (is.null(fields) == FALSE) {
-      # Get a list of names from fields that are still in the columns of records
-      dropem <- intersect(names(records), fields)
-      
-      # Drop the unwanted columns
-      records <- records %>% select(any_of(dropem))
-    }
-  }
-  
-  # EBIRD BASIC DATASET --------------------------------------------------------
-  if (database == "EBD") {
-    library(auk)
-    
-    # Condition next action on whether a single species is specified.
-    if (is.null(behaviors) == FALSE) {
-      # Read in sampling data frame with auk
-      ebd <- EBD_observations %>%
-        auk_ebd() %>%
-        auk_breeding() %>%
-        auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
-        read_ebd() %>%
-        data.frame()
-    }
-    
-    if (is.null(behaviors) == TRUE) {
-      ebd <- EBD_observations %>%
-        auk_ebd() %>%
-        auk_filter("TMP_EBD.txt", overwrite = TRUE) %>%
-        read_ebd() %>%
-        data.frame()
-    }
-    
-    # Pull out desired project
-    if (is.null(project) == FALSE) {
-      ebd <- filter(ebd, project_code == project)
-    }
-    
-    # Pull out desired block
-    if (is.null(block) == FALSE) {
-      ebd <- filter(ebd, atlas_block == block)
-    }
-    
-    # Pull out desired observer
-    if (is.null(observer) == FALSE) {
-      ebd <- filter(ebd, observer_id == observer)
-    }
-    
-    # Subset the columns
-    if (is.null(fields) == FALSE) {
-      records <- select(ebd, str_to_lower(fields))
-    } else {
-      records <- ebd
-    }
-  }
-  return(records)
-}
+get_breeding_records
 ```
 
 # Usage
 The function can target records of a certain species, project, block, or observer, as well as combinations of those four.
 
-## Species
-Retrieve observations from the Atlas Cache with the function, but only certain fields.
+## Behaviors
+Retrieve breeding records from the Atlas Cache with the function, but only certain fields.
 ```{r}
-fields <- c("SAMPLING_EVENT_IDENTIFIER", "BEHAVIOR_CODE", 
-            "GLOBAL_UNIQUE_IDENTIFIER", "ATLAS_BLOCK")
+fields <- c("SAMPLING_EVENT_IDENTIFIER", "BEHAVIOR_CODE", "COMMON_NAME", 
+            "ATLAS_BLOCK")
 
-behaviors <- NULL#c("S7", "ON")
-
-records <- get_breeding_records(behaviors = behaviors, database = "AtlasCache",
+records <- get_breeding_records(behaviors = c("S7", "ON"),
+                                database = "AtlasCache",
                                 EBD_fields_only = TRUE,
                                 fields = fields)
 print(head(records, 5))
 ```
 
-Retrieve observations from the EBD with the function.
+Retrieve breeding records from the EBD with the function.
 ```{r}
-obs <- get_observations(species = "American Avocet", database = "EBD")
-print(head(obs, 5))
+fields <- c("SAMPLING_EVENT_IDENTIFIER", "BEHAVIOR_CODE", "COMMON_NAME", 
+            "ATLAS_BLOCK")
+
+records <- get_breeding_records(behaviors = c("S7", "ON"),
+                                database = "EBD",
+                                EBD_fields_only = TRUE,
+                                fields = fields)
+print(head(records, 5))
 ```
 
 ## Block
 Retrieve observations from a particular block from the Atlas Cache.
 ```{r}
-block <- "35075F4NW"
+block <- "36078C8SE"
 
-fields <- c("ATLAS_BLOCK", "SAMPLING_EVENT_IDENTIFIER", "PROJECT_CODE", 
-            "GLOBAL_UNIQUE_IDENTIFIER")
+fields <- c("ATLAS_BLOCK", "SAMPLING_EVENT_IDENTIFIER", "OBSERVER_ID", "COMMON_NAME")
 
-obs <- get_observations(block = block, database = "AtlasCache", fields = fields)
-print(head(obs, 5))
+timberlake <- get_breeding_records(behaviors = breeding_codes()$confirmed, 
+                                   block = block, 
+                                   database = "AtlasCache", 
+                                   fields = fields)
+print(timberlake)
 ```
 
-Retrieve observations from the EBD with the function.  THIS IS VERY SLOW.
+Retrieve observations from the EBD with the function.
 ```{r}
-#obs <- get_observations(block = block, database = "EBD", fields = fields)
-#print(head(obs, 5))
+timberlake <- get_breeding_records(behaviors = breeding_codes()$confirmed, 
+                                   block = block, 
+                                   database = "EBD", 
+                                   fields = fields)
+print(timberlake)
 ```
 
 ## Observer
-Retrieve observations from a particular observer from the Atlas Cache.
+Retrieve breeding records from a particular observer from the Atlas Cache.
 ```{r}
-observer <- "obsr375303"
-
-fields <- c("OBSERVER_ID", "SAMPLING_EVENT_IDENTIFIER", "PROJECT_CODE", 
-            "GLOBAL_UNIQUE_IDENTIFIER")
-
-obs <- get_observations(observer = observer, database = "AtlasCache", 
-                        fields = fields)
-print(head(obs, 5))
+observer <- "obsr225263"
+fields <- c("ATLAS_BLOCK", "SAMPLING_EVENT_IDENTIFIER", 
+            "GLOBAL_UNIQUE_IDENTIFIER", "OBSERVER_ID", "COMMON_NAME", 
+            "BEHAVIOR_CODE")
+natetarr <- get_breeding_records(behaviors = breeding_codes()$confirmed, 
+                                 block = NULL,
+                                 observer = observer,
+                                 database = "AtlasCache", 
+                                 fields = fields)
+print(natetarr)
 ```
 
-Retrieve observations from the EBD with the function. THIS IS VERY SLOW.
+Retrieve breeding records from the EBD with the function.
 ```{r}
-#obs <- get_observations(observer = observer, database = "EBD",
-#                        fields = fields)
-#print(head(obs, 5))
+natetarr <- get_breeding_records(behaviors = breeding_codes()$confirmed, 
+                                 block = NULL,
+                                 observer = observer,
+                                 database = "EBD", 
+                                 fields = fields)
+print(natetarr)
 ```
 
 ## Project
 Retrieve observations from a particular project from the Atlas Cache.
 ```{r}
-fields <- c("PROJECT_CODE", "SAMPLING_EVENT_IDENTIFIER", 
+fields <- c("PROJECT_CODE", "SAMPLING_EVENT_IDENTIFIER", "BREEDING_CODE",
             "GLOBAL_UNIQUE_IDENTIFIER", "COUNTY", "COMMON_NAME")
 
-obs <- get_observations(project = "EBIRD_ATL_VA", 
-                        database = "AtlasCache", 
-                        fields = fields)
-print(head(obs, 5))
+VA <- get_breeding_records(project = "EBIRD_ATL_VA", 
+                           database = "AtlasCache", 
+                           fields = fields)
+print(head(VA, 5))
 ```
 
-Retrieve observations from the EBD with the function.  THIS IS VERY SLOW.
-```{r}
-#obs <- get_observations(project = "EBIRD_ATL_VA", database = "EBD", 
-#                        fields = fields)
-#print(head(obs, 5))
-```
 
 ## All options
 More than parameter can be utilized.
 ```{r}
 fields <- c("PROJECT_CODE", "SAMPLING_EVENT_IDENTIFIER", 
-            "GLOBAL_UNIQUE_IDENTIFIER")
+            "GLOBAL_UNIQUE_IDENTIFIER", "OBSERVER_ID", "BREEDING_CODE")
 
-obs.AC <- get_observations(project = "EBIRD_ATL_NC",
-                           observer = "obsr375303",
-                           species = "American Avocet",
-                           block = "35075F4NW",
-                           database = "AtlasCache", 
-                           fields = fields)
+obs.AC <- get_breeding_records(project = "EBIRD_ATL_NC",
+                               observer = observer,
+                               behaviors = c("H", "ON", "S"),
+                               block = block,
+                               database = "AtlasCache", 
+                               fields = fields)
 print(head(obs.AC, 5))
 ```
 
 ```{r}
-obs.EBD <- get_observations(project = "EBIRD_ATL_NC",
-                            observer = "obsr375303",
-                            species = "American Avocet",
-                            block = "35075F4NW",
-                            database = "EBD", 
-                            fields = fields)
+obs.EBD <- get_breeding_records(project = "EBIRD_ATL_NC",
+                               observer = observer,
+                               behaviors = c("H", "ON", "S"),
+                               block = block,
+                               database = "EBD", 
+                               fields = fields)
 print(head(obs.EBD, 5))
 ```
 
@@ -312,23 +142,16 @@ print(head(obs.EBD, 5))
 # Tests
 
 ## From the Atlas Cache
-There should only be one species name in the data frame. If the species' name alone is returned from this chunk, then the test is passed.
+There should only be the desired breeding codes in the data frame. If no unwanted codes are returned from this chunk, then the test is passed.
 ```{r}
-obs <- get_observations(species = "King Rail", 
-                            database = "AtlasCache",
-                            project = "EBIRD_ATL_NC",
-                            EBD_fields_only = FALSE,
-                            fields = NULL)
-print(unique(obs$COMMON_NAME))
+obs <- get_breeding_records(behaviors = c("ON", "CN"))
+print(unique(obs$BEHAVIOR_CODE))
 ```
 
-If NCBA_only was set to TRUE, then the PROJECT_CODE field should only contain "EBIRD_ATL_NC".  This chunk returns "EBIRD_ATL_NC" if the test was passed.
+If the project was set to NCBA, then the PROJECT_CODE field should only contain "EBIRD_ATL_NC".  This chunk returns "EBIRD_ATL_NC" if the test was passed.
 ```{r}
-obs <- get_observations(species = "King Rail", 
-                            database = "AtlasCache",
-                            project = "EBIRD_ATL_NC",
-                            EBD_fields_only = FALSE,
-                            fields = NULL)
+obs <- get_breeding_records(behaviors = c("CN"),
+                            project = "EBIRD_ATL_NC")
 print(unique(obs$PROJECT_CODE))
 ```
 
@@ -336,10 +159,8 @@ If a list of fields is provided, then the output data frame should only include 
 ```{r}
 fields <- c("SAMPLING_EVENT_IDENTIFIER", "PROJECT_CODE", "GLOBAL_UNIQUE_IDENTIFIER")
 
-obs <- get_observations(species = "King Rail", 
-                            database = "AtlasCache",
+obs <- get_breeding_records(behaviors = c("CN"),
                             project = "EBIRD_ATL_NC",
-                            EBD_fields_only = TRUE,
                             fields = fields)
 print(unique(names(obs) == fields))
 ```
@@ -352,8 +173,8 @@ THIS TEST FAILS because of the fields "SUBSPECIES_COMMON_NAME" and "SUBSPECIES_S
 NCBA.columns <- nonEBD_fields() 
 
 # Get observations
-obs <- get_observations(species = "King Rail", 
-                            database = "AtlasCache",
+obs <- get_breeding_records(behaviors = c("CN"),
+                            project = "EBIRD_ATL_NC",
                             EBD_fields_only = TRUE)
 
 # Test whether NCBA columns are in the observation data frame
@@ -388,22 +209,18 @@ print(setdiff(EBD.columns, our.columns))
 ```
 
 ## eBird Basic Dataset
-There should only be one species name in the data frame. If the species' name alone is returned from this chunk, then the test is passed.
+There should only be the desired breeding codes in the data frame. If no unwanted codes are returned from this chunk, then the test is passed.
 ```{r}
-obs <- get_observations(species = "King Rail", 
-                            database = "EBD",
-                            project = NULL)
-
-print(unique(obs$common_name))
+obs <- get_breeding_records(behaviors = c("ON", "CN", "FY"),
+                            database = "EBD")
+print(unique(obs$behavior_code))
 ```
 
-If NCBA_only was set to TRUE, then the PROJECT_CODE field should only contain "EBIRD_ATL_NC".  This chunk returns "EBIRD_ATL_NC" if the test was passed.
+If the project was set to NCBA, then the PROJECT_CODE field should only contain "EBIRD_ATL_NC".  This chunk returns "EBIRD_ATL_NC" if the test was passed.
 ```{r}
-obs <- get_observations(species = "King Rail", 
-                            database = "EBD",
+obs <- get_breeding_records(behaviors = c("CN"),
                             project = "EBIRD_ATL_NC",
-                            EBD_fields_only = FALSE,
-                            fields = NULL)
+                            database = "EBD")
 print(unique(obs$project_code))
 ```
 
@@ -411,10 +228,9 @@ If a list of fields is provided, then the output data frame should only include 
 ```{r}
 fields <- c("sampling_event_identifier", "project_code", "global_unique_identifier")
 
-obs <- get_observations(species = "King Rail", 
-                            database = "EBD",
-                            project = "EBIRD_ATL_NC",
-                            fields = fields)
+obs <- get_breeding_records(behaviors = c("CN"),
+                            fields = fields,
+                            database = "EBD")
 print(unique(names(obs) == fields))
 ```
 
@@ -422,13 +238,13 @@ print(unique(names(obs) == fields))
 # Speed (in seconds)
 
 ## Atlas Cache
-For a data-poor species
+For an infrequent code
 ```{r}
-# Run the function 5 times and record the runtime
+# Run the function 3 times and record the runtime
 time <- c()
-for (i in 1:5) {
+for (i in 1:3) {
   time1 <- proc.time()
-  get_observations(species = "King Rail", database = "AtlasCache")
+  get_breeding_records(behaviors = c("FS"))
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }
@@ -437,13 +253,13 @@ for (i in 1:5) {
 print(summary(time))
 ```
 
-For a data-rich species
+For a frequent code
 ```{r}
-# Run the function 5 times and record the runtime
+# Run the function 3 times and record the runtime
 time <- c()
-for (i in 1:5) {
+for (i in 1:3) {
   time1 <- proc.time()
-  get_observations(species = "Indigo Bunting", database = "AtlasCache")
+  get_breeding_records(behaviors = c("H"))
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }
@@ -459,7 +275,7 @@ For a data-poor species
 time <- c()
 for (i in 1:2) {
   time1 <- proc.time()
-  get_observations(species = "King Rail", database = "EBD")
+  get_breeding_records(behaviors = c("FS"), database = "EBD")
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }
@@ -474,7 +290,7 @@ For a data-rich species
 time <- c()
 for (i in 1:2) {
   time1 <- proc.time()
-  get_observations(species = "Indigo Bunting", database = "EBD")
+  get_breeding_records(behaviors = c("H"), database = "EBD")
   t <- proc.time() - time1
   time[i] <- t["elapsed"]
 }
