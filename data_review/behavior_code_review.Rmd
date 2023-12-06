@@ -16,8 +16,7 @@ Pull in records for carrying a fecal sac "FS"
 ```{r}
 fs <- get_breeding_records(behaviors = c("FS")) %>%
   to_EBD_format() %>%
-  auk_unique() %>%
-  records_as_sf(kind = "observations", method = "points")
+  auk_unique()
 ```
 
 Print the records
@@ -25,8 +24,25 @@ Print the records
 print(fs)
 ```
 
+```{r}
+print(unique(fs$common_name))
+```
+
 Map
 ```{r}
+fs_sf <- records_as_sf(fs, kind = "observations", method = "points")
 
+# Make a simple map
+ggplot(data = counties_NC()) +
+    geom_sf() +
+    geom_sf(data = fs_sf, size = 4, shape = 20, 
+            colour = "darkred", fill = NA) + 
+    ggtitle("Records of Birds Carrying Fecal Sacs", subtitle = "")
+```
+
+When were the codes reported?
+```{r}
+box <- breeding_boxplot(species = NULL, data = fs, type = "ecoregional")
+show(box)
 ```
 
