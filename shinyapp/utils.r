@@ -319,7 +319,6 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
               season = "Non-Breeding"
               }
             }
-            
             return(season)
 
           })
@@ -355,7 +354,7 @@ get_block_data <- function() {
     ' "ID_EBD_NAME": 1, "ID_NCBA_BLOCK": 1, "ID_OLD_ID": 1, "NW_X": 1, ',
     '"NW_Y": 1, "PRIORITY": 1, "QUADID": 1, "QUAD_BLOCK": 1, "QUAD_NAME": 1, ',
     '"REGION": 1, "SE_X": 1, "SE_Y": 1, "SUBNAT2": 1, "TYPE": 1, ',
-    '"ID_S123_NOSPACES_TEMP": 1, "ID_S123_SPACES_TEMP": 1}')
+    '"ID_S123_NOSPACES_TEMP": 1, "ID_S123_SPACES_TEMP": 1, "STATUS": 1}')
 
   # blockdata <- m_blocks$find("{}","{}")
   blockdata <- m_blocks$find("{}",filter)
@@ -366,7 +365,7 @@ get_block_gap_spp <- function(blockid){
 # Retrieves list of species for the passed block id
   filter <- '{"GAP_SPP":1}'
   query <- '{"_id":"${blockid}"}'
-  blockdata <- m_blocks$find("{}",filter)
+  blockdata <- m_blocks$find("{}", filter)
 
 # add code here to unnest data (like observations above)
 
@@ -374,41 +373,6 @@ get_block_gap_spp <- function(blockid){
 
 }
 
-# DEPRECATED
-# get_block_checklists <- function(block = "", portal = FALSE) (
-#   # Retrieves data from MongoDB Atlas implementation
-#   #
-#   # Description:
-#   #   Returns a dataframe of records from the NC Bird Atlas MongoDB 
-#       implementation in a format to plot on the map.
-#   #
-#   # Arguments:
-#   # block -- string that corresponds to the ID_NCBA_BLOCK field
-#   #
-#   # Examples:
-#   #   1. Retrieve checklists submitted to the portal
-#           from the GRIMESLAND-CW block
-#   #     get_block_checklists('GRIMESLAND-CW', TRUE)
-#
-#   if (block != ""){
-#     if (portal) {
-#       query <- 
-#           str_interp(
-  #           '{"ID_NCBA_BLOCK":"${block}", "PROJECT_CODE":"EBIRD_ATL_NC"}')
-#     } else {
-#       query <- str_interp('{"ID_NCBA_BLOCK":"${block}"}')
-#     }
-#     print(query)
-#
-#     filter <- str_interp('{"LATITUDE":1, "LONGITUDE":1, ',
-#       '"SAMPLING_EVENT_IDENTIFIER":1, "LOCALITY_ID":1, ',
-#       '"OBSERVATION_DATE":1}'
-#     print(filter)
-#
-#     return(get_ebd_data(query, filter))
-#   }
-#
-# )
 #############################################################################
 # Species
 get_spp_obs <- function(species, filter){
@@ -452,7 +416,6 @@ print(head(species_list))
 
 ###############################################################################
 # Block level summaries
-
 # block_data <- read.csv("input_data/blocks.csv") %>% filter(COUNTY == "WAKE")
 block_data <- get_block_data()
 # priority_block_geojson <- readLines("input_data/blocks_priority.geojson")
@@ -468,7 +431,8 @@ priority_block_data <- filter(
     "SE_Y",
     "PRIORITY",
     "COUNTY",
-    "REGION")]
+    "REGION",
+    "STATUS")]
 
 print("filtering block records")
 
@@ -497,4 +461,20 @@ get_block_hours <- function(id_ncba_block) {
     return(result)
 
   }
+}
+
+get_block_summary <- function(id_ncba_block) {
+
+    q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}"}')
+}
+
+## for overview map
+get_block_summaries <- function() {
+  blocksum_filter <- '{"sppList": 0}'
+
+  blocksum <- m_block_summaries$find("{}", blocksum_filter)
+
+  blocksum <- as.data.frame(blocksum)
+  print(head(blocksum))
+  return(blocksum)
 }
