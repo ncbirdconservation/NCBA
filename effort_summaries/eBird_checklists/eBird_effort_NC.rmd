@@ -49,7 +49,7 @@ comma <- function(x) format(x, digits=2, big.mark=",")
 
 ```{r block_data}
 # Read in NCBA block spatial data frame
-blocks_sf <- st_read(blocks_path) %>% st_transform(6542)
+blocks_sf <- get_blocks(spatial = TRUE) %>% st_transform(6542)
 st_crs(blocks_sf)
 ```
 

@@ -8,6 +8,7 @@
 # then be called by their names.
 library(tidyverse)
 library(auk)
+library(tmap)
 
 # Load the config file
 source("ncba_config.r")
@@ -858,6 +859,55 @@ breeding_boxplot <- function(species, data, type="interactive",
   }
 }
 
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+breeding_map <- function(records, popup.vars = c("URL"), title) {
+  # Creates an interactive map of records.  
+  #
+  # Description:
+  # Uses the TMAP package to create an interactive map of the provided records.
+  #   Designed for use with output from get_breeding_records().  Hovering the 
+  #   mouse over the record symbol displays the sampling event identifier.  
+  #   Clicking on symbols opens a small table showing records attributes.  The
+  #   popup.vars argument controls what is included in those tables.  Including
+  #   "URL" will provide a hyperlink to the checklist webpage on ebird.com.
+  #
+  #
+  # Arguments:
+  # records -- dataframe of records
+  # popup.vars -- vector containing column names to include in the popup table.
+  #   Always include the text "URL" as an item in the vector.
+  # title -- a title to use for the map
+  
+  # Make data frames of suspicious records and their uncertainty buffers
+  sf <- records_as_sf(records, kind = "observations", 
+                      method = "points") %>%
+    select(c("sampling_event_identifier", "geometry")) %>%
+    distinct() %>%
+    right_join(records, by = "sampling_event_identifier")
+  
+  uncertainty_buffer <- records_as_sf(records, kind = "observations", 
+                                      method = "point-radius") %>%
+    filter(buffer_length > 0) 
+  
+  # Add a column with code to open the webpage for each checklist
+  sf$front <- '<a href = https://ebird.org/checklist/'
+  
+  # Strip off any excess identifiers; group checklists produce "S104604778,S104604779"
+  sf$sampling_event_identifier <- lapply(strsplit(sf$sampling_event_identifier, 
+                                                  split = ","), 
+                                         function(l) l[[1]])
+  sf$URL <- with(sf, paste0(front, sampling_event_identifier, ">visit</a>"))
+  
+  # Draw the map
+  tmap_mode("view") 
+  tm_shape(counties_NC(), name = "Counties") + tm_borders() +
+    tm_shape(sf, name = "Records") + 
+    tm_dots(popup.vars = popup.vars, popup.format = list(html.escape = F)) + 
+    tm_shape(uncertainty_buffer, name = "Locational Uncertainty") + tm_borders(col = "magenta") + 
+    tm_layout(title = title)
+}
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
@@ -2679,7 +2729,7 @@ breeding_codes <- function(lumped = TRUE){
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-eBird_URL <- function(sampling_event_identifier) {
+visit_checklist <- function(sampling_event_identifier) {
   # Opens the webpage for a checklist.
   ebirdURL <- 'https://ebird.org/checklist/'
   ChecklistLink <- paste0(ebirdURL, sampling_event_identifier)

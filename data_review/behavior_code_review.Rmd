@@ -6,43 +6,114 @@ output: word_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE)
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
 library(auk)
+library(tmap)
 ```
 
-Pull in records for carrying a fecal sac "FS"
+# Purpose
+At times it may be advantageous to review all records that have a certain behavior code, regardless of the species.  This document demonstrates how NCBA code can facilitate that, as well as for review of groups of species.
+
+# All Species Review
+The "PE" breeding code is for observations of birds with physiological conditions that indicate breeding.  It should predominantly justified by in-hand observations of birds.  It is not often used and it may be worth while to review all cases where it has been used.
+
+The "get_breeding_records" function can retrieve records of "PE".
 ```{r}
-fs <- get_breeding_records(behaviors = c("FS")) %>%
+pe <- get_breeding_records(behaviors = c("PE")) %>%
   to_EBD_format() %>%
   auk_unique()
+
+print(pe %>% select(sampling_event_identifier, common_name, has_media))
 ```
 
-Print the records
+See for which species the code was reported.
 ```{r}
-print(fs)
+print(unique(pe$common_name))
 ```
 
+The records can be mapped in a way where clicking on the records symbol provides a hyperlink to the checklist's website.
 ```{r}
-print(unique(fs$common_name))
+# Make data frames of suspicious records and their uncertainty buffers
+pe_sf <- records_as_sf(pe, kind = "observations", 
+                            method = "points") %>%
+  right_join(pe, by = "sampling_event_identifier")
+
+uncertainty_buffer <- records_as_sf(pe, kind = "observations", 
+                              method = "point-radius") %>%
+  filter(buffer_length > 0)
+
+# Add a column with code to open the webpage for each checklist
+pe_sf$front <- '<a href = https://ebird.org/checklist/'
+
+# Strip off any excess identifiers; group checklists produce "S104604778,S104604779"
+pe_sf$sampling_event_identifier <- lapply(strsplit(pe_sf$sampling_event_identifier, split = ","), function(l) l[[1]])
+pe_sf$URL <- with(pe_sf, paste0(front, sampling_event_identifier,
+                                            ">visit</a>"))
+
+# Draw the map
+tmap_mode("view") 
+tm_shape(counties_NC(), name = "Counties") + tm_borders() +
+tm_shape(pe_sf, name = "PE records") + 
+  tm_dots(popup.vars = c("URL", "common_name"), popup.format = list(html.escape = F)) + 
+tm_shape(uncertainty_buffer, name = "Locational Uncertainty") + tm_borders(col = "green") + 
+  tm_layout(title = "PE records")
 ```
 
-Map
+The records can also be summarized and plotted by day of year with a boxplot that also provides hyperlinks for each record.
 ```{r}
-fs_sf <- records_as_sf(fs, kind = "observations", method = "points")
-
-# Make a simple map
-ggplot(data = counties_NC()) +
-    geom_sf() +
-    geom_sf(data = fs_sf, size = 4, shape = 20, 
-            colour = "darkred", fill = NA) + 
-    ggtitle("Records of Birds Carrying Fecal Sacs", subtitle = "")
-```
-
-When were the codes reported?
-```{r}
-box <- breeding_boxplot(species = NULL, data = fs, type = "ecoregional")
+box <- breeding_boxplot(species = NULL, data = pe, type = "interactive")
 show(box)
 ```
 
+
+# Species Group
+The process from above can be applied to a group of species with inclusion of a statement that filters based on a species list.  For this example, I present records of tanagers exhibiting distraction displays.
+
+The "get_breeding_records" function can retrieve records of "DD".
+```{r}
+species <- c("Summer Tanager", "Scarlet Tanager")
+
+df <- get_breeding_records(behaviors = c("A")) %>%
+  to_EBD_format() %>%
+  auk_unique() %>%
+  filter(common_name %in% species)
+
+print(df %>% select(sampling_event_identifier, common_name, behavior_code))
+```
+
+The records can be mapped in a way where clicking on the records symbol provides a hyperlink to the checklist's website.
+```{r}
+# Make data frames of suspicious records and their uncertainty buffers
+A_sf <- records_as_sf(df, kind = "observations", 
+                            method = "points")
+
+uncertainty_buffer <- records_as_sf(df, kind = "observations", 
+                              method = "point-radius") %>%
+  filter(buffer_length > 0)
+
+# Add a column with code to open the webpage for each checklist
+A_sf$front <- '<a href = https://ebird.org/checklist/'
+
+# Strip off any excess identifiers; group checklists produce "S104604778,S104604779"
+A_sf$sampling_event_identifier <- lapply(strsplit(A_sf$sampling_event_identifier, split = ","), function(l) l[[1]])
+A_sf$URL <- with(A_sf, paste0(front, sampling_event_identifier,
+                                            ">visit</a>"))
+
+# Draw the map
+tmap_mode("view") 
+tm_shape(counties_NC(), name = "Counties") + tm_borders() +
+tm_shape(A_sf, name = "FS records") + 
+  tm_dots(popup.vars = c("URL"), popup.format = list(html.escape = F)) + 
+tm_shape(uncertainty_buffer, name = "Locational Uncertainty") + tm_borders(col = "green")
+```
+
+The records can also be summarized and plotted by day of year with a boxplot that also provides hyperlinks for each record.
+```{r}
+box <- breeding_boxplot(species = NULL, data = df, type = "interactive")
+show(box)
+```

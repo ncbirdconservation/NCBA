@@ -6,34 +6,200 @@ output: word_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE)
 setwd("~/Code/NCBA/resources")
 source("ncba_functions.R")
 library(auk)
+library(tmap)
 ```
 
-Assign a species and get the records in EBD format with duplicates removed.
+# Purpose
+When using the eBird portal, atlasers can submit breeding behaviors they observe.  However, those behaviors only indicate breeding in some of the cases when they are observered.  Records need to be reviewed by NCBA staff before breeding behaviors are considered evidence of breeeding.  This topic is discussed in detail on the [eBird website]() https://ebird.org/atlasnc/about/understanding-breeding-codes).
+
+EBird's article identifies four questions that must be addressed.  In this document, I demonstrate how NCBA code can help answer the questions by revealing problematic records.
+
+Once records are flagged, they will need to be adjusted to correct them.  Developing and demonstrating a process for that is beyond the scope of this contract, but I demonstrate a suggested beginning to that process whereby problematic records are saved to csv files for futher review.  
+
+## Is the reported code something that this species does?
+Answering this question requires the identification of breeding behavior codes that are not suitable for each species.  Records with an innapropriate code can then be explored and corrected.  
+
+First, we must assign a species and get the records in EBD format with duplicates removed.
 ```{r}
 species <- "Turkey Vulture"
-records <- get_observations(species = species, EBD_fields_only = TRUE) %>%
+records <- get_observations(species = species, EBD_fields_only = FALSE) %>%
   to_EBD_format() %>%
   auk_unique()
 ```
 
-Pull out records with inappropriate behavior codes.
+Next, we need to retrieve the list of inappropriate behavior codes for the species.  It would be ideal to have a document in the Atlas Cache storing this information, but that does not yet exist.  For this demonstration, we define the informatio for test species in a data frame.
 ```{r}
-# Innapropriate behavior codes
-bad_codes <- c("S", "P", "A")
+notapp_spp <- data.frame(behavior_code = c("S", "S"),
+                         species = c("Turkey Vulture", "Black Vulture"),
+                         problem = c("The species does not sing", 
+                                     "The species does not sing"),
+                         solution = c("Automatically change to NC",
+                                      "Automatically change to NC"),
+                         new_breeding_code = c("NC", "NC"),
+                         new_behavior_code = c("NC", "NC"))
+print(notapp_spp)
+```
 
-singers <- records %>% 
-  filter(breeding_code %in% bad_codes) %>%
+Pull out the inappropriate codes.
+```{r}
+TUVU <- notapp_spp %>% filter(species == species)
+bad_codes <- unique(TUVU$behavior_code)
+print(bad_codes)
+```
+
+Pull out records with inappropriate behavior codes and save to a csv.
+```{r}
+suspicious <- records %>% 
+  filter(behavior_code %in% bad_codes) %>%
   select(-c(state, state_code, country, bcr_code, usfws_code, iba_code, 
             locality_id, year, month, taxonomic_order, category))
-print(singers)
+
+# Save to csv
+write_csv(suspicious, paste(work_dir, "singing_TUVU.csv"))
+print(suspicious)
+```
+
+Map the records.
+```{r}
+# Make data frames of suspicious records and their uncertainty buffers
+suspect_records <- records_as_sf(suspicious, kind = "observations", 
+                            method = "points") %>%
+  left_join(suspicious, by = "sampling_event_identifier")
+
+uncertainty_buffer <- records_as_sf(suspicious, kind = "observations", 
+                              method = "point-radius") %>%
+  filter(buffer_length > 0) 
+
+# Add a column with code to open the webpage for each checklist
+suspect_records$front <- '<a href = https://ebird.org/checklist/'
+
+# Strip off any excess identifiers; group checklists produce "S104604778,S104604779"
+suspect_records$sampling_event_identifier <- lapply(strsplit(suspect_records$sampling_event_identifier, split = ","), function(l) l[[1]])
+suspect_records$URL <- with(suspect_records, paste0(front, sampling_event_identifier,
+                                            ">visit</a>"))
+
+# Draw the map
+tmap_mode("view") 
+tm_shape(counties_NC(), name = "Counties") + tm_borders() +
+tm_shape(suspect_records, name = "Suspicious Records") + 
+  tm_dots(popup.vars = c("URL", "observation_date", "behavior_code"), popup.format = list(html.escape = F)) + 
+tm_shape(uncertainty_buffer, name = "Locational Uncertainty") + tm_borders(col = "green") + 
+  tm_layout(title = paste(species, " ", bad_codes, " records"))
 ```
 
 Breeding boxplot
 ```{r}
-breeding_boxplot(species = species, data = records)
+all_codes <- breeding_codes(lumped = FALSE)
+omit <- setdiff(all_codes, bad_codes)
+breeding_boxplot(species = species, data = records, 
+                 omit_codes = omit)
 ```
 
+The breeding codes will need to be changed in the Atlas Cache somehow, but a process is not yet in place.  In the meantime, the proposed changes can be saved in a table that could be later incorporated into the Atlas Cache.
+```{r}
+proposed <- suspicious %>% select("sampling_event_identifier", "common_name", 
+                                    "behavior_code")
+names(proposed) <- c("sampling_event_identifier", "common_name", "reported_code")
+proposed$behavior_adjusted <- "NC"
+proposed$breeding_adjusted <- "NC"
+proposed$reviewer <- "N. Tarr"
+proposed$justification <- "The reported code is likely an error because vultures do not sing."
+proposed$date <- Sys.time()
+print(proposed)
+write_csv(proposed, paste(work_dir, "TUVU_adjustments_05122023.csv"))
+```
+
+
+## Is the location where the code was reported a location where the bird is breeding?
+This can be assessed by mapping the breeding records of the species and color coding by breeding category.  Doing this in an interactive map allows the user to click on a record in the map and open its checklist website on eBird.com.  Suspicious records would be those that are not near confirmed breeding records and/or that are outside of what the reviewers believe to be the species breeding range.
+```{r}
+# Species to evaluate
+species <- "Red-breasted Nuthatch"
+
+# Get the records
+records <- get_observations(species = species, EBD_fields_only = FALSE) %>%
+  to_EBD_format() %>%
+  auk_unique()
+
+# Make spatial data frames of all records
+records_sf <- records_as_sf(records, kind = "observations", method = "points") %>%
+  right_join(records, by = "sampling_event_identifier") %>%
+  filter(breeding_category != "")
+
+# Add a column with code to open the webpage for each checklist
+records_sf$front <- '<a href = https://ebird.org/checklist/'
+
+# Strip off any excess identifiers (group checklists produce "S104604778,S104604779")
+records_sf$sampling_event_identifier <- lapply(strsplit(records_sf$sampling_event_identifier, split = ","), function(l) l[[1]])
+records_sf$URL <- with(records_sf, paste0(front, sampling_event_identifier,
+                                            ">visit</a>"))
+
+# Draw the map
+tmap_mode("view") 
+tm_shape(shp = counties_NC(), name = "counties") + tm_borders() +
+tm_shape(shp = records_sf, name = "observations") + 
+  tm_dots(interactive = TRUE, popup.vars = c("URL", "observation_date", "behavior_code"), col = "breeding_category",
+          popup.format = list(html.escape = F), border.alpha = 0,
+          palette = c("yellow", "lightgreen", "darkgreen", "purple"),
+          labels = c("observed", "possible", "probable", "confirmed")) +
+  tm_layout(title = species)
+```
+
+
+## Is the time of year when the code was reported a time when the bird is breeding?
+This question can be assessed with the breeding boxplot by including all breeding codes, but with confirmed codes lumped together to provide a reference to compare records against.
+```{r}
+# Species to evaluate
+species <- "Brown-headed Nuthatch"
+
+# Get the records
+records <- get_observations(species = species, EBD_fields_only = FALSE) %>%
+  to_EBD_format() %>%
+  auk_unique()
+
+# Build a list of columns to include
+all_codes <- breeding_codes(lumped = FALSE)
+confirmed_codes <- breeding_codes()$confirmed
+
+
+breeding_boxplot(species = species, data = records,
+                 lump = list("confirmed" = breeding_codes()$confirmed),
+                 omit = c("NULL", "F"))
+```
+
+Another approach is to use breeding safe dates and isolate all records that are from outside of their date range.  However, this method is somewhat risky because it gives a lot of influence to the breeding dates, which originally came from another state and have not been adjusted for NC yet.
+```{r}
+# Get breeding dates from table in the Atlas Cache
+breedates <- get_breeding_dates(species, day_year = TRUE)
+
+# Add a day of year column to records
+records$yday <- sapply(records$observation_date, yday)
+
+# Isolate records from outside the breeding dates
+nonbreeding <- records %>%
+  filter(yday <= breedates[1] | yday >= breedates[2],
+         breeding_category %in% c("C2", "C3", "C4")) %>%
+  select(c(sampling_event_identifier, common_name, behavior_code, observation_date))
+
+names(nonbreeding) <- c("sampling_event_identifier", "common_name",
+                              "reported_code", "observation_date")
+
+nonbreeding$behavior_adjusted <- NA
+nonbreeding$breeding_adjusted <- NA
+nonbreeding$reviewer <- NA
+nonbreeding$justification <- NA
+nonbreeding$date <- NA
+print(nonbreeding)
+write_csv(nonbreeding, paste(work_dir, "BHNU_adjustments_05Dec2023.csv"))
+```
+
+
+## Is the reported code appropriate for the time of year?
+This question must be asked on a species-specific bases because species winter- and summer-breeding species inhabit North Carolina.  Therefore, see the previous question.
