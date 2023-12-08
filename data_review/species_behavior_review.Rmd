@@ -2,7 +2,7 @@
 title: "Species-centered Behavior Code Review"
 author: "N.M. Tarr"
 date: "2023-12-04"
-output: word_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -34,7 +34,7 @@ records <- get_observations(species = species, EBD_fields_only = FALSE) %>%
   auk_unique()
 ```
 
-Next, we need to retrieve the list of inappropriate behavior codes for the species.  It would be ideal to have a document in the Atlas Cache storing this information, but that does not yet exist.  For this demonstration, we define the informatio for test species in a data frame.
+Next, we need to retrieve the list of inappropriate behavior codes for the species.  It would be ideal to have a document in the Atlas Cache storing this information, but that does not yet exist.  For this demonstration, we define the information for test species in a data frame.
 ```{r}
 notapp_spp <- data.frame(behavior_code = c("S", "S"),
                          species = c("Turkey Vulture", "Black Vulture"),
@@ -62,7 +62,7 @@ suspicious <- records %>%
             locality_id, year, month, taxonomic_order, category))
 
 # Save to csv
-write_csv(suspicious, paste(work_dir, "singing_TUVU.csv"))
+write_csv(suspicious, paste(work_dir, "/DataReview/singing_TUVU.csv"))
 print(suspicious)
 ```
 

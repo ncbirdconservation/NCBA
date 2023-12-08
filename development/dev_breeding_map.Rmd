@@ -3,7 +3,8 @@ title: "dev_breeding_map"
 author: "N.M. Tarr"
 date: "2023-12-7"
 output:
-  word_document: html
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}

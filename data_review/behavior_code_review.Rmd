@@ -2,7 +2,9 @@
 title: "Code-centered Behavior Code Review"
 author: "N.M. Tarr"
 date: "2023-12-04"
-output: word_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -26,9 +28,13 @@ The "get_breeding_records" function can retrieve records of "PE".
 ```{r}
 pe <- get_breeding_records(behaviors = c("PE")) %>%
   to_EBD_format() %>%
-  auk_unique()
+  auk_unique() %>%
+  select(sampling_event_identifier, common_name, protocol_type, has_media) %>%
+  filter(protocol_type != "Banding") %>%
+  arrange(common_name)
 
-print(pe %>% select(sampling_event_identifier, common_name, has_media))
+print(pe)
+write_csv(pe, paste(work_dir, "physiological_evidence.csv"))
 ```
 
 See for which species the code was reported.
