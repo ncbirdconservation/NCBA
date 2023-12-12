@@ -62,7 +62,7 @@ suspicious <- records %>%
             locality_id, year, month, taxonomic_order, category))
 
 # Save to csv
-write_csv(suspicious, paste(work_dir, "/DataReview/singing_TUVU.csv"))
+write_csv(suspicious, paste0(work_dir, "DataReview/singing_TUVU.csv"))
 print(suspicious)
 ```
 
@@ -113,7 +113,7 @@ proposed$reviewer <- "N. Tarr"
 proposed$justification <- "The reported code is likely an error because vultures do not sing."
 proposed$date <- Sys.time()
 print(proposed)
-write_csv(proposed, paste(work_dir, "TUVU_adjustments_05122023.csv"))
+write_csv(proposed, paste0(work_dir, "TUVU_adjustments_05122023.csv"))
 ```
 
 

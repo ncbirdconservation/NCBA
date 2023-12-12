@@ -9,7 +9,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  echo = FALSE,
+  echo = TRUE,
   warning = FALSE,
   message = FALSE)
 setwd("~/Code/NCBA/resources")
@@ -29,11 +29,10 @@ The "get_breeding_records" function can retrieve records of "PE".
 pe <- get_breeding_records(behaviors = c("PE")) %>%
   to_EBD_format() %>%
   auk_unique() %>%
-  select(sampling_event_identifier, common_name, protocol_type, has_media) %>%
   filter(protocol_type != "Banding") %>%
   arrange(common_name)
 
-print(pe)
+print(select(pe, c(sampling_event_identifier, common_name, protocol_type, has_media)))
 write_csv(pe, paste(work_dir, "physiological_evidence.csv"))
 ```
 
@@ -72,8 +71,7 @@ tm_shape(uncertainty_buffer, name = "Locational Uncertainty") + tm_borders(col =
 
 The records can also be summarized and plotted by day of year with a boxplot that also provides hyperlinks for each record.
 ```{r}
-box <- breeding_boxplot(species = NULL, data = pe, type = "interactive")
-show(box)
+breeding_boxplot(species = NULL, data = pe, type = "interactive")
 ```
 
 
@@ -120,6 +118,5 @@ tm_shape(uncertainty_buffer, name = "Locational Uncertainty") + tm_borders(col =
 
 The records can also be summarized and plotted by day of year with a boxplot that also provides hyperlinks for each record.
 ```{r}
-box <- breeding_boxplot(species = NULL, data = df, type = "interactive")
-show(box)
+breeding_boxplot(species = NULL, data = df, type = "interactive")
 ```

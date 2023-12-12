@@ -2,9 +2,7 @@
 title: "dev_breeding_map"
 author: "N.M. Tarr"
 date: "2023-12-7"
-output:
-  html_document:
-    df_print: paged
+output: html_document
 ---
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}

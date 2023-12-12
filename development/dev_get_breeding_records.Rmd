@@ -269,7 +269,7 @@ print(summary(time))
 ```
 
 ## EBD
-For a data-poor species
+For a data-poor code
 ```{r}
 # Run the function 2 times and record the runtime
 time <- c()
@@ -284,7 +284,7 @@ for (i in 1:2) {
 print(summary(time))
 ```
 
-For a data-rich species
+For a data-rich code
 ```{r}
 # Run the function 2 times and record the runtime
 time <- c()
