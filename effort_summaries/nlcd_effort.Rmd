@@ -1,6 +1,12 @@
-# NLCD land cover bias in NCBA sampling effort
-N. Tarr
-October 2023
+
+---
+title: "NLCD Survey Bias"
+author: "N.M. Tarr"
+date: "2023-12-04"
+output:
+  html_document:
+    df_print: paged
+---
 
 # Introduction
 This document details an approach for assessing the bias of NCBA effort in terms of the land cover types surveyed.  The assessment is performed on a per-block basis with the goal of answering questions such as, "which land cover types have been sufficiently sampled?"; "which land cover types should be prioritized for sampling in the future?"; and "what proportion of the surveyed area is urban (or any other class)?".  The approach is based upon the area covered by surveys, not the number or duration of surveys.  
