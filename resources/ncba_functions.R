@@ -584,6 +584,49 @@ calculate_breeding_dates <- function(species, basis, quantiles, year = 2023,
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+breeding_map <- function(species) {
+  # Makes an interactive map of records color coded by breeding category
+  #
+  # Description:
+  # Gets observations for a species and maps them atop a counties layer in an
+  #   interactive map.  Clicking on record symbols reveals a hyperlink to the 
+  #   checklist webpage on ebird.com.
+  #
+  # Arguments:
+  # species -- common name
+  
+  # Get the records
+  records <- get_observations(species = species, EBD_fields_only = FALSE) %>%
+    to_EBD_format() %>%
+    auk_unique()
+  
+  # Make spatial data frames of all records
+  records_sf <- records_as_sf(records, kind = "observations", method = "points") %>%
+    right_join(records, by = "sampling_event_identifier") %>%
+    filter(breeding_category != "")
+  
+  # Add a column with code to open the webpage for each checklist
+  records_sf$front <- '<a href = https://ebird.org/checklist/'
+  
+  # Strip off any excess identifiers (group checklists produce "S104604778,S104604779")
+  records_sf$sampling_event_identifier <- lapply(strsplit(records_sf$sampling_event_identifier, split = ","), function(l) l[[1]])
+  records_sf$URL <- with(records_sf, paste0(front, sampling_event_identifier,
+                                            ">visit</a>"))
+  
+  # Draw the map
+  tmap_mode("view") 
+  tm_shape(shp = counties_NC(), name = "counties") + tm_borders() +
+    tm_shape(shp = records_sf, name = "observations") + 
+    tm_dots(interactive = TRUE, popup.vars = c("URL", "observation_date", "behavior_code"), col = "breeding_category",
+            popup.format = list(html.escape = F), border.alpha = 0,
+            palette = c("yellow", "lightgreen", "darkgreen", "purple"),
+            labels = c("observed", "possible", "probable", "confirmed")) +
+    tm_layout(title = species)
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 breeding_boxplot <- function(species, data, type="interactive", 
                              pallet="Paired", omit_codes=NULL,
                              lump=NULL, drop=TRUE, cex.x.axis = 0.9, 
@@ -862,7 +905,7 @@ breeding_boxplot <- function(species, data, type="interactive",
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-breeding_map <- function(records, popup.vars = c("URL"), title) {
+map_records <- function(records, popup.vars = c("URL"), title) {
   # Creates an interactive map of records.  
   #
   # Description:
@@ -1478,7 +1521,7 @@ get_breeding_records <- function(behaviors = NULL,
     # Retrieve the checklists #
     records <- connection$find(fields = fields2, query = query) %>%
       unnest(cols = (c(OBSERVATIONS))) %>% # Expands observations
-      filter(BEHAVIOR_CODE %in% behaviors) # Rows for non-target records detected along
+      filter(BREEDING_CODE %in% behaviors) # Rows for non-target records detected along
     # with target records exist and need to be dropped.
     
     # Second pass at dropping unwanted fields (needed because of nested fields).

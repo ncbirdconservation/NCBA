@@ -1,0 +1,54 @@
+---
+title: "dev_map_records"
+author: "N.M. Tarr"
+date: "2023-12-7"
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+setwd("~/Code/NCBA/resources")
+source("ncba_functions.R")
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+
+# Function
+Uses the TMAP package to create an interactive map of the provided records.  Designed for use with output from get_breeding_records() or get_observations().  Hovering the mouse over the record symbol displays the sampling event identifier.  Clicking on symbols opens a small table showing records attributes.  The popup.vars argument controls what is included in those tables.  Including "URL" will provide a hyperlink to the checklist webpage on ebird.com.
+```{r}
+map_records
+```
+
+# Usage
+When paired with get_breeding_records(), the function allows the user to map and explore the attributes of records.
+```{r}
+# Get breeding records
+df <- get_breeding_records(behaviors = c("PE", "FS")) %>%
+  to_EBD_format() %>%
+  auk_unique()
+
+# Make a map
+map_records(records = df, popup.vars = c("URL", "common_name", "behavior_code"), 
+             title = "Physiological Evidence or Carrying a Fecal Sac")
+```
+
+# Tests
+The usage example shows a case where records are for two behavior codes, any species.  Try a case where records are from one species and one code: singing Turkey Vultures.
+```{r}
+species <- "Turkey Vulture"
+records <- get_observations(species = species, EBD_fields_only = FALSE) %>%
+  to_EBD_format() %>%
+  auk_unique()
+
+suspicious <- records %>% 
+  filter(behavior_code == "S") %>%
+  select(-c(state, state_code, country, bcr_code, usfws_code, iba_code, 
+            locality_id, year, month, taxonomic_order, category))
+
+map_records(suspicious, popup.vars = c("URL", "observation_date"), 
+             title = "Singing Turkey Vultures")
+```
