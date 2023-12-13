@@ -1,0 +1,1452 @@
+# NC Bird Atlas Shiny App
+# v0.2
+# 12/08/2022
+# Scott K. Anderson, Elsa Chen, Nathan Tarr, Scott Pearson
+# https://github.com/nmtarr/NCBA/shinyapp
+
+
+if(!require(shiny)) install.packages(
+  "shiny", repos = "http://cran.us.r-project.org")
+if(!require(shinyWidgets)) install.packages(
+  "shinyWidgets", repos = "http://cran.us.r-project.org")
+if(!require(tidyverse)) install.packages(
+  "tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(mongolite)) install.packages(
+  "mongolite", repos = "http://cran.us.r-project.org")
+if(!require(dplyr)) install.packages(
+  "dplyr", repos = "http://cran.us.r-project.org")
+if(!require(leaflet)) install.packages(
+  "leaflet", repos = "http://cran.us.r-project.org")
+if(!require(leaflegend)) install.packages(
+  "leaflegend",
+  repos = "http://cran.us.r-project.org"
+)
+if(!require(htmltools)) install.packages(
+  "htmltools", repos = "http://cran.us.r-project.org")
+if(!require(shinythemes)) install.packages(
+  "shinythemes", repos = "http://cran.us.r-project.org")
+if(!require(shinydashboard)) install.packages(
+  "shinydashboard",
+  repos = "http://cran.us.r-project.org"
+)
+if(!require(polished)) install.packages(
+  "polished", repos = "http://cran.us.r-project.org")
+# if(!require(waffle)) install.packages(
+#   "waffle", repos = "https://cinc.rud.is")
+
+#adds functions for tooltips
+if(!require(shinyBS)) install.packages(
+  "shinyBS", repos = "http://cran.us.r-project.org")
+# if(!require(geojsonio)) install.packages(
+#   "geojsonio", repos = "http://cran.us.r-project.org")
+
+#libraries for spp data
+if(!require(lubridate)) install.packages(
+  "lubridate", repos = "http://cran.us.r-project.org")
+if(!require(grid)) install.packages(
+  "grid", repos = "http://cran.us.r-project.org")
+if(!require(gridBase)) install.packages(
+  "gridBase", repos = "http://cran.us.r-project.org")
+if(!require(RColorBrewer)) install.packages(
+  "RColorBrewer", repos = "http://cran.us.r-project.org")
+
+#get functions from other files
+source("blocks.r")
+source("utils.r") #utilities file
+source("spp.r") #species function file
+source("blkcumhrfunc.r") #block hour graph
+source("ncba_functions_shiny.R") #add this later to sync with Nathan work
+
+# MAP CONSTANTS
+nc_center_lat = 35.5
+nc_center_lng = -79.2
+nc_center_zoom = 7
+nc_block_zoom = 13
+ncba_blue = "#2a3b4d"
+ncba_half_blue = "#B8C5D3"
+checklists_found = 0
+ncba_failed = "#DB504A"
+ncba_success = "#43AA8B"
+ncba_white = "#ffffff"
+ncba_gray = "#aaaaaa"
+
+# SETUP FILES
+current_block = ""
+enableBookmarking("url")
+sd <- get_safe_dates()
+
+
+# Define UI for Quackalacky Data app -----------------------------------------
+ui <- bootstrapPage(
+  # titlePanel("NC Bird Atlas Explorer"),
+  navbarPage(
+    theme = shinytheme("flatly"), 
+    collapsible=TRUE,
+    # theme = shinytheme("cosmo"), collapsible=TRUE,
+    id="nav",
+    windowTitle = "NCBA Explorer",
+    tags$head(includeCSS("styles.css")),
+    tags$head(tags$link(rel="icon", href="/input_data/ncba_blue_wbnu.ico")),
+    header(
+      tags$div(
+        tags$img(
+          src = "ncba_logo_blue_halo_100.png"
+        )
+      )
+      # HTML(
+      # paste0(
+      #   '<a style="text-decoration:none;cursor:default;color:#FFFFFF;"',
+      #   ' class="active" href="#">NC Bird Atlas Explorer</a>',
+      #   '<p style="font-style:italic;font-size: 0.62em;">',
+      #   # 'Last Updated ', htmlOutput("latest_record") , '</p>'
+      #   'Last Updated Oct 31, 2023</p>'
+      #   )
+      # )
+    ),
+    tabPanel("Blocks",
+      div(class="col-md-2 panel sidebar", id = "block_controls",
+          h3("Blocks", class="tab-control-title"),
+          tags$p(
+            "Summary statistics page for block-level data.",
+            class="desc-text"
+            ),
+          div(class="tab-control-group",
+            selectInput(inputId = "APBlock", #name of input
+            label = "Selected Priority Block", #label displayed in ui
+            choices = c(
+              as.character(unique(priority_block_data$ID_NCBA_BLOCK)),
+              "NONE"),
+            # calls unique values from the ID_NCBA_BLOCK column
+            # in the previously created table
+            selected = "NONE")
+            # htmlOutput("checklist_counter")
+          ),
+          div(class="tab-control-group",
+          #  prettySwitch("portal_records","Portal Records Only", TRUE ),
+           radioButtons("season_radio",label = h4("Season"),
+              choices = list(
+                "All Records" = "All",
+                "Breeding" = "Breeding",
+                "Non-Breeding" = "Non-Breeding"
+              ),
+                # "Custom" = "Custom"),
+              selected = "All")
+          #  conditionalPanel(condition = "input.season_radio == 'Custom'",
+          #                   selectInput(
+          #                     "month_range",
+          #                     "Selected Months",
+          #                     choices = c(1,2,3,4,5,6,7,8,9,10,11,12),
+          #                     selected = c(1,2,3,4,5,6,7,8,9,10,11,12),
+          #                     multiple = TRUE)
+          #  )
+          )
+        ),
+        div(class="col-md-10 panel",
+          leafletOutput("mymap")
+        ),
+        div(class="col-md-3 panel",
+          h3("Statistics"),
+          htmlOutput("block_breeding_stats"),
+          downloadButton("download_block_checklists", "Download Checklists")
+        ),
+        div(class="col-md-3 panel",
+          h3("Hours"),
+          plotOutput("blockhours")
+        ),
+        div(class="col-md-3 panel",
+          h3("Species Accumulation"),
+          plotOutput("spp_accumulation")
+        ),
+        div(class="col-md-6 panel",
+          h3("Species List"),
+          dataTableOutput("spp_observed"),
+          downloadButton("download_spplist", "Download")
+
+        )
+    ),
+    # tabPanel("Species",
+    #   div(class="container-fluid", tags$head(includeCSS("styles.css")),
+    #     div(class="col-md-3",
+    #       selectizeInput("spp_select", h3("Species"),
+    #       choices = species_list, options=list(
+    #         placeholder = 'Select species',
+    #         onInitialize = I('function() {this.setValue(""); }')
+    #       ))
+    #     ),
+    #     div(class="col-md-9",
+    #       plotOutput("spp_breedingbox_plot"),
+    #       div(tableOutput("breeding_code_legend"), style="font-size:60%")
+    #   )
+    # )
+    # ),
+    tabPanel("Species Map",
+        div(
+          class = "col-md-2",
+          div(
+            selectizeInput(
+              "sppmap_select",
+              h3("Species"),
+            choices = species_list, options = list(
+              placeholder = 'Select species',
+              onInitialize = I('function() {this.setValue(""); }')
+              )
+            )
+          ),
+          div(tableOutput("block_breedcode_table"))
+        ),
+        div(
+          class = "col-md-10",
+          id = "spp-block-map",
+          leafletOutput("mysppmap")
+          )
+    ),
+    tabPanel(
+      "Overview",
+      div(
+        class = "col-md-12",
+        leafletOutput("overview_map", height = "70vh")
+      )
+    ),
+    tabPanel(
+      "About",
+      tags$div(
+        tags$h4("NC Bird Atlas Data Explorer"),
+        tags$p(
+          paste0("This site is a work in progress, designed to provide access",
+          " to data collected through the North Carolina Bird Atlas. ",
+          "Data submitted to eBird is updated on a monthly basis, ",
+          "and are unvetted.")),
+        tags$br(),
+        tags$img(
+          src = "ncba_blue_halo_final.png"
+          # width = "150px",
+          # height = "75px"
+          )
+
+        )
+    )
+  )
+
+)
+
+# Define server logic to plot various variables against mpg
+server <- function(input, output, session) {
+
+## GET SERVER URL PARAMETERS (if they exist)
+
+observe({
+  query <- parseQueryString(session$clientData$url_search)
+  if (!is.null(query[['block']])) {
+    print(query[['block']])
+    # b <- query[['block']]
+    rv_block$id = query[['block']]
+    # if ( b %in% input$APBlock & b != input$APBlock) {
+    #   selected = input$APBlock[input$APBlock != b]
+    # } else {
+    #   selected = c(input$APBlock, b)
+    #   updateSelectInput(
+    #     session,
+    #     "APBlock",
+    #     selected = selected
+    #   )
+    # }
+    # updateQueryString('https://ncbirdconservation.shinyapps.io/shinyapp_public/')
+  }
+
+  remove_query_string (
+    session = shiny::getDefaultReactiveDomain(),
+    mode = "replace"
+  )
+})
+
+
+# output$url <- renderText({
+#   'http://127.0.0.1:3658/'
+#   # 'https://ncbirdconservation.shinyapps.io/shinyapp_public/'
+# })
+
+## BLOCK TAB  ----------------------------------------------------
+  # latest record
+  output$latest_record <- reactive({
+    # pipeline <- paste0('[{"$group": {"_id": "max",',
+    #   '"maxDate": { "$max": "$OBSERVATION_DATE"}',
+    #   '}}]')
+    # print(pipeline)
+    # md <- aggregate_ebd_data(pipeline)
+    # print(md)
+
+    paste("Oct 31, 2023")
+  })
+  # CHECKLISTS
+  checklist_count <- reactive({
+    unique_sei <- unique(current_block_ebd()$SAMPLING_EVENT_IDENTIFIER)
+    length(unique_sei)
+  })
+
+  checklist_filtered_count <- reactive({
+    unique_sei <- 
+      unique(current_block_ebd_filtered()$SAMPLING_EVENT_IDENTIFIER)
+    length(unique_sei)
+  })
+
+  ### BLOCK TAB BLOCKS ----------------------------------------------------
+  # reactive listener for block select
+  #
+  # Creating a reactive value so it can be updated outside of rv_block$id
+  # I think rv_block$id could just be totally replaced with rv_block$id?
+
+  rv_block <- reactiveValues(chosen=NULL, id =NULL)
+
+  #observe events where block changes
+  # block map click
+  observeEvent(
+    input$mymap_shape_click,
+    {
+      rv_block$id = input$mymap_shape_click$id
+      print("block map clicked")
+    }
+  )
+  # block select change
+  observeEvent(
+    input$APBlock,
+    {
+      rv_block$id = input$APBlock
+      print("Block selected from drop down list")
+      if(input$APBlock == "NONE")
+        rv_block$id = NULL
+      else
+        rv_block$id = input$APBlock
+    },
+    ignoreInit = TRUE
+  )
+
+  # overview map click
+  observeEvent(
+    input$overview_map_shape_click,
+    {
+      rv_block$id = input$overview_map_shape_click$id
+      print("overview map clicked")
+
+      #change focus to blocks tab
+      updateNavbarPage(
+        session,
+        "nav",
+        selected = "Blocks"
+      )
+    }
+  )
+
+  # when rv_block changes, do the following
+  observeEvent(
+    rv_block$id,
+    {
+      print(paste0("rv_block changed to ", rv_block$id))
+      b <- rv_block$id
+      # if (b %in% input$APBlock & b != input$APBlock){
+      #   # block is in drop-down, and is not the current block
+      #   selected = input$APBlock[input$APBlock != b]
+      # } else {
+        # selected = b
+        updateSelectInput(
+          session,
+          "APBlock",
+          selected = b
+        )
+      # }
+
+      ## Update map - zoom in
+      block_info <- filter(priority_block_data, ID_NCBA_BLOCK == rv_block$id)
+
+      #calculate the center of the block
+      block_center_lat <- block_info$SE_Y +
+        ((block_info$NW_Y - block_info$SE_Y)/2)
+      block_center_lng <- block_info$SE_X - 
+        ((block_info$SE_X - block_info$NW_X)/2)
+
+      leafletProxy("mymap", session) %>%
+        setView(
+          lat = block_center_lat,
+          lng = block_center_lng,
+          zoom = nc_block_zoom
+          )
+    }
+  )
+
+  # # grab id from map click
+  # observeEvent (input$mymap_shape_click, {
+  #   blockmap_info <- input$mymap_shape_click
+  #   blockmap_info_id <- input$mymap_shape_click$id
+
+  #   # rv_block$chosen <- blockmap_info
+  #   rv_block$id <-  blockmap_info_id
+  # })
+
+  # current block changes when map is clicked
+  # current_block_r <- reactive({
+  #   print("map clicked")
+  #   print(rv_block$id)
+  #   paste(rv_block$id)
+  # })
+
+  # when map block clicked, update select input drop down list
+  # and when clicking current block it doesn't clear the name
+  # from the drop down list
+  # observeEvent(input$mymap_shape_click, {
+  #   print("Updating drop down list to match clicked block")
+  #   click <- input$mymap_shape_click
+  #   if(click$id %in% input$APBlock & click$id != input$APBlock)
+  #     selected = input$APBlock[input$APBlock != click$id]
+  #   else
+  #     selected = c(input$APBlock, click$id)
+  #   updateSelectInput(session, "APBlock",
+  #                     selected = selected)
+  # })
+
+  #### React to Change of Selected Block in Drop down list instead of click,
+  ## a bit redundant with the one above but I am not sure how to combine them?
+  # observeEvent(input$APBlock, {
+  #   print("Block selected from drop down list")
+  #   blockmap_list_id <- input$APBlock
+  #   if(input$APBlock == "NONE")
+  #     rv_block$id = NULL
+  #   else
+  #     rv_block$id = blockmap_list_id
+  # })
+
+  # retrieves current block records when rv_block$id changes
+  current_block_ebd <- reactive({
+    req(rv_block$id)
+    print("retrieving current block data")
+    #build query string from parameters
+    #philosophy:
+    #   - if block changes, rerun query to retrieve from
+    #       AtlasCache (this function)
+    #       - this returns a flattened dataset,
+    #           with one row per checklist-species combination
+    #   - if other parameters change,
+    #       filter existing data with "current_block_ebd_filtered"
+    #   - current_block_ebd_checklistsonly_filtered
+    #       returns checklist level data
+
+    cblock <- rv_block$id
+
+    q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}", "PROJECT_CODE": "EBIRD_ATL_NC"}')
+
+    get_ebd_data(q, "{}") #get all fields
+
+  })
+  current_block_summary <- reactive({
+    req(rv_block$id)
+    cblock <- rv_block$id
+
+    q <- str_interp('{"ID_NCBA_BLOCK":"${cblock}"}')
+
+    m_block_summaries$find(q, "{}") #get all fields
+
+  })
+  portal_records_switch <- reactive({
+    # input$portal_records()
+    TRUE
+  })
+
+  # Applies filter WHEN CRITERIA CHANGES
+  current_block_ebd_filtered <- reactive({
+    req(current_block_ebd())
+    # print(head(current_block_ebd()$EBD_NOCTURNAL))
+    #make sure there are records to filter!
+    validate(
+      need(checklist_count()>0,"")
+    )
+    print("applying filters to block records")
+      current_block_ebd() %>%
+        filter(
+          if(portal_records_switch())
+          PROJECT_CODE == "EBIRD_ATL_NC"
+          else TRUE) %>%
+        filter(
+          if (input$season_radio == "Breeding")
+            MONTH %in% c("3","4","5","6","7","8")
+           else if (input$season_radio == "Non-Breeding") 
+              MONTH %in% c("1","2","11","12")
+              else if (input$season_radio == "Custom")
+             MONTH %in% input$month_range
+          else TRUE
+        )
+  })
+
+
+  # UPDATE CHECKLIST COUNT
+  # output$checklist_counter <- renderUI({
+  #   req(
+  #     current_block_ebd(),
+  #     current_block_ebd_filtered(),
+  #     checklist_count(),
+  #     checklist_filtered_count())
+
+  #   all <- paste(checklist_count(), " Total Checklists Found")
+
+  #   filtered <- paste(
+  #     checklist_filtered_count(),
+  #     " Filtered Checklists Found")
+
+  #   HTML(paste(all, filtered, sep='<br/>'))
+
+  # })
+
+  #### FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES
+  #     RETURNS CHECKLIST LEVEL DATA ------
+  current_block_ebd_checklistsonly_filtered <- reactive({
+
+    req(current_block_ebd(), current_block_ebd_filtered())
+
+    current_block_ebd_filtered() %>%
+      filter(CATEGORY == "species") %>% # make sure only species counted
+      group_by(SAMPLING_EVENT_IDENTIFIER) %>%  # nolint
+      mutate(SPP_COUNT = length(unique(GLOBAL_UNIQUE_IDENTIFIER))) %>%
+      ungroup(SAMPLING_EVENT_IDENTIFIER) %>%
+      distinct(SAMPLING_EVENT_IDENTIFIER, .keep_all = TRUE) %>%
+      select(ALL_SPECIES_REPORTED, SPP_COUNT, ATLAS_BLOCK,BCR_CODE,COUNTRY, # nolint
+        COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA, # nolint
+        EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE, # nolint
+        ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID, # nolint
+        LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE, # nolint
+        OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE, # nolint
+        SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED, # nolint
+        TRIP_COMMENTS,USFWS_CODE,YEAR,EBD_NOCTURNAL) %>% # nolint
+      # ADD ADDITIONAL FILTERS HERE AS NEEDED
+      # create a column with the html link https://ebird.org/checklist/SID
+      mutate(
+        link = paste(htmlEscape("https://ebird.org/checklist"),
+        SAMPLING_EVENT_IDENTIFIER, sep = "/")) %>%
+      # then a column with the HTML code for part of the popup label
+      mutate(
+        ebird_link = paste0("",'<a style="font-weight:bold" href="',
+          link,
+          '"target="_blank">',htmlEscape(SAMPLING_EVENT_IDENTIFIER),
+          '</a> <br>',"Date: ", htmlEscape(OBSERVATION_DATE), "<br>",
+          "Start Time: ", htmlEscape(TIME_OBSERVATIONS_STARTED), "<br>",
+          "Length (Minutes): ", htmlEscape(DURATION_MINUTES), "<br>",
+          "Distance (km): ", htmlEscape(EFFORT_DISTANCE_KM), "<br>"
+          )
+        )
+  })
+
+
+
+
+  # # POPULATE LABEL FOR CURRENT BLOCK
+
+  output$download_block_checklists <- downloadHandler(
+    filename = function() {
+      p <- ""
+      if (portal_records_switch()){ p <- "portal"}
+
+      paste(
+        rv_block$id,
+        input$season_radio,p,
+        "blockchecklists.csv",
+        sep = "_")
+    },
+    content = function(file) (
+      write.csv(
+        current_block_ebd_checklistsonly_filtered(),
+        file,
+        row.names = TRUE)
+    )
+
+  )
+
+### For downloading testing datasets when conditions change (Deprecated?) ####
+
+  ## BREEDING STATS ----------------------------------------------------
+  output$block_breeding_stats <- renderUI({
+    req(current_block_summary())
+    print("rendering block stats")
+    #ensure records returned
+    validate(
+      need(current_block_summary(), "No checklists submitted.")
+    )
+    complete_text <- ifelse(
+      current_block_summary()$STATUS == "Complete",
+      "<h2>COMPLETED!</h2>",
+      ""
+    )
+    HTML(paste0(
+      "<p style='margin:2px 0px;font-size:1.1rem;'>", 
+      current_block_summary()$county, " county, region ",
+      current_block_summary()$region, "</p>",
+      # complete_text,
+      "<h4>Breeding</h4>",
+      "<p style='font-weight:600;'>", current_block_summary()$STATUS,"</p>",
+      "<p>Observed: ",
+      current_block_summary()$breedCountDetected + current_block_summary()$breedCountCoded,
+      "<br/>Coded: ",
+      current_block_summary()$breedCountCoded,
+      "<br/>Confirmed: ",
+      paste0(
+        current_block_summary()$breedCountConfirmed,
+        " (",
+        round(100 * current_block_summary()$breedPctConfirmed, 1),
+        "%)"
+        ),
+      "<br/>Possible: ",
+      paste0(
+        current_block_summary()$breedCountPossible,
+        " (",
+        round(100 * current_block_summary()$breedPctPossible, 1),
+        "%)"
+        ),
+      "<br/>Daytime Hours: ",
+      round(current_block_summary()$breedHrsDiurnal, 1),
+      "<br/>Daytime Visits: ",
+      current_block_summary()$breedCountDiurnalChecklists,
+      "<br/>Nocturnal Hours: ",
+      current_block_summary()$breedCountNocturnalChecklists,
+      "</p>",
+      "<h4>Winter</h4>",
+      "<p>Observed: ",
+      current_block_summary()$winterCountDetected,
+      "<br/>Daytime Hrs: ",
+        round(current_block_summary()$winterHrsDiurnal, 1),
+      "<br/>Daytime Visits: ",
+      current_block_summary()$winterCountDiurnalChecklists,
+      "<br/>Nocturnal Visits: ",
+      current_block_summary()$winterCountNocturnalChecklists,
+      "</p>"
+    ))
+
+  })
+  
+  #### DISPLAY BLOCK HOURS SUMMARY PLOT ------
+  block_hrs_results <- reactive({
+    req(current_block_ebd_checklistsonly_filtered())
+    print("running block hrs results")
+    block_hrs(current_block_ebd_checklistsonly_filtered())
+
+  })
+  output$blockhours <- renderPlot({
+    req(current_block_ebd_checklistsonly_filtered())
+    block_hrs_results()$hr_plot
+  })
+
+  #### DISPLAY SPECIES ACCUMULATION PLOT ------
+  spp_accumulation_results <- reactive({
+    req(current_block_ebd(), current_block_ebd_filtered())
+    # pass only those columns needed
+    sa <- filter(
+      current_block_ebd_filtered(),
+      CATEGORY == "species"
+      )[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES",
+      "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME", "CATEGORY")]
+
+    cblock <- rv_block$id
+
+    ## Retrieves appropriate data through aggregation query
+    ## _id = combination of block name and species
+    ## spp = species common name
+    ## maxBC = maximum Breeding Code
+    pipeline <- str_interp(c(
+      '[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
+      '{"$unwind": {"path": "$OBSERVATIONS"}}, ',
+      '{"$match": {"OBSERVATIONS.CATEGORY": "species"}},',
+      '{"$group": {"_id": {"blockName": "$ID_NCBA_BLOCK",',
+      '"spp": "$OBSERVATIONS.COMMON_NAME"},',
+      '"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]'
+      ))
+
+    spp_bcs <- aggregate_ebd_data(pipeline)
+    plot_spp_accumulation(sa, spp_bcs)
+
+  })
+
+  output$spp_accumulation <- renderPlot({
+    req(spp_accumulation_results())
+    # print(spp_accumulation_results()$spp_acc_data)
+    spp_accumulation_results()$plot
+
+  })
+
+  #### DISPLAY SPECIES LIST ------
+  # output$spp_observed <- renderDataTable(
+  #   spp_accumulation_results()$spp_unique[
+  #     c("spp", "bcat")],
+  #     options = list(pageLength=5, autoWidth = TRUE)
+  # )
+  block_spp_list <- reactive({
+    cblock <- rv_block$id
+    block_spp_pipeline <- str_interp(c(
+      '[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
+      '{"$unwind": {"path": "$sppList"}},',
+      '{"$project": {',
+      '"SPECIES": "$sppList.COMMON_NAME",',
+      '"BREEDING_STATUS": "$sppList.breedStatus",',
+      '"BREEDING_DETECTED": "$sppList.breedDetected",',
+      '"WINTER_DETECTED": "$sppList.winterDetected"',
+      '}}',
+      ']'
+    ))
+    m_block_summaries$aggregate(block_spp_pipeline)
+  })
+
+  output$spp_observed <- renderDataTable(block_spp_list())
+
+  output$download_spplist <- downloadHandler(
+    filename = function() {
+      paste("spp_list", ".csv", sep = "")
+    },
+    content = function ( file ) {
+      write.csv(block_spp_list(), file, row.names = TRUE)
+    }
+  )
+
+  ## SPECIES MAP  ----------------------------------------------------
+  ### SETUP LEAFLET MAP, RENDER BASEMAP ------
+  output$mymap <- renderLeaflet({
+
+    #setup block geojson layer
+    print("starting map, adding blocks")
+
+    ## Add fill value based on block status
+    priority_block_data <- priority_block_data %>%
+    mutate(
+      fillComplete = ifelse(
+        STATUS == "Complete", ncba_white, "#777777"
+      )
+    ) %>%
+    mutate(
+      colorComplete = ifelse(
+        STATUS == "Complete", ncba_blue, ncba_white
+      )
+    ) %>%
+    mutate(
+      fillOpac = ifelse(
+        STATUS == "Complete", 0.8, 0.05
+      )
+    )
+
+    leaflet() %>%
+      setView(
+        lng = nc_center_lng,
+        lat = nc_center_lat,
+        zoom = nc_center_zoom) %>%
+      # addTiles() %>%
+      addProviderTiles(
+        providers$Esri.WorldImagery,
+        options = providerTileOptions(opacity = 1),
+        group = "Aerial Map"
+        ) %>%
+      addProviderTiles(
+        "OpenStreetMap.Mapnik",
+        options = providerTileOptions(opacity = 1),
+        group = "Street Map"
+      ) %>%
+      addRectangles(
+        data = priority_block_data,
+        layerId = ~ ID_NCBA_BLOCK,
+        lng1 = ~ NW_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        weight = 2,
+        color = ncba_white,
+        # color = ~ colorComplete,
+        opacity = 0.9,
+        # fillColor = "#777777",
+        fillColor = ~ fillComplete,
+        # fillOpacity = 0.05,
+        fillOpacity = ~ fillOpac,
+        fill = TRUE,
+        label = ~ ID_NCBA_BLOCK
+        ) %>%
+        addLayersControl(
+          data = priority_block_data,
+          baseGroups = c("Street Map", "Aerial Map"),
+          options = layersControlOptions(collapsed = FALSE)
+          )
+  })
+
+  ### ZOOM MAP TO SELECTED BLOCK ------
+  # observeEvent(rv_block$id, {
+  #     req(rv_block$id)
+  #     block_info <- filter(block_data, ID_NCBA_BLOCK==rv_block$id)
+
+  #     #calculate the center of the block
+  #     block_center_lat <- block_info$SE_Y +
+  #       ((block_info$NW_Y - block_info$SE_Y)/2)
+  #     block_center_lng <- block_info$SE_X - 
+  #       ((block_info$SE_X - block_info$NW_X)/2)
+
+  #     leafletProxy("mymap", session) %>%
+  #       setView(
+  #         lat = block_center_lat,
+  #         lng = block_center_lng,
+  #         zoom = nc_block_zoom
+  #         )
+  # })
+
+   ## SPECIES MAP  ----------------------------------------------------
+  ### SETUP LEAFLET MAP, RENDER BASEMAP ------
+  output$mysppmap <- renderLeaflet({
+
+    #setup block geojson layer
+    print("starting map, adding blocks")
+
+    leaflet() %>%
+      setView(
+        lng = -79.0,
+        lat = 35.7,
+        zoom = 7) %>%
+      addProviderTiles(providers$Esri.WorldTopoMap)
+
+  })
+  ### ADD SYMBOLOGY FOR SELECTED SPECIES ------
+  sppblock_data <- reactive({
+    # print(input$sppmap_select)
+      spp <- input$sppmap_select
+      print(spp)
+      get_spp_by_block(spp)
+  })
+
+  observeEvent(
+    sppblock_data(),
+    {
+      print("retrieving spp block data")
+      sppblockmap_data <- sppblock_data()
+      print("spp block data retrieved")
+
+      if (nrow(sppblockmap_data) > 0){
+      # print (paste0("spp by block len = ",nrow(sppblockmap_data)))
+      spp_blocks <- merge(
+        priority_block_data,
+        sppblockmap_data,
+        by = "ID_NCBA_BLOCK"
+        )
+      # print(paste0("spp block len = ",nrow(spp_blocks)))
+
+
+      spp_blocks <- mutate(
+        spp_blocks,
+        breedcat = case_when(
+          bc == "C4" ~ "C4 Confirmed",
+          bc == "C3" ~ "C3 Probable",
+          bc == "C2" ~ "C2 Possible",
+          TRUE ~ "C1 Observed"
+        )
+      )
+
+      spp_blocks <- mutate(
+        spp_blocks,
+        blocklink = sprintf(
+          'https://ebird.org/atlasnc/block/%s',
+          spp_blocks$ID_BLOCK_CODE
+          )
+      )
+      output$block_breedcode_table <- renderTable(table(spp_blocks$breedcat))
+
+      block_colors <- colorFactor(
+        palette = brewer.pal(4, 'Purples'),
+        domain = spp_blocks$breedcat
+        )
+
+      print("adding blocks to map")
+      leafletProxy("mysppmap") %>%
+      clearShapes() %>%
+      clearControls() %>%
+      addRectangles(
+        data = priority_block_data,
+        layerId = ~ ID_BLOCK_CODE,
+        lng1 = ~ NW_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        weight= 0.5,
+        color=ncba_blue,
+        opacity = 0.25,
+        fill = FALSE,
+        label = priority_block_data$ID_NCBA_BLOCK
+        ) %>%
+      addRectangles(
+        data = spp_blocks,
+        layerId = ~ ID_NCBA_BLOCK,
+        lng1 = ~ NW_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        weight = 0.5,
+        color = '#000000',
+        # opacity = 0,
+        fillColor= ~block_colors(breedcat),
+        fillOpacity = 0.8,
+        fill = TRUE,
+        label = sprintf(
+          "<strong><a href = '%s'>%s</a></strong><br/>%s",
+          spp_blocks$blocklink,
+          spp_blocks$ID_NCBA_BLOCK,
+          spp_blocks$breedcat
+          ) %>%
+          lapply(htmltools::HTML)
+        ) %>%
+      addLegend(
+        "bottomright",
+        pal = block_colors,
+        values = spp_blocks$breedcat,
+        labFormat = labelFormat(
+          transform = function(x) sort(x, decreasing = FALSE)
+        ),
+        title = "Breeding Category",
+        opacity = 1
+        ) 
+        }
+    }
+  )
+
+
+### DISPLAY BLOCKS
+
+ # popup menu on hover over checklist
+
+  ### DISPLAY CHECKLISTS ON THE MAP ------
+  observeEvent(
+    current_block_ebd_checklistsonly_filtered(),
+    {
+      req(current_block_ebd_checklistsonly_filtered())
+
+      # check to make sure records returned!
+      checklists <-
+        current_block_ebd_checklistsonly_filtered()[
+          c("LATITUDE","LONGITUDE", "SAMPLING_EVENT_IDENTIFIER", "LOCALITY_ID",
+          "LOCALITY", "OBSERVATION_DATE", "ebird_link")]
+      if (length(checklists) > 0){
+        leafletProxy("mymap") %>%
+        clearMarkerClusters() %>%
+        # clearShapes() %>%
+        addCircleMarkers(
+          data = checklists,
+          lat = ~ LATITUDE,
+          lng = ~ LONGITUDE,
+          radius = 5,
+          clusterOptions = markerClusterOptions(
+            maxClusterRadius = 10,
+            spiderfyDistanceMultiplier = 2),
+          color = ncba_blue,
+          opacity = 1,
+          stroke = TRUE,
+          weight = 1.8,
+          fillColor = ncba_white,
+          fillOpacity = 0.6,
+          label = sprintf(
+            "<strong>%s</strong><br/>%s<br/>%s",
+            checklists$SAMPLING_EVENT_IDENTIFIER,
+            checklists$LOCALITY,
+            checklists$OBSERVATION_DATE) %>%
+          lapply(htmltools::HTML),
+          popup = ~ebird_link)
+      }
+    }
+  )
+
+
+
+  # SPECIES TAB  ----------------------------------------------------
+
+  # Species info
+
+  output$breeding_code_legend <- renderTable(
+    breeding_codes_key,
+    striped = TRUE,
+    spacing = "xs"
+  )
+
+#   output$spp_breedingbox_plot <- renderPlot({
+
+#   # check to make sure species is selected
+#   # validate(
+#   #   need(input$spp_select, 'select a species from the list')
+#   # )
+#   ### PLOT BREEDING CODES ------------------------------------------------
+#   lump <- list(S = c("S", "S7", "M"), O = c("", "F", "O", "NC"))
+#   no_plot_codes <- NULL
+#   out_pdf <- NULL
+#   spp <- input$spp_select
+#   # print(spp)
+
+#   #this pipeline pulls from the ebd_observations collection
+#   # slower, but needs less pre-compilation (like spp_summaries)
+#   pipeline  <- sprintf(
+#     '[{
+#       "$match": {"COMMON_NAME": "%s"}
+#       },
+#       {"$group":
+#           {"_id": {
+#               "bcode": "$BREEDING_CODE",
+#               "odate": "$OBSERVATION_DATE"
+#             },
+#             "cname": {
+#               "$first": "$COMMON_NAME"
+#             }
+#           }
+#       },
+#       {
+#         "$project": {
+#           "_id": "$cname",
+#           "COMMON_NAME": "$cname",
+#           "OBSERVATION_DATE": "$_id.odate",
+#           "BREEDING_CODE": "$_id.bcode"
+#         }
+#       }
+#     ]' ,
+#       spp)
+
+#     ebird <- aggregate_spp_data(pipeline)
+
+#   print("aggregate pipeline completed.")
+  
+#   print("ebd records retrieved, plotting data")
+#   breeding_boxplot(
+#     spp,
+#     ebird,
+#     pallet="Paired",
+#     out_pdf=NULL,
+#     no_plot_codes=no_plot_codes,
+#     lump=lump,
+#     drop=TRUE)
+# })
+
+#############################################################
+## OVERVIEW TAB
+
+# BLOCK COMPLETION CRITERIA
+breedHrsDiurnalCriteriaMin <- 20
+breedPctConfirmedCriteriaMin <- 0.25
+breedPctPossibleCriteriaMax <- 0.25
+breedCountCodedCriteriaMin <- 55
+breedVisitsDiurnalCriteriaMin <- 3
+breedVisitsNocturnalCriteriaMin <- 2
+winterSppCriteriaMin <- 55
+winterHrsDiurnalCriteriaMin <- 5
+winterVisitsDiurnalCriteriaMin <- 2
+winterVisitsNocturnalCriteriaMin <- 1
+
+insideBlockAdj <- 0.003
+
+
+
+  ### SETUP LEAFLET MAP, RENDER BASEMAP 
+  print("loading overview_map")
+  output$overview_map <- renderLeaflet({
+    #setup block geojson layer
+    print("starting effort map, adding blocks")
+    leaflet() %>%
+      setView(
+        lng = nc_center_lng,
+        lat = nc_center_lat,
+        zoom = nc_center_zoom
+      ) %>%
+      ### Base Groups (Satellite Imagery and Blocks )
+      addProviderTiles(
+        "CartoDB.DarkMatterNoLabels",
+        options = providerTileOptions(opacity = 1),
+        group = "Dark No Labels"
+      ) %>%
+      addProviderTiles(
+        "OpenStreetMap.Mapnik",
+        options = providerTileOptions(opacity = 1),
+        group = "Street Map"
+      ) %>%
+      #add block outlines
+      addRectangles(
+        data = pb_map,
+        layerId = ~ ID_NCBA_BLOCK,
+        lng1 = ~ NW_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        stroke = TRUE,
+        fillColor = ~ fillComplete,
+        fill = TRUE,
+        fillOpacity = ~ fillOpac,
+        weight = 2.5,
+        color = ncba_gray,
+        label = ~paste0(
+            "<strong>",
+            ID_NCBA_BLOCK,
+            "<br/>",
+            STATUS,
+            "</strong>",
+            "<br/>Breeding Coded: ",
+            breedCountCoded,
+            "</strong><br>Breeding Confirmed: ",
+            paste(round(100 * breedPctConfirmed, 1), "%", sep = ""),
+            "</strong><br>Breeding Possible: ",
+            paste(round(100 * breedPctPossible, 1), "%", sep = ""),
+            "</strong><br>Breeding Diurnal Hours: ",
+            round(breedHrsDiurnal, 1),
+            "</strong><br>Breeding Visits: ",
+            breedCountDiurnalChecklists,
+            "</strong><br>Winter Diurnal Hours: ",
+            round(winterHrsDiurnal, 1),
+            "</strong><br>Winter Diurnal Visits: ",
+            winterCountDiurnalChecklists,
+            "</strong><br>Winter Species Detected: ",
+            winterCountDetected,
+            "</strong><br>Winter Nocturnal Visits: ",
+            winterCountNocturnalChecklists
+          ) %>%
+          lapply(htmltools::HTML),
+          group = "Blocks",
+          # popup = ~block_popup
+      ) %>%
+      ### Overlay Groups
+      ## Breeding Coded (top bar)
+      addRectangles(
+        data = pb_map,
+        lng1 = ~ NW_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ NW_Y,
+        color = ~ncbapal(bbcgCoded),
+        # color = ~breedingcodedpal(breedCountCoded),
+        stroke = ~ !fillBool,
+        weight = 5,
+        opacity = 1,
+        fill = FALSE,
+        group = "Breeding Coded"
+      ) %>%
+      ## Breeding Confirmed (right bar)
+      addRectangles(
+        data = pb_map,
+        lng1 = ~ SE_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        color = ~ ncbapal(bbcgConfirmed),
+        stroke = ~ !fillBool,
+        weight = 5,
+        opacity = 1,
+        fill = FALSE,
+        group = "Breeding Confirmed"
+      ) %>%
+      ## Breeding Possible (bottom bar)
+      addRectangles(
+        data = pb_map,
+        lng1 = ~ NW_X,
+        lat1 = ~ SE_Y,
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        color = ~ ncbapal(bbcgPossible),
+        stroke = ~ !fillBool,
+        weight = 5,
+        opacity = 1,
+        fill = FALSE,
+        group = "Breeding Possible"
+      ) %>%
+      ## Breeding Diurnal Hours (left bar)
+      addRectangles(
+        data = pb_map,
+        lng1 = ~ NW_X,
+        lat1 = ~ NW_Y,
+        lng2 = ~ NW_X,
+        lat2 = ~ SE_Y,
+        color = ~ ncbapal(bbcgTotalEffortHrs),
+        stroke = ~ !fillBool,
+        weight = 5,
+        opacity = 1,
+        fill = FALSE,
+        group = "Breeding Diurnal Hrs"
+      ) %>%
+      # ## Winter Diurnal Hours (top under bar)
+      # addRectangles(
+      #   data = pb_map,
+      #   lng1 = ~ NW_X + insideBlockAdj,
+      #   lat1 = ~ NW_Y - insideBlockAdj,
+      #   lng2 = ~ SE_X - insideBlockAdj,
+      #   lat2 = ~ NW_Y - insideBlockAdj,
+      #   color = ~winterpal(winterHrsDiurnal),
+      #   stroke = TRUE,
+      #   weight = 5,
+      #   opacity = 1,
+      #   fill = FALSE,
+      #   group = "Winter Diurnal Hrs"
+      # ) %>%
+      ## winter Species (right bar)
+      # Layers Control (Making Icons as Overlay Layers)
+      addLayersControl(data = pb_map,
+        baseGroups = c("Street Map", "Dark No Labels"),
+        overlayGroups = c(
+          "Breeding Coded",
+          "Breeding Confirmed",
+          "Breeding Possible",
+          "Breeding Diurnal Hrs"
+          # "Winter Diurnal Hrs"
+          ),
+        options = layersControlOptions(collapsed = FALSE)
+      ) %>%
+      # # Hide Nocturnal Hours and Confirmed Species Icons upon Map Start
+      # hideGroup(
+      #   c(
+      #     "Winter Diurnal Hrs"
+      #     )
+      #   ) %>%
+      # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
+      addLegendImage(
+        images = diurnal_symbols,
+        labels = c(
+          "0",
+          paste(">", breedCountCodedCriteriaMin)
+          ),
+        orientation = "vertical",
+        title = "Breeding Coded Species (top)",
+        position = "topleft",
+        width = 16.44,
+        height = 16.44,
+        labelStyle = "font-size: 14px; vertical-align: center;"
+      ) %>%
+      addLegendImage(
+        images = diurnal_symbols,
+        labels = c(
+          "0",
+          paste(">", round(100 * breedPctConfirmedCriteriaMin, 1))
+          ),
+        labelStyle = "font-size: 14px; vertical-align: center;",
+        title = "% Species Confirmed (right)",
+        orientation = "vertical",
+        width = 13.32,
+        height = 16.44,
+        position = "topleft"
+      ) %>%
+      addLegendImage(
+        images = diurnal_symbols,
+        labels = c(
+          "",
+          paste("<", round(100 * breedPctPossibleCriteriaMax, 1), "%")
+          ),
+        labelStyle = "font-size: 14px; vertical-align: center;",
+        title = "% Species Possible (bottom)",
+        orientation = "vertical",
+        width = 13.32,
+        height = 16.44,
+        position = "topleft"
+      ) %>%
+      addLegendImage(
+        images = diurnal_symbols,
+        labels = c(
+          "0",
+          paste(">", breedHrsDiurnalCriteriaMin)
+          ), 
+        orientation = "vertical",
+        title = "Breeding Diurnal Hrs (left)",
+        position = "topleft",
+        width = 16.44,
+        height = 16.44,
+        labelStyle = "font-size: 14px; vertical-align: center;"
+      )
+    })
+  
+  ## Add event listener for block click
+  # moved above
+  # observeEvent(
+  #   input$overview_map_shape_click,
+  #   {
+  #     print("block clicked")
+  #     rv_block$id = input$overview_map_shape_click
+  #     # click <- input$overview_map_shape_click
+  #     # if ( click$id %in% input$APBlock & click$id != input$APBlock){
+  #     #   selected = input$APBlock[input$APBlock != click$id]
+  #     # } else {
+  #     #   selected = c(input$APBlock, click$id)
+  #     #   updateSelectInput(
+  #     #     session,
+  #     #     "APBlock",
+  #     #     selected = selected
+  #     #   )
+  #     # }
+
+  #     #change focus to blocks tab
+  #     updateNavbarPage(
+  #       session,
+  #       "nav",
+  #       selected = "Blocks"
+  #     )
+  #   }
+  # )
+  ### Merging Block Shapes for mapping and Summary Table
+  pb_map <- merge(
+    priority_block_data,
+    get_block_summaries(),
+    all = TRUE
+    )
+  # print(head(pb_map))
+  
+  ## Convert percentages to numbers instead of decimals
+  pb_map <- pb_map %>%
+    mutate(PctConfirm = round( breedPctConfirmed * 100, 1)) %>%
+  ## Add fill value based on block status
+    mutate(
+      fillComplete = ifelse(
+        STATUS == "Complete", ncba_blue,
+        ncba_white
+      )
+    ) %>%
+    mutate(
+      fillOpac = ifelse(
+        STATUS == "Complete", 0.75,
+        0.05
+      )
+    ) %>%
+    mutate(
+      fillBool = ifelse(
+        STATUS == "Complete", TRUE,
+        FALSE
+      )
+    )
+
+  ### Centroids of Priority Blocks
+  centr_x <- (pb_map$NW_X + pb_map$SE_X)/2
+  centr_y <- (pb_map$NW_Y + pb_map$SE_Y)/2
+  mutate(pb_map, centr_x)
+  mutate(pb_map, centr_y)
+  
+  ### Custom Crow icon is from Font Awesome (https://fontawesome.com/icons)
+  
+  ### legend components for breeding diurnal hours
+  # diurnal_shapes <- c('rect','rect','rect')
+  # diurnal_colors <- c(
+  #   "#b3b3b3",
+  #   "#FDE725FF",
+  #   "#3c8d40"
+  #   )
+  diurnal_shapes <- c('rect','rect')
+  diurnal_colors <- c(
+    "#b3b3b3",
+    ncba_blue
+    )
+  diurnal_palette <- palette(diurnal_colors)
+  ncba_colors <- c(
+    "#b3b3b3",
+    ncba_blue
+    )
+  ncba_palette <- palette(ncba_colors)
+  diurnal_symbols <- Map(
+    f = makeSymbol,
+    shape = diurnal_shapes,
+    fillColor = diurnal_colors,
+    color = diurnal_colors,
+    opacity = 1,
+    fillOpacity = 0,
+    width = 20,
+    `stroke-width` = 2
+    )
+
+  ### palette for Diurnal Hours
+  
+  ncbapal <- colorFactor(
+    ncba_palette,
+    levels = c(0, 1)
+    )
+  breedingcodedpal <- colorBin(
+    diurnal_palette,
+    pb_map$breedCountCoded,
+    bins = c(0, (breedCountCodedCriteriaMin + 1)),
+    # bins = c(0.1, (breedCountCodedCriteriaMin - 1), Inf),
+    reverse = TRUE
+    )
+  breedingconfpal <- colorBin(
+    diurnal_palette,
+    pb_map$breedPctConfirmed,
+    bins = c(0, (breedPctConfirmedCriteriaMin - 0.1), Inf),
+    reverse = TRUE
+    )
+  breedingposspal <- colorBin(
+    diurnal_palette,
+    pb_map$breedPctPossible,
+    bins = c(0, (breedPctPossibleCriteriaMax - 0.1), Inf),
+    reverse = TRUE
+    )
+  breedingpal <- colorBin(
+    diurnal_palette,
+    pb_map$breedHrsDiurnal,
+    bins = c(0, (breedHrsDiurnalCriteriaMin - 0.1), Inf),
+    reverse = FALSE
+    )
+  winterpal <- colorBin(
+    diurnal_palette,
+    pb_map$winterHrsDiurnal,
+    bins = c(0, (winterHrsDiurnalCriteriaMin - 0.1), Inf),
+    reverse = TRUE
+    )
+
+    ## move focus to block tab when clicked
+
+
+  # breedingpalnum <- colorNumeric(
+  #   diurnal_palette,
+  #   pb_map$breedHrsDiurnal,
+  #   reverse = TRUE
+  #   )
+
+  
+  # winterbinpal <- colorBin(
+  #   diurnal_palette,
+  #   pb_map$winterHrsDiurnal,
+  #   bins = c(0.1,2.5,5,7.5,10,Inf),
+  #   reverse = TRUE
+  #   )
+  
+  # ### palette for Nocturnal Hours
+  # binpalnight <- colorBin(
+  #   diurnal_palette,
+  #   pb_map$breedHrsNocturnal,
+  #   bins = c(0.1,0.5,1,1.5,2,Inf),
+  #   reverse = TRUE
+  #   )
+  
+  # ### legend for winter diurnal hours
+  # winter_shapes <- c('circle','circle','circle','circle','circle','circle')
+  # winter_diurnal_symbols <- Map(
+  #   f = makeSymbol,
+  #   shape = winter_shapes,
+  #   fillColor = diurnal_colors,
+  #   color = diurnal_colors,
+  #   opacity = 1,
+  #   fillOpacity = 1,
+  #   width = 20,
+  #   `stroke-width` = 2
+  #   )
+  
+  # ### legend for breeding nocturnal symbols
+  # winter_shapes <- c('circle','circle','circle','circle','circle','circle')
+  # breeding_nocturnal_symbols <- Map(
+  #   f = makeSymbol,
+  #   shape = winter_shapes,
+  #   fillColor = diurnal_colors,
+  #   color = diurnal_colors,
+  #   opacity = 1,
+  #   fillOpacity = 0,
+  #   width = 20,
+  #   `stroke-width` = 2
+  #   )
+  
+ 
+
+  ### Change to Block Tab when Clicking a Block in Effort Map
+  ### 
+
+}  
+#
+# ## SUMMARIZE START TIMES --------------------------------------------------
+# plot(start_time_boxplot(ebird))
+
+# ## PLOT COORDINATES OF RECORDS --------------------------------------------
+# coords.plot <- plot_checklists_coords(ebird)
+# plot(coords.plot)
+#
+# ## SUMMARIZE TRAVEL DISTANCE ----------------------------------------------
+# plot(effort_distance_boxplot(ebird))
+#
+# ## SUMMARIZE MINUTES EFFORT -----------------------------------------------
+# plot(duration_minutes_boxplot(ebird))
+#
+# ## LOCALITY TYPE BREAKDOWN ------------------------------------------------
+# plot(locality_type_pie(ebird))
+
+shinyApp(ui, server)
