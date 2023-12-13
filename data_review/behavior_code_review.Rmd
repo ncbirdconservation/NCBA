@@ -78,7 +78,7 @@ breeding_boxplot(species = NULL, data = pe, type = "interactive")
 # Species Group
 The process from above can be applied to a group of species with inclusion of a statement that filters based on a species list.  For this example, I present records of tanagers exhibiting distraction displays.
 
-The "get_breeding_records" function can retrieve records of "DD".
+The "get_breeding_records" function can retrieve records of "A".
 ```{r}
 species <- c("Summer Tanager", "Scarlet Tanager")
 
