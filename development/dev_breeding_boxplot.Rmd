@@ -9,7 +9,7 @@ output:
   word_document: default
 ---
 ```{r setup, include=FALSE, message=TRUE, warning=TRUE}
-setwd("~/Code/NCBA/resources")
+setwd("T:/Code/NCBA/resources")
 source("ncba_functions.R")
 library(auk)
 
