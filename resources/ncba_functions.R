@@ -618,9 +618,10 @@ breeding_map <- function(species) {
   tm_shape(shp = counties_NC(), name = "counties") + tm_borders() +
     tm_shape(shp = records_sf, name = "observations") + 
     tm_dots(interactive = TRUE, popup.vars = c("URL", "observation_date", "behavior_code"), col = "breeding_category",
-            popup.format = list(html.escape = F), border.alpha = 0,
-            palette = c("yellow", "lightgreen", "darkgreen", "purple"),
-            labels = c("observed", "possible", "probable", "confirmed")) +
+            popup.format = list(html.escape = F), border.alpha = 0#,
+            #palette = c("yellow", "lightgreen", "darkgreen", "purple"),
+            #labels = c("observed", "possible", "probable", "confirmed")
+    ) +
     tm_layout(title = species)
 }
 

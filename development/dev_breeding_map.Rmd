@@ -18,9 +18,50 @@ knitr::opts_chunk$set(
 
 
 # Function
-Uses the TMAP package to create an interactive map of the provided records.  Designed for use with output from get_breeding_records().  Hovering the mouse over the record symbol displays the sampling event identifier.  Clicking on symbols opens a small table showing records attributes.  The popup.vars argument controls what is included in those tables.  Including "URL" will provide a hyperlink to the checklist webpage on ebird.com.
+Uses the TMAP package to create an interactive map of the provided records.  Designed for use with output from get_breeding_records().  Hovering the mouse over the record symbol displays the sampling event identifier.  Clicking on symbols opens a small table showing records attributes.  The popup.vars argument controls what is included in those tables.  Including "URL" will provide a hyperlink to the checklist webpage on eBird.com. 
 ```{r}
-breeding_map
+breeding_map <- function(species) {
+  # Makes an interactive map of records color coded by breeding category
+  
+  #
+  # Description:
+  # Gets observations for a species and maps them atop a counties layer in an
+  #   interactive map.  Clicking on record symbols reveals a hyperlink to the 
+  #   checklist webpage on ebird.com.
+  #
+  # Arguments:
+  # species -- common name
+  
+  # Get the records
+  records <- get_observations(species = species, EBD_fields_only = FALSE) %>%
+    to_EBD_format() %>%
+    auk_unique()
+  
+  # Make spatial data frames of all records
+  records_sf <- records_as_sf(records, kind = "observations", method = "points") %>%
+    right_join(records, by = "sampling_event_identifier") %>%
+    filter(breeding_category != "")
+  
+  # Add a column with code to open the webpage for each checklist
+  records_sf$front <- '<a href = https://ebird.org/checklist/'
+  
+  # Strip off any excess identifiers (group checklists produce "S104604778,S104604779")
+  records_sf$sampling_event_identifier <- lapply(strsplit(records_sf$sampling_event_identifier, split = ","), function(l) l[[1]])
+  records_sf$URL <- with(records_sf, paste0(front, sampling_event_identifier,
+                                            ">visit</a>"))
+  
+  # Draw the map
+  tmap_mode("view") 
+  tm_shape(shp = counties_NC(), name = "counties") + tm_borders() +
+    tm_shape(shp = records_sf, name = "observations") + 
+    tm_dots(interactive = TRUE, popup.vars = c("URL", "observation_date", "behavior_code"), col = "breeding_category",
+            popup.format = list(html.escape = F), border.alpha = 0#,
+            #palette = c("yellow", "lightgreen", "darkgreen", "purple"),
+            #labels = c("observed", "possible", "probable", "confirmed")
+            ) +
+    tm_layout(title = species)
+}
+
 ```
 
 # Usage
@@ -31,4 +72,10 @@ breeding_map("Orchard Oriole")
 
 ```{r}
 breeding_map("Mississippi Kite")
+```
+
+# Tests
+View a case where not all breeding categories are represented.
+```{r}
+breeding_map("Worm-eating Warbler")
 ```
