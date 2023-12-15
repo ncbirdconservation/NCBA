@@ -2757,7 +2757,7 @@ breeding_codes <- function(lumped = TRUE){
   if (lumped == FALSE) {
     codes <- c("H", "S", "S7", "M", "T", "P", "C", "B", "CN", "NB", "A", "N",
               "DD", "ON", "NE", "FS", "CF", "NY", "FY", "FL", "PE", "UN",
-              "F", "O", "NC", "NULL")
+              "F", "O", "NC", "NULL", "")
   }
   
   if (lumped == TRUE) {
