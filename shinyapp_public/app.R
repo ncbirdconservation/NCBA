@@ -1,8 +1,8 @@
-# NC Bird Atlas Shiny App
-# v0.2
-# 12/08/2022
+# NC Bird Atlas Shiny App - Public Version
+# v1
+# 01/24/2024
 # Scott K. Anderson, Elsa Chen, Nathan Tarr, Scott Pearson
-# https://github.com/nmtarr/NCBA/shinyapp
+# https://github.com/nmtarr/NCBA/shinyapp_public
 
 
 if(!require(shiny)) install.packages(
@@ -81,28 +81,23 @@ ui <- bootstrapPage(
   # titlePanel("NC Bird Atlas Explorer"),
   navbarPage(
     theme = shinytheme("flatly"), 
-    collapsible=TRUE,
+    collapsible = TRUE,
     # theme = shinytheme("cosmo"), collapsible=TRUE,
-    id="nav",
+    position = "static-top",
+    # header = 
+    HTML(
+      paste0(
+        '<a style="text-decoration:none;cursor:default;color:#FFFFFF;"',
+        ' class="active" href="#">NC Bird Atlas Explorer</a>',
+        '<p style="font-style:italic;font-size: 0.62em;">',
+        'Last Updated Dec 31, 2023</p>'
+        )
+      ),
+    # ),
+    id = "nav",
     windowTitle = "NCBA Explorer",
     tags$head(includeCSS("styles.css")),
     tags$head(tags$link(rel="icon", href="/input_data/ncba_blue_wbnu.ico")),
-    header(
-      tags$div(
-        tags$img(
-          src = "ncba_logo_blue_halo_100.png"
-        )
-      )
-      # HTML(
-      # paste0(
-      #   '<a style="text-decoration:none;cursor:default;color:#FFFFFF;"',
-      #   ' class="active" href="#">NC Bird Atlas Explorer</a>',
-      #   '<p style="font-style:italic;font-size: 0.62em;">',
-      #   # 'Last Updated ', htmlOutput("latest_record") , '</p>'
-      #   'Last Updated Oct 31, 2023</p>'
-      #   )
-      # )
-    ),
     tabPanel("Blocks",
       div(class="col-md-2 panel sidebar", id = "block_controls",
           h3("Blocks", class="tab-control-title"),
@@ -275,7 +270,7 @@ observe({
     # md <- aggregate_ebd_data(pipeline)
     # print(md)
 
-    paste("Oct 31, 2023")
+    paste("Dec 31, 2023")
   })
   # CHECKLISTS
   checklist_count <- reactive({

@@ -78,7 +78,7 @@ sd <- get_safe_dates()
 ui <- bootstrapPage(
   # titlePanel("NC Bird Atlas Explorer"),
   navbarPage(
-    theme = shinytheme("flatly"), collapsible=TRUE,
+    theme = shinytheme("flatly"), collapsible = TRUE,
     # theme = shinytheme("cosmo"), collapsible=TRUE,
     HTML(
       paste0(
