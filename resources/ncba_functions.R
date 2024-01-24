@@ -584,6 +584,50 @@ calculate_breeding_dates <- function(species, basis, quantiles, year = 2023,
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+breeding_map <- function(species) {
+  # Makes an interactive map of records color coded by breeding category
+  #
+  # Description:
+  # Gets observations for a species and maps them atop a counties layer in an
+  #   interactive map.  Clicking on record symbols reveals a hyperlink to the 
+  #   checklist webpage on ebird.com.
+  #
+  # Arguments:
+  # species -- common name
+  
+  # Get the records
+  records <- get_observations(species = species, EBD_fields_only = FALSE) %>%
+    to_EBD_format() %>%
+    auk_unique()
+  
+  # Make spatial data frames of all records
+  records_sf <- records_as_sf(records, kind = "observations", method = "points") %>%
+    right_join(records, by = "sampling_event_identifier") %>%
+    filter(breeding_category != "")
+  
+  # Add a column with code to open the webpage for each checklist
+  records_sf$front <- '<a href = https://ebird.org/checklist/'
+  
+  # Strip off any excess identifiers (group checklists produce "S104604778,S104604779")
+  records_sf$sampling_event_identifier <- lapply(strsplit(records_sf$sampling_event_identifier, split = ","), function(l) l[[1]])
+  records_sf$URL <- with(records_sf, paste0(front, sampling_event_identifier,
+                                            ">visit</a>"))
+  
+  # Draw the map
+  tmap_mode("view") 
+  tm_shape(shp = counties_NC(), name = "counties") + tm_borders() +
+    tm_shape(shp = records_sf, name = "observations") + 
+    tm_dots(interactive = TRUE, popup.vars = c("URL", "observation_date", "behavior_code"), col = "breeding_category",
+            popup.format = list(html.escape = F), border.alpha = 0#,
+            #palette = c("yellow", "lightgreen", "darkgreen", "purple"),
+            #labels = c("observed", "possible", "probable", "confirmed")
+    ) +
+    tm_layout(title = species)
+}
+
+
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 breeding_boxplot <- function(species, data, type="interactive", 
                              pallet="Paired", omit_codes=NULL,
                              lump=NULL, drop=TRUE, cex.x.axis = 0.9, 
@@ -862,7 +906,7 @@ breeding_boxplot <- function(species, data, type="interactive",
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-breeding_map <- function(records, popup.vars = c("URL"), title) {
+map_records <- function(records, popup.vars = c("URL"), title) {
   # Creates an interactive map of records.  
   #
   # Description:
@@ -1478,7 +1522,7 @@ get_breeding_records <- function(behaviors = NULL,
     # Retrieve the checklists #
     records <- connection$find(fields = fields2, query = query) %>%
       unnest(cols = (c(OBSERVATIONS))) %>% # Expands observations
-      filter(BEHAVIOR_CODE %in% behaviors) # Rows for non-target records detected along
+      filter(BREEDING_CODE %in% behaviors) # Rows for non-target records detected along
     # with target records exist and need to be dropped.
     
     # Second pass at dropping unwanted fields (needed because of nested fields).
@@ -2475,235 +2519,6 @@ blocks_needed <- function(species, source, season, database, project,
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-checklists_per_block <- function(records_df, blocks_sf, attribute, method){ # DRAFT DRAFT DRAFT
-  # Tallies the number of checklists per block.  Records_as_sf() produces
-  #   input for this function.
-  # 
-  # Description:
-  # Although coordinates are provided by eBird for checklists, they do not
-  # provide precise locations of eBirder effort for two reasons.  First, there
-  # are limits to the spatial precision of the points due to gps precision
-  # and/or observers ability to identify exactly where they birded on a map or
-  # in the app.  Second, many birders travel while birding but their paths are
-  # not yet available, only the distances they traveled.  
-  # 
-  # Locational uncertainty is important and problematic because if it is large
-  # in relation to the level of analysis, it creates uncertainty about which
-  # spatial subregions, such as counties or atlas blocks, a checklist should
-  # be attributed to.
-  #
-  # Arguments:
-  # records_sf -- a data frame of checklists from EBD or the atlas cache.  
-  #   The functions "records_as_sf()" can provide this.
-  #
-  # kind -- what the records are, "checklists" or "observations"? FORTHCOMING
-  #
-  # blocks_sf -- a spatial data frame of atlas blacks
-  #
-  # attribute -- column to summarize, such as "checklists"  FORTHCOMING
-  # 
-  # method -- specify the method to use for attributing checklists to blocks.
-  #   Choices are: "A", "B", "C", or "D", but method C is unavailable.
-  #   
-  #   Method A uses the block identified by eBird in the column "atlas_block".
-  #       An abundance of empty values for atlas_block poses a problem.
-  #
-  #   Method B assigns each checklist to the block that the checklist
-  #   coordinate is located within.  This approach could generate deceptive
-  #   results if checklists represent birding effort from multiple blocks but
-  #   are assigned to a single block or if the coordinate is located in a block
-  #   adjacent to where the birding actually occurred.  This approach should
-  #   generally be expected to underestimate how many checklists covered some
-  #   portion of a given block.  Results are likely the same as with method A.
-  #   
-  #   Method C is currently unavailable.  It would involve acquiring checklist
-  #   tracks and buffering them before intersecting with blocks.
-  #
-  #   Method D uses polygons instead of the coordinates (points as in Method A) in
-  #   order to include the locational uncertainty.  Under this approach,
-  #   coordinates are buffered with the distance traveled by the observer
-  #   during the checklist period, plus 100 m to account for the fact that
-  #   observers may have recorded birds at a distance from where they were
-  #   located.  Each checklist is then assigned to all of the blocks that the
-  #   polygon intersects in order to acknowledge that the checklist could
-  #   represent effort from multiple blocks. Results from this approach can
-  #   logically be expected to exaggerate the true footprint of birding effort
-  #   and suggest blocks were sampled that actually were not, thus overestimating
-  #   how many checklists covered some portion of a given block.  Furthermore,
-  #   checklists with large effort distances produce enormous footprints than make
-  #   results unhelpful.  Thus, I excluded checklists with effort distances
-  #   greater than 5 km for this method.
-  # 
-  #   Results:
-  #   Spatial data frame of blocks with a checklist tally.
-  
-  if (method=="A") {
-    result <- records_sf %>%
-      # Summarize by number checklists within each block
-      group_by(atlas_block) %>%
-      summarize(checklists=n()) %>%
-      select(atlas_block, checklists) %>%
-      replace_na(list(checklists=0)) %>%
-      # Make spatial again
-      st_as_sf()}
-  
-  if (method=="B") {
-    records_sf <- records_as_sf(records_df, kind="checklists",
-                                method="points")
-    result <- records_sf %>%
-      # Find which blocks each coordinate is within
-      st_join(blocks_sf, join = st_within, left=TRUE) %>%
-      # Summarize by number checklists within each block
-      group_by(name) %>%
-      summarize(checklists=n()) %>%
-      select(name, checklists) %>%
-      # Join back with blocks spatial frame to fill in zeros (as a data
-      # frame)
-      data.frame() %>%
-      select(-c(geometry)) %>%
-      right_join(blocks_sf, by=("name" = "name")) %>%
-      replace_na(list(checklists=0)) %>%
-      # Make spatial again
-      st_as_sf()}
-  
-  if (method=="C") {
-    records_as_sf(checklists_df, method="buffer-tracks", kind="checklists")
-    result <- NULL}
-  
-  if (method=="D") {
-    records_sf <- records_as_sf(checklists_df, method="point-radius", 
-                                kind="checklists")
-    result <- records_sf %>%
-      # Intersect footprints with blocks, NOTE this keeps "withins" and fragments
-      st_intersection(blocks_sf) %>%
-      # Find count by block
-      group_by(name) %>%
-      summarize(checklists = n()) %>%
-      st_drop_geometry() %>%
-      # Add zero blocks via a join
-      right_join(blocks_sf, by="name") %>%
-      select(name, checklists, geometry) %>%
-      replace_na(list(checklists=0)) %>%
-      st_as_sf()}
-  return(result)
-}
-
-# ------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-observations_per_block <- function(records_df, blocks_sf, method){ # DRAFT DRAFT DRAFT
-  # Tallies the number of observations per block.  Records_as_sf() produces
-  #   input for this function.
-  # 
-  # Description:
-  # Although coordinates are provided by eBird for checklists, they do not
-  # provide precise locations of eBirder effort for two reasons.  First, there
-  # are limits to the spatial precision of the points due to gps precision
-  # and/or observers ability to identify exactly where they birded on a map or
-  # in the app.  Second, many birders travel while birding but their paths are
-  # not available, only the distances they traveled.  
-  # 
-  # Locational uncertainty is important and problematic because if it is large
-  # in relation to the level of analysis, it creates uncertainty about which
-  # spatial subregions, such as counties or atlas blocks, an observation should
-  # be attributed to.
-  #
-  # Arguments:
-  # records_sf -- a data frame of observations from EBD or the atlas cache.
-  #
-  # blocks_sf -- a spatial data frame of atlas blacks
-  #
-  # method -- specify the method to use for attributing observations to blocks.
-  #   Choices are: "A", "B", "C", or "D", but method C is unavailable.
-  #   
-  #   Method A uses the block identified by eBird in the column "atlas_block".
-  #       An abundance of empty values for atlas_block poses a problem.
-  #
-  #   Method B assigns each observation to the block that the checklist
-  #   coordinate is located within.  This approach could generate deceptive
-  #   results if checklists represent birding effort from multiple blocks but
-  #   are assigned to a single block or if the coordinate is located in a block
-  #   adjacent to where the birding actually occurred.  This approach should
-  #   generally be expected to underestimate how many checklists covered some
-  #   portion of a given block.  Results are likely the same as with method A.
-  #   
-  #   Method C is currently unavailable.  It would involve acquiring checklist
-  #   tracks and buffering them before intersecting with blocks.
-  #
-  #   Method D uses polygons instead of the coordinates (points as in Method A) in
-  #   order to include the locational uncertainty.  Under this approach,
-  #   coordinates are buffered with the distance traveled by the observer
-  #   during the checklist period, plus 100 m to account for the fact that
-  #   observers may have recorded birds at a distance from where they were
-  #   located.  Each checklist is then assigned to all of the blocks that the
-  #   polygon intersects in order to acknowledge that the checklist could
-  #   represent effort from multiple blocks. Results from this approach can
-  #   logically be expected to exaggerate the true footprint of birding effort
-  #   and suggest blocks were sampled that actually were not, thus overestimating
-  #   how many checklists covered some portion of a given block.  Furthermore,
-  #   checklists with large effort distances produce enormous footprints than make
-  #   results unhelpful.  Thus, I excluded checklists with effort distances
-  #   greater than 5 km for this method.
-  # 
-  #   Results:
-  #   Spatial data frame of blocks with a tally of individuals reported.
-  
-  if (method=="A") {
-    result <- records_sf %>%
-      # Summarize by number checklists within each block
-      group_by(atlas_block) %>%
-      summarize(individuals=sum(observation_count)) %>%
-      select(atlas_block, individuals) %>%
-      replace_na(list(individuals=0)) %>%
-      # Make spatial again
-      st_as_sf()
-  }
-  
-  if (method=="B") {
-    records_sf <- records_as_sf(records_df, kind="observations",
-                                method="points")
-    result <- records_sf %>%
-      # Find which blocks each coordinate is within
-      st_join(blocks_sf, join = st_within, left=TRUE) %>%
-      # Summarize by number checklists within each block
-      group_by(name) %>%
-      summarize(individuals=sum(observation_count)) %>%
-      select(c(name, individuals)) %>%
-      # Join back with blocks spatial frame to fill in zeros (as a data
-      # frame)
-      data.frame() %>%
-      select(-c(geometry)) %>%
-      right_join(blocks_sf, by=("name" = "name")) %>%
-      replace_na(list(individuals=0)) %>%
-      # Make spatial again
-      st_as_sf()
-  }
-  
-  if (method=="C") {
-    records_as_sf(records_df, method="buffer-tracks", kind="observations")
-    result <- NULL
-  }
-  
-  if (method=="D") {
-    records_sf <- records_as_sf(records_df, method="point-radius", 
-                                kind="observations")
-    result <- records_sf %>%
-      # Intersect footprints with blocks, NOTE this keeps "withins" and fragments
-      st_intersection(blocks_sf) %>%
-      # Find count by block
-      group_by(name) %>%
-      summarize(individuals=sum(observation_count)) %>%
-      select(c(name, individuals)) %>%
-      st_drop_geometry() %>%
-      # Add zero blocks via a join
-      right_join(blocks_sf, by=("name" = "name")) %>%
-      replace_na(list(individuals=0)) %>%
-      st_as_sf()
-  }
-  return(result)
-}
-
-# ------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------
 breeding_codes <- function(lumped = TRUE){
   # Returns either a full or nested list of all breeding codes.
   
@@ -2713,7 +2528,7 @@ breeding_codes <- function(lumped = TRUE){
   if (lumped == FALSE) {
     codes <- c("H", "S", "S7", "M", "T", "P", "C", "B", "CN", "NB", "A", "N",
               "DD", "ON", "NE", "FS", "CF", "NY", "FY", "FL", "PE", "UN",
-              "F", "O", "NC", "NULL")
+              "F", "O", "NC", "NULL", "")
   }
   
   if (lumped == TRUE) {
