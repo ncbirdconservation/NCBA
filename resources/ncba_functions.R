@@ -126,7 +126,7 @@ get_blocks <- function(spatial = FALSE, fields = NULL,
   }
 }
 
-
+# ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 to_EBD_format <- function(dataframe, drop = FALSE) {
   # Reformat columns to match that of the EBD
@@ -187,6 +187,58 @@ to_EBD_format <- function(dataframe, drop = FALSE) {
   return(df2)
 }
 
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+ncba_unique <- function (x, group_id = "group_identifier", 
+                         checklist_id = "sampling_event_identifier",
+                         species_id = "scientific_name", 
+                         observer_id = "observer_id",
+                         checklists_only = FALSE) {
+  # Drops duplicate checklist records that result from group checklists.
+  #
+  # Copied from the auk package.
+  assertthat::assert_that(is.data.frame(x), assertthat::is.flag(checklists_only), 
+                          assertthat::is.string(group_id), group_id %in% names(x), 
+                          assertthat::is.string(checklist_id), checklist_id %in% 
+                            names(x), assertthat::is.string(species_id), checklists_only || 
+                            species_id %in% names(x), assertthat::is.string(observer_id), 
+                          observer_id %in% names(x), is.character(x[[group_id]]), 
+                          is.character(x[[checklist_id]]), is.character(x[[observer_id]]), 
+                          checklists_only || is.character(x[[species_id]]))
+  if (isTRUE(attr(x, "unique"))) {
+    return(x)
+  }
+  x[[group_id]][x[[group_id]] == ""] <- NA_integer_
+  grouped <- !is.na(x[[group_id]])
+  x_grouped <- x[grouped, ]
+  x_grouped <- x_grouped[order(x_grouped[[checklist_id]]), 
+  ]
+  if (checklists_only) {
+    cols <- group_id
+  }
+  else {
+    cols <- c(species_id, group_id)
+  }
+  ids <- dplyr::select(x_grouped, dplyr::one_of(c(cols, checklist_id, 
+                                                  observer_id)))
+  ids <- dplyr::group_by_at(ids, cols)
+  ids <- dplyr::arrange_at(ids, checklist_id)
+  ids <- dplyr::summarize(ids, .cid = paste(.data[[checklist_id]], 
+                                            collapse = ","), .oid = paste(.data[[observer_id]], collapse = ","))
+  ids <- dplyr::ungroup(ids)
+  x_grouped <- dplyr::inner_join(x_grouped, ids, by = cols)
+  x_grouped[[checklist_id]] <- x_grouped$.cid
+  x_grouped[[observer_id]] <- x_grouped$.oid
+  x_grouped$.cid <- NULL
+  x_grouped$.oid <- NULL
+  x_grouped <- x_grouped[!duplicated(x_grouped[, cols]), ]
+  x$checklist_id <- x[[checklist_id]]
+  x_grouped$checklist_id <- x_grouped[[group_id]]
+  x <- rbind(x[!grouped, ], x_grouped)
+  x <- dplyr::select(x, .data$checklist_id, dplyr::everything())
+  attr(x, "unique") <- TRUE
+  dplyr::as_tibble(x)
+}
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
