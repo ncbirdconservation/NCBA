@@ -270,7 +270,7 @@ observe({
     # md <- aggregate_ebd_data(pipeline)
     # print(md)
 
-    paste("Dec 31, 2023")
+    paste("Jan 31, 2024")
   })
   # CHECKLISTS
   checklist_count <- reactive({
