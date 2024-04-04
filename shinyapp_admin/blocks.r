@@ -1,7 +1,7 @@
 # Code for parsing block data
 # Functions:
 #   plot_spp_accumulation(block_recs, spp_bcs)
-#
+#		modified by S. Pearson, 2023-12-14
 #
 plot_spp_accumulation <- function(block_recs, spp_bcs) {
   # TODO - list highest behavior code by spp
@@ -98,52 +98,44 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
   c2 <- length(spp_unique["bcat"][spp_unique["bcat"] == "C2"])
   c3 <- length(spp_unique["bcat"][spp_unique["bcat"] == "C3"])
   c4 <- length(spp_unique["bcat"][spp_unique["bcat"] == "C4"])
-
   # print(c(obs_min,length(spp_unique$spp),c1,c2, c3, c4))
-  spp_acc[nrow(spp_acc)+1,]<-c(obs_min,length(spp_unique$spp),c1,c2, c3, c4)
-
+  spp_acc[nrow(spp_acc)+1,] <- c(obs_min,length(spp_unique$spp),c1,c2, c3, c4)
 
   spp_tot <- nrow(spp_unique)
   spp_tot_half <- spp_tot * 0.5
   hrs_convert <- 60.0
   hrs_total = obs_min/hrs_convert
 
-  #plot the data
-  plot_response <- ggplot(data=spp_acc,aes((min), all)) +
-    geom_hline(
-      aes(yintercept=(spp_tot_half),
-      colour = "50% total")) +
-    geom_text(
-      aes(0,spp_tot_half),
-      label = "50% total spp",
-      vjust = -1) +
-    geom_smooth(
-      method = 'loess',
-      formula = 'y ~ x',
-      aes(y = all, colour="all")) +
-    geom_smooth(
-      method = 'loess',
-      formula = 'y ~ x',
-      aes(y = c4, colour="confirmed")) +
-    geom_smooth(
-      method = 'loess',
-      formula = 'y ~ x',
-      aes(y = c3, color="probable")) +
-    geom_smooth(
-      method = 'loess',
-      formula = 'y ~ x',
-      aes(y = c2, color="possible")) +
-    scale_colour_manual(
-      name="",
-      values = c(
-        "#444444",
-        "#2a3b4d",
-        "#ff1a1a",
-        "#ffbf00",
-        "#ccccff")) +
-    xlim(0,obs_min) +
-    ylab("# Species") + xlab("Observation Time")
-    # geom_line() +
+  ### Revised code by S. Pearson starts here ###
+  # add field (c2_4) 'coded spp' = sum of C2, C3, C4 
+  spp_acc$c2_4 <- apply(spp_acc[,4:6],1,sum)	
+
+  # 'coded_spp_25perc' = y position of horizontal line for
+  #      25% threshold of 'coded spp' (with codes)
+  if (max(spp_acc$all)>55){ coded_spp_25perc <- trunc(max(spp_acc$all)*0.25) } else {
+  				    coded_spp_25perc <- 13 }	# close if else
+
+  # set y-axis maximum to be >=60
+  ymax <- max(spp_acc$all)	# set to maximum number of species
+  if (ymax <60){ ymax <- 60 }	# unless <60
+
+  # plot the data (lines without smoothing)
+  plot_response <- ggplot(data=spp_acc,aes((min), all)) + 
+    geom_hline( yintercept=(55),linetype=2) +			# min coded spp
+    geom_hline( yintercept=(coded_spp_25perc),linetype=2) +	# 25% of coded spp
+    geom_line(aes(y = all, color="a"), linewidth=1.2) +
+    geom_line( aes(y = c2_4, color="b"), linewidth=1.2) +
+    geom_line( aes(y = c4, color="c"), linewidth=1.2) +
+    geom_line(aes(y = c3, color="d"), linewidth=1.2) +
+    geom_line( aes(y = c2, color="e"), linewidth=1.2) +
+    scale_colour_manual( name="Breeding status", 
+	values = c("a"="#aaaaaa", "b"="#2a3b4d", "c"="#ff1a1a", "d"="#ffbf00", "e"="#ccccff"),
+	labels = c("All Species","Coded Species", "Confirmed", "Probable", "Possible")) +
+    geom_text(aes(0,coded_spp_25perc),label="25% goal", vjust=-0.5, hjust=+0.00) +
+    geom_text(aes(0,55),label = "Minimum coded species", vjust=-0.5, hjust=+0.00) +
+    xlim(0,obs_min) + ylim(0,ymax) +
+    ylab("Count of Species") + xlab("Observation Time") 
+  ### end of revised code from S. Pearson ###
 
   #figure out how to provide multiple return data
   # plot = accumulation plot output
@@ -152,7 +144,7 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
   response <- list(
     "plot" = plot_response,
     "spp_unique" = spp_unique,
-    "spp_acc_data" = spp_acc,
+    "spp_acc_data" = spp_acc[,1:6],		# excludes spp_acc$c2_4, SMP
     "hrs_total" = hrs_total)
 
   return(response)
