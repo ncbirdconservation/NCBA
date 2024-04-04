@@ -53,6 +53,11 @@ m_sd <- mongo(
   url = URI,
   options = ssl_options(weak_cert_validation = T))
 
+m_status <- mongo(
+  "db_status",
+  url = URI,
+  options = ssl_options(weak_cert_validation = T))
+
 get_safe_dates <- function(){
   sd <- m_sd$find("{}","{}")
 
@@ -477,4 +482,14 @@ get_block_summaries <- function() {
   blocksum <- as.data.frame(blocksum)
   # print(head(blocksum))
   return(blocksum)
+}
+
+get_db_status <- function() {
+  # query <- '{}'
+  query <- '{"_id": "summary"}'
+  result <- m_status$find(query, "{}")
+  result <- as.data.frame(result)
+  last_date <- result$MOST_RECENT_EBD_DATE_TEXT
+  # print(result)
+  return(last_date)
 }

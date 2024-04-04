@@ -85,14 +85,15 @@ ui <- bootstrapPage(
     # theme = shinytheme("cosmo"), collapsible=TRUE,
     position = "static-top",
     # header = 
-    HTML(
-      paste0(
-        '<a style="text-decoration:none;cursor:default;color:#FFFFFF;"',
-        ' class="active" href="#">NC Bird Atlas Explorer</a>',
-        '<p style="font-style:italic;font-size: 0.62em;">',
-        'Last Updated Dec 31, 2023</p>'
-        )
-      ),
+    htmlOutput("navbar_title"),
+    # HTML(
+    #   paste0(
+    #     '<a style="text-decoration:none;cursor:default;color:#FFFFFF;"',
+    #     ' class="active" href="#">NC Bird Atlas Explorer</a>',
+    #     '<p style="font-style:italic;font-size: 0.62em;">',
+    #     'Last Updated Dec 31, 2023</p>'
+    #     )
+    #   ),
     # ),
     id = "nav",
     windowTitle = "NCBA Explorer",
@@ -262,15 +263,15 @@ observe({
 
 ## BLOCK TAB  ----------------------------------------------------
   # latest record
-  output$latest_record <- reactive({
-    # pipeline <- paste0('[{"$group": {"_id": "max",',
-    #   '"maxDate": { "$max": "$OBSERVATION_DATE"}',
-    #   '}}]')
-    # print(pipeline)
-    # md <- aggregate_ebd_data(pipeline)
-    # print(md)
-
-    paste("Jan 31, 2024")
+  output$navbar_title <- reactive({
+    htmltools::HTML(
+      paste0(
+        '<a style="text-decoration:none;cursor:default;color:#FFFFFF;"',
+        ' class="active" href="#">NC Bird Atlas Explorer</a>',
+        '<p style="font-style:italic;font-size: 0.62em;">',
+        'Last Updated ', get_db_status(), '</p>'
+        )
+      )
   })
   # CHECKLISTS
   checklist_count <- reactive({
