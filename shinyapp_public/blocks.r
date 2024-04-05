@@ -119,19 +119,21 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
   spp_acc$c2_4 <- apply(spp_acc[, 4:6], 1, sum)
   # 'coded_spp_25perc' = y position of horizontal line for
   #      25% threshold of 'coded spp' (with codes)
-  if (max(spp_acc$all) > 55){
+  # print(sprintf("coded gt 55 %d", max(spp_acc$c2_4) > 55)) # TESTING
+  if (max(spp_acc$c2_4) > 55) {
     coded_spp_25perc <- trunc(max(spp_acc$c2_4) * 0.25)
   } else {
-    coded_spp_25perc <- 14 }	# close if else
+    coded_spp_25perc <- 14
+  }	# close if else
 
   # set y-axis maximum to be >=60
   ymax <- max(spp_acc$all)	# set to maximum number of species
   if (ymax < 60){
     ymax <- 60
   }	# unless <60
-
+  # print(sprintf("max poss %i", coded_spp_25perc)) #TESTING
   # plot the data (lines without smoothing)
-  plot_response <- ggplot(data=spp_acc,aes((min), all)) +
+  plot_response <- ggplot(data = spp_acc, aes((min), all)) +
     geom_hline(yintercept = (55), linetype = 2) +			# min coded spp
     geom_hline(yintercept = (coded_spp_25perc), linetype = 2) +	# 25% coded spp
     geom_line(aes(y = all, color = "a"), linewidth = 1.2) +
@@ -158,7 +160,7 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
     ) +
     geom_text(
       aes(0, coded_spp_25perc),
-      label = "25% goal",
+      label = sprintf("25 pct goal (%i spp)", coded_spp_25perc),
       vjust = -0.5,
       hjust = +0.00
     ) +
