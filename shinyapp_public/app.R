@@ -114,7 +114,8 @@ ui <- bootstrapPage(
     tags$head(includeCSS("styles.css")),
     tags$head(tags$link(rel="icon", href="/input_data/ncba_blue_wbnu.ico")),
     tabPanel("Blocks",
-      div(class="col-md-2 panel sidebar", id = "block_controls",
+      div(class="row", id="top_row_panel",
+        div(class="col-md-2 panel sidebar", id = "block_controls",
           h3("Blocks", class="tab-control-title"),
           tags$p(
             "Summary statistics page for block-level data.",
@@ -129,32 +130,24 @@ ui <- bootstrapPage(
             # calls unique values from the ID_NCBA_BLOCK column
             # in the previously created table
             selected = "NONE")
-            # htmlOutput("checklist_counter")
           ),
           div(class="tab-control-group",
-          #  prettySwitch("portal_records","Portal Records Only", TRUE ),
-           radioButtons("season_radio",label = h4("Season"),
+            radioButtons("season_radio",label = h4("Season"),
               choices = list(
                 "All Records" = "All",
                 "Breeding" = "Breeding",
                 "Non-Breeding" = "Non-Breeding"
               ),
-                # "Custom" = "Custom"),
               selected = "All")
-          #  conditionalPanel(condition = "input.season_radio == 'Custom'",
-          #                   selectInput(
-          #                     "month_range",
-          #                     "Selected Months",
-          #                     choices = c(1,2,3,4,5,6,7,8,9,10,11,12),
-          #                     selected = c(1,2,3,4,5,6,7,8,9,10,11,12),
-          #                     multiple = TRUE)
-          #  )
+
           )
         ),
         div(class = "col-md-10 panel",
           leafletOutput("mymap", height = "50vh")
         ),
-        div(class = "col-md-3 panel",
+      ),
+      div(class="row", id="mid_row_panel",
+        div(class = "col-md-4 panel",
           h3("Statistics"),
           h4(htmlOutput("block_status")),
           tabsetPanel(
@@ -163,20 +156,23 @@ ui <- bootstrapPage(
           ),
           downloadButton("download_block_checklists", "Download Checklists")
         ),
-        div(class = "col-md-3 panel",
+        div(class = "col-md-4 panel",
           h3("Hours"),
           plotOutput("blockhours")
         ),
-        div(class = "col-md-3 panel",
+        div(class = "col-md-4 panel",
           h3("Species Accumulation"),
           plotOutput("spp_accumulation")
-        ),
-        div(class = "col-md-6 panel",
+        )
+      ),
+      div(class="row", id="spp_list_row",
+        div(class = "col-md-12 panel",
           h3("Species List"),
           dataTableOutput("spp_observed"),
           downloadButton("download_spplist", "Download")
 
         )
+      )
     ),
     # tabPanel("Species",
     #   div(class="container-fluid", tags$head(includeCSS("styles.css")),
