@@ -156,7 +156,11 @@ ui <- bootstrapPage(
         ),
         div(class = "col-md-3 panel",
           h3("Statistics"),
-          htmlOutput("block_breeding_stats"),
+          h4(htmlOutput("block_status")),
+          tabsetPanel(
+            tabPanel("Breeding", htmlOutput("block_breeding_stats")),
+            tabPanel("Wintering", htmlOutput("block_wintering_stats")),
+          ),
           downloadButton("download_block_checklists", "Download Checklists")
         ),
         div(class = "col-md-3 panel",
@@ -365,7 +369,7 @@ observe({
       # }
 
       ## Update map - zoom in
-      block_info <- filter(priority_block_data, ID_NCBA_BLOCK == rv_block$id)
+      block_info <- dplyr::filter(priority_block_data, ID_NCBA_BLOCK == rv_block$id)
 
       #calculate the center of the block
       block_center_lat <- block_info$SE_Y +
@@ -469,11 +473,11 @@ observe({
     )
     print("applying filters to block records")
       current_block_ebd() %>%
-        filter(
+        dplyr::filter(
           if(portal_records_switch())
           PROJECT_CODE == "EBIRD_ATL_NC"
           else TRUE) %>%
-        filter(
+        dplyr::filter(
           if (input$season_radio == "Breeding")
             MONTH %in% c("3","4","5","6","7","8")
            else if (input$season_radio == "Non-Breeding") 
@@ -510,7 +514,7 @@ observe({
     req(current_block_ebd(), current_block_ebd_filtered())
 
     current_block_ebd_filtered() %>%
-      filter(CATEGORY == "species") %>% # make sure only species counted
+      dplyr::filter(CATEGORY == "species") %>% # make sure only species counted
       group_by(SAMPLING_EVENT_IDENTIFIER) %>%  # nolint
       mutate(SPP_COUNT = length(unique(GLOBAL_UNIQUE_IDENTIFIER))) %>%
       ungroup(SAMPLING_EVENT_IDENTIFIER) %>%
@@ -569,6 +573,18 @@ observe({
 ### For downloading testing datasets when conditions change (Deprecated?) ####
 
   ## BREEDING STATS ----------------------------------------------------
+
+  ## BLOCK STATUS
+  output$block_status <- renderUI({
+
+    complete_text <- ifelse(
+      current_block_summary()$STATUS == "Complete",
+      "<h3>COMPLETED!</h3>",
+      "<h5>Incomplete</h5>"
+    )
+    HTML(complete_text)
+  })
+
   output$block_breeding_stats <- renderUI({
     req(current_block_summary())
     print("rendering block stats")
@@ -577,24 +593,6 @@ observe({
       need(current_block_summary(), "No checklists submitted.")
     )
 
-    complete_text <- ifelse(
-      current_block_summary()$STATUS == "Complete",
-      "<h2>COMPLETED!</h2>",
-      ""
-    )
-    # Data Table Experiment
-    # dt_opts <- c(
-    #   dt_opts,
-    #   list(
-    #     columnDefs = list(
-    #       list(
-    #         className = "dt-center",
-    #         targets = 1:3
-    #       )
-    #     )
-    #   )
-    # )
-    
     breed_stat_col <- as.character(
       c(
         "Detected, Uncoded",
@@ -616,17 +614,17 @@ observe({
         current_block_summary()$breedCountDetected,
         current_block_summary()$breedCountCoded,
         sprintf(
-          "%s (%.0f%% )",
+          "%s (%.0f%%)",
           current_block_summary()$breedCountConfirmed,
           current_block_summary()$breedPctConfirmed * 100
         ),
         sprintf(
-          "%s (%.0f%% )",
+          "%s (%.0f%%)",
           current_block_summary()$breedCountProbable,
           current_block_summary()$breedPctProbable * 100
         ),
         sprintf(
-          "%s (%.0f%% )",
+          "%s (%.0f%%)",
           current_block_summary()$breedCountPossible,
           current_block_summary()$breedPctPossible * 100
         ),
@@ -673,10 +671,26 @@ observe({
           "COMPLETED!",
           "missing"
         ),
-        "missing",
-        "missing",
-        "missing",
-        "missing",
+        ifelse(
+          current_block_summary()$bbcgTotalEffortHrs,
+          "COMPLETED!",
+          "missing"
+        ),
+        ifelse(
+          current_block_summary()$breed1CountDiurnalChecklists > 0,
+          "COMPLETED!",
+          "missing"
+        ),
+        ifelse(
+          current_block_summary()$breed2CountDiurnalChecklists > 0,
+          "COMPLETED!",
+          "missing"
+        ),
+        ifelse(
+          current_block_summary()$breed3CountDiurnalChecklists > 0,
+          "COMPLETED!",
+          "missing"
+        ),
         "-",
         "-"
       )
@@ -713,51 +727,114 @@ observe({
     )
 
     # End Data Table Experiment
+  })
 
+  ## WINTERING STATISTICS ----------------------------------------------------
+  output$block_wintering_stats <- renderUI({
+    req(current_block_summary())
+    print("rendering winter block stats")
+    #ensure records returned
+    validate(
+      need(current_block_summary(), "No checklists submitted.")
+    )
 
-    # HTML(paste0(
-    #   "<p style='margin:2px 0px;font-size:1.1rem;'>", 
-    #   current_block_summary()$county, " county, region ",
-    #   current_block_summary()$region, "</p>",
-    #   # complete_text,
-    #   "<h4>Breeding</h4>",
-    #   "<p style='font-weight:600;'>", current_block_summary()$STATUS,"</p>",
-    #   "<p>Observed: ",
-    #   current_block_summary()$breedCountDetected + current_block_summary()$breedCountCoded,
-    #   "<br/>Coded: ",
-    #   current_block_summary()$breedCountCoded,
-    #   "<br/>Confirmed: ",
-    #   paste0(
-    #     current_block_summary()$breedCountConfirmed,
-    #     " (",
-    #     round(100 * current_block_summary()$breedPctConfirmed, 1),
-    #     "%)"
-    #     ),
-    #   "<br/>Possible: ",
-    #   paste0(
-    #     current_block_summary()$breedCountPossible,
-    #     " (",
-    #     round(100 * current_block_summary()$breedPctPossible, 1),
-    #     "%)"
-    #     ),
-    #   "<br/>Daytime Hours: ",
-    #   round(current_block_summary()$breedHrsDiurnal, 1),
-    #   "<br/>Daytime Visits: ",
-    #   current_block_summary()$breedCountDiurnalChecklists,
-    #   "<br/>Nocturnal Hours: ",
-    #   current_block_summary()$breedCountNocturnalChecklists,
-    #   "</p>",
-    #   "<h4>Winter</h4>",
-    #   "<p>Observed: ",
-    #   current_block_summary()$winterCountDetected,
-    #   "<br/>Daytime Hrs: ",
-    #     round(current_block_summary()$winterHrsDiurnal, 1),
-    #   "<br/>Daytime Visits: ",
-    #   current_block_summary()$winterCountDiurnalChecklists,
-    #   "<br/>Nocturnal Visits: ",
-    #   current_block_summary()$winterCountNocturnalChecklists,
-    #   "</p>"
-    # ))
+    # Data Table Experiment
+    
+    winter_stat_col <- as.character(
+      c(
+        "Total Species",
+        "Diurnal Visits Early",
+        "Diurnal Visits Late",
+        "Diurnal Visits Total",
+        "Diurnal Hrs",
+        "Nocturnal Visits",
+        "Nocturnal Hrs"
+      )
+    )
+
+    winter_val_col <- as.character(
+      c(
+        current_block_summary()$winterCountDetected,
+        current_block_summary()$winter1CountDiurnalChecklists,
+        current_block_summary()$winter2CountDiurnalChecklists,
+        current_block_summary()$winterCountDiurnalChecklists,
+        format(current_block_summary()$winterHrsDiurnal, digits = 1),
+        current_block_summary()$winterCountNocturnalChecklists,
+        format(current_block_summary()$winterHrsNocturnal, digits = 1)
+      )
+    )
+
+    winter_target_col <- as.character(
+      c(
+        ">= 55",
+        ">= 1",
+        "<= 1",
+        ">= 2",
+        ">= 5",
+        "1 (preferred)",
+        "-"
+      )
+    )
+    winter_status_col <- as.character(
+      c(
+        ifelse(
+          current_block_summary()$wbcgDetected,
+          "COMPLETED!",
+          "missing"
+        ),
+        ifelse(
+          current_block_summary()$winter1CountDiurnalChecklists > 0,
+          "COMPLETED!",
+          "missing"
+        ),
+        ifelse(
+          current_block_summary()$winter2CountDiurnalChecklists > 0,
+          "COMPLETED!",
+          "missing"
+        ),
+        ifelse(
+          current_block_summary()$wbcgDiurnalVisits,
+          "COMPLETED!",
+          "missing"
+        ),
+        ifelse(
+          current_block_summary()$wbcgTotalEffortHrs,
+          "COMPLETED!",
+          "missing"
+        ),
+        "-",
+        "-"
+      )
+    )
+
+    winter_stats_colnames <- c(
+      "Statistic",
+      "Value",
+      "Criteria",
+      "Status"
+    )
+    winter_stats_dt <- data.frame(
+      winter_stat_col,
+      winter_val_col,
+      winter_target_col,
+      winter_status_col
+    )
+
+    DT::datatable(
+      winter_stats_dt,
+      options = dt_opts,
+      colnames = winter_stats_colnames,
+      rownames = FALSE
+    ) %>%
+    formatStyle(
+      columns = c(0,1,2,3),
+      fontSize = "80%"
+    ) %>%
+    formatStyle(
+      columns = c(1,2,3),
+      className = "dt-center"
+    )
+
 
   })
   
@@ -777,7 +854,7 @@ observe({
   spp_accumulation_results <- reactive({
     req(current_block_ebd(), current_block_ebd_filtered())
     # pass only those columns needed
-    sa <- filter(
+    sa <- dplyr::filter(
       current_block_ebd_filtered(),
       CATEGORY == "species"
       )[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES",
@@ -912,7 +989,7 @@ observe({
   ### ZOOM MAP TO SELECTED BLOCK ------
   # observeEvent(rv_block$id, {
   #     req(rv_block$id)
-  #     block_info <- filter(block_data, ID_NCBA_BLOCK==rv_block$id)
+  #     block_info <- dplyr::filter(block_data, ID_NCBA_BLOCK==rv_block$id)
 
   #     #calculate the center of the block
   #     block_center_lat <- block_info$SE_Y +
