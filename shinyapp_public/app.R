@@ -50,6 +50,20 @@ if(!require(gridBase)) install.packages(
 if(!require(RColorBrewer)) install.packages(
   "RColorBrewer", repos = "http://cran.us.r-project.org")
 
+# data tables
+if(!require(DT)) install.packages(
+  "DT", repos = "http://cran.us.r-project.org")
+
+DT:::DT2BSClass(c("compact", "cell-border"))
+dt_opts <- list(
+  info = FALSE,
+  paging = FALSE,
+  searching = FALSE,
+  scrollX = FALSE,
+  scrollY = FALSE,
+  ordering = FALSE
+  )
+
 #get functions from other files
 source("blocks.r")
 source("utils.r") #utilities file
@@ -137,23 +151,23 @@ ui <- bootstrapPage(
           #  )
           )
         ),
-        div(class="col-md-10 panel",
-          leafletOutput("mymap")
+        div(class = "col-md-10 panel",
+          leafletOutput("mymap", height = "50vh")
         ),
-        div(class="col-md-3 panel",
+        div(class = "col-md-3 panel",
           h3("Statistics"),
           htmlOutput("block_breeding_stats"),
           downloadButton("download_block_checklists", "Download Checklists")
         ),
-        div(class="col-md-3 panel",
+        div(class = "col-md-3 panel",
           h3("Hours"),
           plotOutput("blockhours")
         ),
-        div(class="col-md-3 panel",
+        div(class = "col-md-3 panel",
           h3("Species Accumulation"),
           plotOutput("spp_accumulation")
         ),
-        div(class="col-md-6 panel",
+        div(class = "col-md-6 panel",
           h3("Species List"),
           dataTableOutput("spp_observed"),
           downloadButton("download_spplist", "Download")
@@ -562,54 +576,188 @@ observe({
     validate(
       need(current_block_summary(), "No checklists submitted.")
     )
+
     complete_text <- ifelse(
       current_block_summary()$STATUS == "Complete",
       "<h2>COMPLETED!</h2>",
       ""
     )
-    HTML(paste0(
-      "<p style='margin:2px 0px;font-size:1.1rem;'>", 
-      current_block_summary()$county, " county, region ",
-      current_block_summary()$region, "</p>",
-      # complete_text,
-      "<h4>Breeding</h4>",
-      "<p style='font-weight:600;'>", current_block_summary()$STATUS,"</p>",
-      "<p>Observed: ",
-      current_block_summary()$breedCountDetected + current_block_summary()$breedCountCoded,
-      "<br/>Coded: ",
-      current_block_summary()$breedCountCoded,
-      "<br/>Confirmed: ",
-      paste0(
-        current_block_summary()$breedCountConfirmed,
-        " (",
-        round(100 * current_block_summary()$breedPctConfirmed, 1),
-        "%)"
+    # Data Table Experiment
+    # dt_opts <- c(
+    #   dt_opts,
+    #   list(
+    #     columnDefs = list(
+    #       list(
+    #         className = "dt-center",
+    #         targets = 1:3
+    #       )
+    #     )
+    #   )
+    # )
+    
+    breed_stat_col <- as.character(
+      c(
+        "Detected, Uncoded",
+        "Coded",
+        "Confirmed",
+        "Probable",
+        "Possible",
+        "Diurnal Hrs",
+        "Diurnal Visits Early",
+        "Diurnal Visits Mid",
+        "Diurnal Visits Late",
+        "Nocturnal Visits",
+        "Nocturnal Hrs"
+      )
+    )
+
+    breed_val_col <- as.character(
+      c(
+        current_block_summary()$breedCountDetected,
+        current_block_summary()$breedCountCoded,
+        sprintf(
+          "%s (%.0f%% )",
+          current_block_summary()$breedCountConfirmed,
+          current_block_summary()$breedPctConfirmed * 100
         ),
-      "<br/>Possible: ",
-      paste0(
-        current_block_summary()$breedCountPossible,
-        " (",
-        round(100 * current_block_summary()$breedPctPossible, 1),
-        "%)"
+        sprintf(
+          "%s (%.0f%% )",
+          current_block_summary()$breedCountProbable,
+          current_block_summary()$breedPctProbable * 100
         ),
-      "<br/>Daytime Hours: ",
-      round(current_block_summary()$breedHrsDiurnal, 1),
-      "<br/>Daytime Visits: ",
-      current_block_summary()$breedCountDiurnalChecklists,
-      "<br/>Nocturnal Hours: ",
-      current_block_summary()$breedCountNocturnalChecklists,
-      "</p>",
-      "<h4>Winter</h4>",
-      "<p>Observed: ",
-      current_block_summary()$winterCountDetected,
-      "<br/>Daytime Hrs: ",
-        round(current_block_summary()$winterHrsDiurnal, 1),
-      "<br/>Daytime Visits: ",
-      current_block_summary()$winterCountDiurnalChecklists,
-      "<br/>Nocturnal Visits: ",
-      current_block_summary()$winterCountNocturnalChecklists,
-      "</p>"
-    ))
+        sprintf(
+          "%s (%.0f%% )",
+          current_block_summary()$breedCountPossible,
+          current_block_summary()$breedPctPossible * 100
+        ),
+        format(current_block_summary()$breedHrsDiurnal, digits = 1),
+        current_block_summary()$breed1CountDiurnalChecklists,
+        current_block_summary()$breed2CountDiurnalChecklists,
+        current_block_summary()$breed3CountDiurnalChecklists,
+        current_block_summary()$breedCountNocturnalChecklists,
+        format(current_block_summary()$breedHrsNocturnal, digits = 1)
+      )
+    )
+
+    breed_target_col <- as.character(
+      c(
+        "-",
+        ">= 55",
+        ">= 25%",
+        "-",
+        "<= 25%",
+        ">= 20",
+        ">= 1",
+        ">= 1",
+        ">= 1",
+        "2 (preferred)",
+        "-"
+      )
+    )
+    breed_status_col <- as.character(
+      c(
+        "-",
+        ifelse(
+          current_block_summary()$bbcgCoded,
+          "COMPLETED!",
+          "missing"
+        ),
+        ifelse(
+          current_block_summary()$bbcgConfirmed,
+          "COMPLETED!",
+          "missing"
+        ),
+        "-",
+        ifelse(
+          current_block_summary()$bbcgPossible,
+          "COMPLETED!",
+          "missing"
+        ),
+        "missing",
+        "missing",
+        "missing",
+        "missing",
+        "-",
+        "-"
+      )
+    )
+
+    breed_stats_colnames <- c(
+      "Statistic",
+      "Value",
+      "Criteria",
+      "Status"
+    )
+    breed_stats_dt <- data.frame(
+      breed_stat_col,
+      breed_val_col,
+      breed_target_col,
+      breed_status_col
+    )
+    print(breed_stats_dt)
+    print(dt_opts)
+
+    DT::datatable(
+      breed_stats_dt,
+      options = dt_opts,
+      colnames = breed_stats_colnames,
+      rownames = FALSE
+    ) %>%
+    formatStyle(
+      columns = c(0,1,2,3),
+      fontSize = "80%"
+    ) %>%
+    formatStyle(
+      columns = c(1,2,3),
+      className = "dt-center"
+    )
+
+    # End Data Table Experiment
+
+
+    # HTML(paste0(
+    #   "<p style='margin:2px 0px;font-size:1.1rem;'>", 
+    #   current_block_summary()$county, " county, region ",
+    #   current_block_summary()$region, "</p>",
+    #   # complete_text,
+    #   "<h4>Breeding</h4>",
+    #   "<p style='font-weight:600;'>", current_block_summary()$STATUS,"</p>",
+    #   "<p>Observed: ",
+    #   current_block_summary()$breedCountDetected + current_block_summary()$breedCountCoded,
+    #   "<br/>Coded: ",
+    #   current_block_summary()$breedCountCoded,
+    #   "<br/>Confirmed: ",
+    #   paste0(
+    #     current_block_summary()$breedCountConfirmed,
+    #     " (",
+    #     round(100 * current_block_summary()$breedPctConfirmed, 1),
+    #     "%)"
+    #     ),
+    #   "<br/>Possible: ",
+    #   paste0(
+    #     current_block_summary()$breedCountPossible,
+    #     " (",
+    #     round(100 * current_block_summary()$breedPctPossible, 1),
+    #     "%)"
+    #     ),
+    #   "<br/>Daytime Hours: ",
+    #   round(current_block_summary()$breedHrsDiurnal, 1),
+    #   "<br/>Daytime Visits: ",
+    #   current_block_summary()$breedCountDiurnalChecklists,
+    #   "<br/>Nocturnal Hours: ",
+    #   current_block_summary()$breedCountNocturnalChecklists,
+    #   "</p>",
+    #   "<h4>Winter</h4>",
+    #   "<p>Observed: ",
+    #   current_block_summary()$winterCountDetected,
+    #   "<br/>Daytime Hrs: ",
+    #     round(current_block_summary()$winterHrsDiurnal, 1),
+    #   "<br/>Daytime Visits: ",
+    #   current_block_summary()$winterCountDiurnalChecklists,
+    #   "<br/>Nocturnal Visits: ",
+    #   current_block_summary()$winterCountNocturnalChecklists,
+    #   "</p>"
+    # ))
 
   })
   
