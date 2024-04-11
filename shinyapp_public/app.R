@@ -5,6 +5,10 @@
 # https://github.com/nmtarr/NCBA/shinyapp_public
 
 
+if(!require(ggiraph)) install.packages(
+  "ggiraph", repos = "http://cran.us.r-project.org")
+if(!require(reactlog)) install.packages(
+  "reactlog", repos = "http://cran.us.r-project.org")
 if(!require(shiny)) install.packages(
   "shiny", repos = "http://cran.us.r-project.org")
 if(!require(shinyWidgets)) install.packages(
@@ -157,7 +161,7 @@ ui <- bootstrapPage(
           downloadButton("download_block_checklists", "Download Checklists")
         ),
         div(class = "col-md-4 panel",
-          h3("Hours"),
+          h3("Survey Hours"),
           plotOutput("blockhours")
         ),
         div(class = "col-md-4 panel",
@@ -174,21 +178,6 @@ ui <- bootstrapPage(
         )
       )
     ),
-    # tabPanel("Species",
-    #   div(class="container-fluid", tags$head(includeCSS("styles.css")),
-    #     div(class="col-md-3",
-    #       selectizeInput("spp_select", h3("Species"),
-    #       choices = species_list, options=list(
-    #         placeholder = 'Select species',
-    #         onInitialize = I('function() {this.setValue(""); }')
-    #       ))
-    #     ),
-    #     div(class="col-md-9",
-    #       plotOutput("spp_breedingbox_plot"),
-    #       div(tableOutput("breeding_code_legend"), style="font-size:60%")
-    #   )
-    # )
-    # ),
     tabPanel("Species Map",
         div(
           class = "col-md-2",
