@@ -283,7 +283,7 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
         # "NCBA_REVIEW_DATE":1,
       }
 
-      print("getting Observations from AtlasCache")
+      # print("getting Observations from AtlasCache")
       mongodata <- m$find(query, filter)
       # mongodata <- m$find(
       #   query,
@@ -291,14 +291,14 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
       #   sort=sortquery) #sorting breaks for big queries
 
       if (nrow(mongodata)>0) {
-        print("unnesting observation records")
+      # print("unnesting observation records")
         mongodata <- unnest(mongodata, cols = (c(OBSERVATIONS)))
 
         #ADD SEASON COLUMN FROM SAFE DATES TABLE AND POPULATE
         gen_breeding_start = yday("2021-04-01")
         gen_breeding_end = yday("2021-08-31")
 
-        print("adding Season (Breeding = April 1 - Aug 31)")
+      # print("adding Season (Breeding = April 1 - Aug 31)")
         mongodata$SEASON <- apply(
           mongodata[c('OBSERVATION_DATE','COMMON_NAME')],1,
           function(x) {
@@ -327,12 +327,12 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
             return(season)
 
           })
-        print("Season (Breeding or Winter)")
+      # print("Season (Breeding or Winter)")
       } # Expand observations if records returned
 
 
       # EXAMPLE/TESTING
-      print("AtlasCache records retrieved")
+    # print("AtlasCache records retrieved")
       # print(head(mongodata))
       # USE aggregation pipeline syntax to return only needed observations
       # pipeline <- str_interp(
@@ -458,7 +458,7 @@ get_block_hours <- function(id_ncba_block) {
   #   1. Retrieve OBSERVATION_DATE and SAMPLING_EVENT_IDENTIFIER columns
   #       from checklists where Cerulean Warbler was observed
 
-  print(id_ncba_block)
+# print(id_ncba_block)
   if (length(id_ncba_block) >0){
     result <- filter(block_hours_month, ID_NCBA_BLOCK == id_ncba_block)
   }
@@ -492,4 +492,12 @@ get_db_status <- function() {
   last_date <- result$MOST_RECENT_EBD_DATE_TEXT
   # print(result)
   return(last_date)
+}
+
+get_status_text <- function(b) {
+  r <- "missing"
+  if (b) {
+    r <- "COMPLETED!"
+  }
+  return(r)
 }

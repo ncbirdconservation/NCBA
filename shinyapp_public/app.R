@@ -236,7 +236,7 @@ server <- function(input, output, session) {
 observe({
   query <- parseQueryString(session$clientData$url_search)
   if (!is.null(query[['block']])) {
-    print(query[['block']])
+    # print(query[['block']])
     # b <- query[['block']]
     rv_block$id = query[['block']]
     # if ( b %in% input$APBlock & b != input$APBlock) {
@@ -302,7 +302,7 @@ observe({
     input$mymap_shape_click,
     {
       rv_block$id = input$mymap_shape_click$id
-      print("block map clicked")
+      # print("block map clicked")
     }
   )
   # block select change
@@ -310,7 +310,7 @@ observe({
     input$APBlock,
     {
       rv_block$id = input$APBlock
-      print("Block selected from drop down list")
+      # print("Block selected from drop down list")
       if(input$APBlock == "NONE")
         rv_block$id = NULL
       else
@@ -324,7 +324,7 @@ observe({
     input$overview_map_shape_click,
     {
       rv_block$id = input$overview_map_shape_click$id
-      print("overview map clicked")
+      # print("overview map clicked")
 
       #change focus to blocks tab
       updateNavbarPage(
@@ -339,7 +339,7 @@ observe({
   observeEvent(
     rv_block$id,
     {
-      print(paste0("rv_block changed to ", rv_block$id))
+      # print(paste0("rv_block changed to ", rv_block$id))
       b <- rv_block$id
       # if (b %in% input$APBlock & b != input$APBlock){
       #   # block is in drop-down, and is not the current block
@@ -415,7 +415,7 @@ observe({
   # retrieves current block records when rv_block$id changes
   current_block_ebd <- reactive({
     req(rv_block$id)
-    print("retrieving current block data")
+    # print("retrieving current block data")
     #build query string from parameters
     #philosophy:
     #   - if block changes, rerun query to retrieve from
@@ -456,21 +456,22 @@ observe({
     validate(
       need(checklist_count()>0,"")
     )
-    print("applying filters to block records")
-      current_block_ebd() %>%
-        dplyr::filter(
-          if(portal_records_switch())
-          PROJECT_CODE == "EBIRD_ATL_NC"
-          else TRUE) %>%
-        dplyr::filter(
-          if (input$season_radio == "Breeding")
-            MONTH %in% c("3","4","5","6","7","8")
-           else if (input$season_radio == "Non-Breeding") 
-              MONTH %in% c("1","2","11","12")
-              else if (input$season_radio == "Custom")
-             MONTH %in% input$month_range
-          else TRUE
-        )
+    # print("applying filters to block records")
+    current_block_ebd() %>%
+      dplyr::filter(
+        if(portal_records_switch())
+        PROJECT_CODE == "EBIRD_ATL_NC"
+        else TRUE
+      ) %>%
+      dplyr::filter(
+        if (input$season_radio == "Breeding")
+          MONTH %in% c("3","4","5","6","7","8")
+          else if (input$season_radio == "Non-Breeding") 
+            MONTH %in% c("1","2","11","12")
+            else if (input$season_radio == "Custom")
+            MONTH %in% input$month_range
+        else TRUE
+      )
   })
 
 
@@ -572,7 +573,7 @@ observe({
 
   output$block_breeding_stats <- renderUI({
     req(current_block_summary())
-    print("rendering block stats")
+    # print("rendering block stats")
     #ensure records returned
     validate(
       need(current_block_summary(), "No checklists submitted.")
@@ -640,42 +641,14 @@ observe({
     breed_status_col <- as.character(
       c(
         "-",
-        ifelse(
-          current_block_summary()$bbcgCoded,
-          "COMPLETED!",
-          "missing"
-        ),
-        ifelse(
-          current_block_summary()$bbcgConfirmed,
-          "COMPLETED!",
-          "missing"
-        ),
+        get_status_text(current_block_summary()$bbcgCoded),
+        get_status_text(current_block_summary()$bbcgConfirmed),
         "-",
-        ifelse(
-          current_block_summary()$bbcgPossible,
-          "COMPLETED!",
-          "missing"
-        ),
-        ifelse(
-          current_block_summary()$bbcgTotalEffortHrs,
-          "COMPLETED!",
-          "missing"
-        ),
-        ifelse(
-          current_block_summary()$breed1CountDiurnalChecklists > 0,
-          "COMPLETED!",
-          "missing"
-        ),
-        ifelse(
-          current_block_summary()$breed2CountDiurnalChecklists > 0,
-          "COMPLETED!",
-          "missing"
-        ),
-        ifelse(
-          current_block_summary()$breed3CountDiurnalChecklists > 0,
-          "COMPLETED!",
-          "missing"
-        ),
+        get_status_text(current_block_summary()$bbcgPossible),
+        get_status_text(current_block_summary()$bbcgTotalEffortHrs),
+        get_status_text(current_block_summary()$breed1CountDiurnalChecklists),
+        get_status_text(current_block_summary()$breed2CountDiurnalChecklists),
+        get_status_text(current_block_summary()$breed3CountDiurnalChecklists),
         "-",
         "-"
       )
@@ -693,8 +666,8 @@ observe({
       breed_target_col,
       breed_status_col
     )
-    print(breed_stats_dt)
-    print(dt_opts)
+    # print(breed_stats_dt)
+    # print(dt_opts)
 
     DT::datatable(
       breed_stats_dt,
@@ -717,7 +690,7 @@ observe({
   ## WINTERING STATISTICS ----------------------------------------------------
   output$block_wintering_stats <- renderUI({
     req(current_block_summary())
-    print("rendering winter block stats")
+  # print("rendering winter block stats")
     #ensure records returned
     validate(
       need(current_block_summary(), "No checklists submitted.")
@@ -762,31 +735,11 @@ observe({
     )
     winter_status_col <- as.character(
       c(
-        ifelse(
-          current_block_summary()$wbcgDetected,
-          "COMPLETED!",
-          "missing"
-        ),
-        ifelse(
-          current_block_summary()$winter1CountDiurnalChecklists > 0,
-          "COMPLETED!",
-          "missing"
-        ),
-        ifelse(
-          current_block_summary()$winter2CountDiurnalChecklists > 0,
-          "COMPLETED!",
-          "missing"
-        ),
-        ifelse(
-          current_block_summary()$wbcgDiurnalVisits,
-          "COMPLETED!",
-          "missing"
-        ),
-        ifelse(
-          current_block_summary()$wbcgTotalEffortHrs,
-          "COMPLETED!",
-          "missing"
-        ),
+        get_status_text(current_block_summary()$wbcgDetected),
+        get_status_text(current_block_summary()$winter1CountDiurnalChecklists),
+        get_status_text(current_block_summary()$winter2CountDiurnalChecklists),
+        get_status_text(current_block_summary()$wbcgDiurnalVisits),
+        get_status_text(current_block_summary()$wbcgTotalEffortHrs),
         "-",
         "-"
       )
@@ -826,7 +779,7 @@ observe({
   #### DISPLAY BLOCK HOURS SUMMARY PLOT ------
   block_hrs_results <- reactive({
     req(current_block_ebd_checklistsonly_filtered())
-    print("running block hrs results")
+  # print("running block hrs results")
     block_hrs(current_block_ebd_checklistsonly_filtered())
 
   })
@@ -910,7 +863,7 @@ observe({
   output$mymap <- renderLeaflet({
 
     #setup block geojson layer
-    print("starting map, adding blocks")
+  # print("starting map, adding blocks")
 
     ## Add fill value based on block status
     priority_block_data <- priority_block_data %>%
@@ -995,7 +948,7 @@ observe({
   output$mysppmap <- renderLeaflet({
 
     #setup block geojson layer
-    print("starting map, adding blocks")
+  # print("starting map, adding blocks")
 
     leaflet() %>%
       setView(
@@ -1009,16 +962,16 @@ observe({
   sppblock_data <- reactive({
     # print(input$sppmap_select)
       spp <- input$sppmap_select
-      print(spp)
+    # print(spp)
       get_spp_by_block(spp)
   })
 
   observeEvent(
     sppblock_data(),
     {
-      print("retrieving spp block data")
+    # print("retrieving spp block data")
       sppblockmap_data <- sppblock_data()
-      print("spp block data retrieved")
+    # print("spp block data retrieved")
 
       if (nrow(sppblockmap_data) > 0){
       # print (paste0("spp by block len = ",nrow(sppblockmap_data)))
@@ -1054,7 +1007,7 @@ observe({
         domain = spp_blocks$breedcat
         )
 
-      print("adding blocks to map")
+    # print("adding blocks to map")
       leafletProxy("mysppmap") %>%
       clearShapes() %>%
       clearControls() %>%
@@ -1238,10 +1191,10 @@ insideBlockAdj <- 0.003
 
 
   ### SETUP LEAFLET MAP, RENDER BASEMAP 
-  print("loading overview_map")
+# print("loading overview_map")
   output$overview_map <- renderLeaflet({
     #setup block geojson layer
-    print("starting effort map, adding blocks")
+  # print("starting effort map, adding blocks")
     leaflet() %>%
       setView(
         lng = nc_center_lng,
