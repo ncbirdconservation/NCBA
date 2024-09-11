@@ -6,16 +6,20 @@
 # this file is stored, then replace "ncba_functions.R" with the path to the file
 # For example, 'source("C:/Code/NCBA/ncba_functions.R").  The functions can
 # then be called by their names.
-library(tidyverse)
-library(auk)
-library(tmap)
+
+if(!require(auk)) install.packages(
+  "auk", repos = "http://cran.us.r-project.org")
+if(!require(tmap)) install.packages(
+  "tmap", repos = "http://cran.us.r-project.org")
+if(!require(tidyverse)) install.packages(
+  "tidyverse", repos = "http://cran.us.r-project.org")
 
 # Load the config file
-source("ncba_config.r")
+source(here("resources","ncba_config.r"))
 
 # Set the working directory to the work_dir variable from the config file.
 #   This may not always work (rmarkdown).....
-setwd(work_dir)
+# setwd(work_dir)
 
 
 # ------------------------------------------------------------------------------
@@ -1466,9 +1470,9 @@ get_breeding_records <- function(behaviors = NULL,
   
   # SET UP ---------------------------------------------------------------------
   # Set the working directory
-  if (is.null(work_dir) == FALSE) {
-    setwd(work_dir)
-  }
+  # if (is.null(work_dir) == FALSE) {
+  #   setwd(work_dir)
+  # }
   
   # If a list of fields is provided, set EBD_fields_only to FALSE
   if (is.null(fields) == FALSE) {
