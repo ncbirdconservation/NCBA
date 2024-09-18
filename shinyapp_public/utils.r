@@ -359,7 +359,7 @@ get_block_data <- function() {
     ' "ID_EBD_NAME": 1, "ID_NCBA_BLOCK": 1, "ID_OLD_ID": 1, "NW_X": 1, ',
     '"NW_Y": 1, "PRIORITY": 1, "QUADID": 1, "QUAD_BLOCK": 1, "QUAD_NAME": 1, ',
     '"REGION": 1, "SE_X": 1, "SE_Y": 1, "SUBNAT2": 1, "TYPE": 1, ',
-    '"ID_S123_NOSPACES_TEMP": 1, "ID_S123_SPACES_TEMP": 1, "STATUS": 1}')
+    '"ID_S123_NOSPACES_TEMP": 1, "ID_S123_SPACES_TEMP": 1}')
 
   # blockdata <- m_blocks$find("{}","{}")
   blockdata <- m_blocks$find("{}",filter)
@@ -436,9 +436,15 @@ priority_block_data <- filter(
     "SE_Y",
     "PRIORITY",
     "COUNTY",
-    "REGION",
-    "STATUS")]
-print(priority_block_data[priority_block_data$ID_NCBA_BLOCK == "NORTHWEST_DURHAM-SE",])
+    "REGION")]
+
+# merge block summary data with priority_block data
+priority_block_data <- priority_block_data %>%
+  merge(
+    get_block_summaries(),
+    by = "ID_NCBA_BLOCK",
+    all = TRUE
+  )
 
 print("filtering block records")
 

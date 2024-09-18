@@ -159,13 +159,16 @@ plot_spp_accumulation <- function(block_recs, spp_bcs) {
       )
     ) +
     geom_text(
-      aes(0, coded_spp_25perc),
-      label = sprintf("25 pct goal (%i spp)", coded_spp_25perc),
-      vjust = -0.5,
-      hjust = +0.00
+      aes(x = 5, y = 18,
+      label = sprintf("25 pct goal (%i spp)", 18)
+      # aes(5, coded_spp_25perc),
+      # label = sprintf("25 pct goal (%i spp)", coded_spp_25perc),
+      # vjust = -0.5,
+      # hjust = +0.00
+      )
     ) +
     geom_text(
-      aes(0, 55),
+      aes(5, 55), 
       label = "Minimum coded species",
       vjust = -0.5,
       hjust=+0.00

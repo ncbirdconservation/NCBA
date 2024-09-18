@@ -1429,11 +1429,7 @@ insideBlockAdj <- 0.003
   #   }
   # )
   ### Merging Block Shapes for mapping and Summary Table
-  pb_map <- merge(
-    priority_block_data,
-    get_block_summaries(),
-    all = TRUE
-    )
+  pb_map <- priority_block_data
   # print(head(pb_map))
   
   ## Convert percentages to numbers instead of decimals
