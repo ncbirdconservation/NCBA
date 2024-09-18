@@ -294,7 +294,7 @@ observe({
   # Creating a reactive value so it can be updated outside of rv_block$id
   # I think rv_block$id could just be totally replaced with rv_block$id?
 
-  rv_block <- reactiveValues(chosen=NULL, id =NULL)
+  rv_block <- reactiveValues(chosen = NULL, id = NULL)
 
   #observe events where block changes
   # block map click

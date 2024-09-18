@@ -438,6 +438,7 @@ priority_block_data <- filter(
     "COUNTY",
     "REGION",
     "STATUS")]
+print(priority_block_data[priority_block_data$ID_NCBA_BLOCK == "NORTHWEST_DURHAM-SE",])
 
 print("filtering block records")
 
@@ -475,12 +476,14 @@ get_block_summary <- function(id_ncba_block) {
 
 ## for overview map
 get_block_summaries <- function() {
-  blocksum_filter <- '{"sppList": 0}'
+  blocksum_filter <- '{"sppList": 0, "ebird_web_data" : 0, "NCBA_EBD_VER": 0, "MOST_RECENT_EBD_DATE": 0}'
 
   blocksum <- m_block_summaries$find("{}", blocksum_filter)
 
   blocksum <- as.data.frame(blocksum)
+  
   # print(head(blocksum))
+  # print(blocksum[blocksum$ID_NCBA_BLOCK == "SOUTHWEST_DURHAM-SE", ])
   return(blocksum)
 }
 
