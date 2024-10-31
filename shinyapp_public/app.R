@@ -726,7 +726,7 @@ observe({
       c(
         ">= 55",
         ">= 1",
-        "<= 1",
+        ">= 1",
         ">= 2",
         ">= 5",
         "1 (preferred)",
@@ -992,12 +992,12 @@ observe({
           TRUE ~ "C1 Observed"
         )
       )
-
+      # print(head(spp_blocks))
       spp_blocks <- mutate(
         spp_blocks,
         blocklink = sprintf(
           'https://ebird.org/atlasnc/block/%s',
-          spp_blocks$ID_BLOCK_CODE
+          spp_blocks$ID_BLOCK_CODE.x
           )
       )
       output$block_breedcode_table <- renderTable(table(spp_blocks$breedcat))
@@ -1013,7 +1013,7 @@ observe({
       clearControls() %>%
       addRectangles(
         data = priority_block_data,
-        layerId = ~ ID_BLOCK_CODE,
+        layerId = ~ ID_BLOCK_CODE.x,
         lng1 = ~ NW_X,
         lat1 = ~ NW_Y,
         lng2 = ~ SE_X,
