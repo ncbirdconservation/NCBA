@@ -587,9 +587,9 @@ observe({
         "Probable",
         "Possible",
         "Diurnal Hrs",
-        "Diurnal Visits Early",
-        "Diurnal Visits Mid",
-        "Diurnal Visits Late",
+        "Diurnal Visits (Mar, Apr)",
+        "Diurnal Visits (Jun, mid-Jul)",
+        "Diurnal Visits (mid-Jul, Aug)",
         "Nocturnal Visits",
         "Nocturnal Hrs"
       )
@@ -701,8 +701,8 @@ observe({
     winter_stat_col <- as.character(
       c(
         "Total Species",
-        "Diurnal Visits Early",
-        "Diurnal Visits Late",
+        "Diurnal Visits (Nov-Dec)",
+        "Diurnal Visits (Jan-Feb)",
         "Diurnal Visits Total",
         "Diurnal Hrs",
         "Nocturnal Visits",
