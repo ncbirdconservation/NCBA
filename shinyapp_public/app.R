@@ -587,9 +587,9 @@ observe({
         "Probable",
         "Possible",
         "Diurnal Hrs",
-        "Diurnal Visits (Mar, Apr)",
-        "Diurnal Visits (Jun, mid-Jul)",
-        "Diurnal Visits (mid-Jul, Aug)",
+        "Diurnal Visits (3/1 - 4/25)",
+        "Diurnal Visits (4/26 - 6/21)",
+        "Diurnal Visits (6/22 - 8/15)",
         "Nocturnal Visits",
         "Nocturnal Hrs"
       )
