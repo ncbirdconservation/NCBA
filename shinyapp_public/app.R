@@ -874,7 +874,7 @@ observe({
     ) %>%
     mutate(
       colorComplete = ifelse(
-        STATUS == "Complete", ncba_blue, ncba_white
+        STATUS == "Complete", ncba_blue, "#aaaaaa"
       )
     ) %>%
     mutate(
@@ -907,8 +907,8 @@ observe({
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
         weight = 2,
-        color = ncba_white,
-        # color = ~ colorComplete,
+        # color = ncba_white,
+        color = ~ colorComplete,
         opacity = 0.9,
         # fillColor = "#777777",
         fillColor = ~ fillComplete,
