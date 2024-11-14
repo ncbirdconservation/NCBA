@@ -1,6 +1,6 @@
 ---
-title: "dev_block_predicted_spp"
-author: "N.M. Tarr"
+title: "dev_block_predicted_spp_all_blocks"
+author: "N.M. Tarr, S.K. Anderson"
 date: "2023-10-11"
 output: word_document
 ---
@@ -28,13 +28,50 @@ block_predicted_spp
 ```
 
 # Usage
-First identify a block of interest.
+First retrieve list of priority blocks.
 ```{r}
-block <- "35079H1SE"
+# block <- "35079H1SE"
+blocks <- get_blocks(
+  spatial = FALSE,
+  fields = c(
+    "ID_NCBA_BLOCK",
+    "ID_BLOCK_CODE",
+    "ECOREGION",
+    "COUNTY"
+  ),
+  priority_only = TRUE
+  )
+
+```
+
+Loop through blocks.
+```{r}
+
+
+for( i in rownames(blocks) ){
+  print( blocks[i,"ID_NCBA_BLOCK"])
+
+  GAP_predictions <- block_predicted_spp(
+    block = blocks[ i, "ID_BLOCK_CODE"],
+    source = "GAP"
+    )
+
+  print(GAP_predictions$summer)
+  
+  # for testing
+  if ( i > 5 ) {
+    break
+    }
+}
 ```
 
 Retrieve the predicted species lists from GAP.
 ```{r}
+
+for( i in rownames(blocks) )
+  print( blocks[i,"ID_NCBA_BLOCK"])
+
+
 GAP_predictions <- block_predicted_spp(block = block, source = "GAP")
 ```
 

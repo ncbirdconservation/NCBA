@@ -53,7 +53,7 @@ connect_ncba_db <- function(database, collection){
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-get_blocks <- function(spatial = FALSE, fields = NULL, priority_only = FALSE,
+get_blocks <- function(spatial = FALSE, fields = NULL,
                            crs = 4326) {
   # Returns a data frame of blocks with or without geometries
   # 
@@ -86,19 +86,10 @@ get_blocks <- function(spatial = FALSE, fields = NULL, priority_only = FALSE,
   connection_blocks <- connect_ncba_db(database = "ebd_mgmt", 
                                        collection = "blocks")
   
-  # Set query string if priority_only is TRUE
-  if (priority_only) {
-    querystring <- '{"PRIORITY": "1"}'
-
-  } else {
-    
-    querystring <- "{}"
-  }
-
   # Condition on whether fields were provided
   if (is.null(fields) == TRUE) {
     # Run query for data frame
-    blocks <- connection_blocks$find(querystring)
+    blocks <- connection_blocks$find()
     
   } else {
     
@@ -112,10 +103,7 @@ get_blocks <- function(spatial = FALSE, fields = NULL, priority_only = FALSE,
                                         collapse = ', '), '}')
     
     # Run query for data frame
-    blocks <- connection_blocks$find(
-      querystring,
-      fields = fields_string
-      )
+    blocks <- connection_blocks$find(fields = fields_string)
   }
   
   # Spatial - get a simple features data frame
@@ -1059,13 +1047,11 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
   
   library(tidyverse)
   library(auk)
-  if(!require(here)) install.packages(
-    "here", repos = "http://cran.us.r-project.org")
-  source(here("resources", "ncba_functions.R"))
+  
   # Set the working directory
-  # if (is.null(work_dir) == FALSE) {
-  #   setwd(work_dir)
-  # }
+  if (is.null(work_dir) == FALSE) {
+    setwd(work_dir)
+  }
   
   # If a list of fields is provided, set EBD_fields_only to FALSE
   if (is.null(fields) == FALSE) {
@@ -1273,9 +1259,9 @@ get_observations <- function(database = "AtlasCache", species = NULL,
   
   # SET UP ---------------------------------------------------------------------
   # Set the working directory
-  # if (is.null(work_dir) == FALSE) {
-  #   setwd(work_dir)
-  # }
+  if (is.null(work_dir) == FALSE) {
+    setwd(work_dir)
+  }
   
   # If a list of fields is provided, set EBD_fields_only to FALSE
   if (is.null(fields) == FALSE) {

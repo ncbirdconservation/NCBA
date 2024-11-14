@@ -74,19 +74,21 @@ source("utils.r") #utilities file
 source("spp.r") #species function file
 source("blkcumhrfunc.r") #block hour graph
 source("ncba_functions_shiny.R") #add this later to sync with Nathan work
+source("ncba_functions.R") #add this later to sync with Nathan work
+print(block_predicted_spp(block = block, source = "GAP"))
 
 # MAP CONSTANTS
-nc_center_lat = 35.5
-nc_center_lng = -79.2
-nc_center_zoom = 7
-nc_block_zoom = 13
-ncba_blue = "#2a3b4d"
-ncba_half_blue = "#B8C5D3"
-checklists_found = 0
-ncba_failed = "#DB504A"
-ncba_success = "#43AA8B"
-ncba_white = "#ffffff"
-ncba_gray = "#aaaaaa"
+nc_center_lat <- 35.5
+nc_center_lng <- -79.2
+nc_center_zoom <- 7
+nc_block_zoom <- 13
+ncba_blue <- "#2a3b4d"
+ncba_half_blue <- "#B8C5D3"
+checklists_found <- 0
+ncba_failed <- "#DB504A"
+ncba_success <- "#43AA8B"
+ncba_white <- "#ffffff"
+ncba_gray <- "#aaaaaa"
 
 # SETUP FILES
 current_block = ""
