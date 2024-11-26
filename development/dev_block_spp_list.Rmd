@@ -2,7 +2,9 @@
 title: "dev_block_spp_lists"
 author: "N.M. Tarr"
 date: "2023-10-06"
-output: word_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
@@ -11,7 +13,7 @@ if(!require(here)) install.packages(
   "here", repos = "http://cran.us.r-project.org")
 source(here("resources", "ncba_functions.R"))
 
-knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 knitr::opts_chunk$set(
   echo = TRUE,
   warning = FALSE,

@@ -1104,7 +1104,7 @@ get_checklists <- function(database = "AtlasCache", EBD_fields_only = TRUE,
 
   if (database == "AtlasCache") {
     # Connect to the NCBA database
-    connection <- connect_ncba_db("ebd_mgmt", "ebd")
+    connection <- connect_ncba_db("ebd_mgmt", "ncba_functions_ebd_view")
 
     # Define a query sequentially.  First, address project
     if (is.null(project) == TRUE) {
