@@ -1,0 +1,118 @@
+---
+title: "dev_block_predicted_spp_all_blocks"
+author: "N.M. Tarr, S.K. Anderson"
+date: "2023-10-11"
+output: word_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+if(!require(here)) install.packages(
+  "here", repos = "http://cran.us.r-project.org")
+source(here("resources", "ncba_functions.R"))
+
+knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+
+# Purpose
+This document details a function to retrieve a list of species that were predicted to occur in a block by either the USGS National Gap Analysis Project (2001) or from analyzing eBird data.   
+
+# Function
+```{r}
+block_predicted_spp
+```
+
+# Usage
+First retrieve list of priority blocks.
+```{r}
+# block <- "35079H1SE"
+blocks <- get_blocks(
+  spatial = FALSE,
+  fields = c(
+    "ID_NCBA_BLOCK",
+    "ID_BLOCK_CODE",
+    "ECOREGION",
+    "COUNTY"
+  ),
+  priority_only = TRUE
+  )
+
+```
+
+Loop through blocks.
+```{r}
+
+
+for( i in rownames(blocks) ){
+  print( blocks[i,"ID_NCBA_BLOCK"])
+
+  GAP_predictions <- block_predicted_spp(
+    block = blocks[ i, "ID_BLOCK_CODE"],
+    source = "GAP"
+    )
+
+  print(GAP_predictions$summer)
+  
+  # for testing
+  if ( i > 5 ) {
+    break
+    }
+}
+```
+
+Retrieve the predicted species lists from GAP.
+```{r}
+
+for( i in rownames(blocks) )
+  print( blocks[i,"ID_NCBA_BLOCK"])
+
+
+GAP_predictions <- block_predicted_spp(block = block, source = "GAP")
+```
+
+Print the GAP prediction for summer
+```{r}
+print(GAP_predictions$summer)
+```
+
+Print the GAP prediction for winter
+```{r}
+print(GAP_predictions$winter)
+```
+
+Retrieve the predicted species lists from eBird.
+```{r}
+eBird_predictions <- block_predicted_spp(block = block, source = "eBird")
+```
+
+Print the eBird prediction for summer.
+```{r}
+print(eBird_predictions$summer)
+```
+
+Print the eBird prediction for winter
+```{r}
+print(eBird_predictions$winter)
+```
+
+
+# Speed
+Run the function several times to get descriptive statistics.
+```{r}
+# Run the function 10 times and record the runtime
+time <- c()
+for (i in 1:10) {
+  time1 <- proc.time()
+  block_predicted_spp(block = block, source = "eBird")
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```
