@@ -1,0 +1,485 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={dev\_blocks\_observed\_in},
+  pdfauthor={N.M. Tarr},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{dev\_blocks\_observed\_in}
+\author{N.M. Tarr}
+\date{2023-10-2}
+
+\begin{document}
+\maketitle
+
+\section{Purpose}\label{purpose}
+
+This document details a function that returns a data frame of NCBA
+blocks within which a species was observed. Parameter are available that
+limit the results according to whether the species was observed within,
+or outside of, a specified time period (eg., breeding dates).
+Furthermore, output can be limited to certain breeding categories.
+
+\section{Definition}\label{definition}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{blocks\_observed\_in}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## function (observations, start_day = 0, end_day = 366, within = TRUE, 
+##     breeding_categories = c("C4", "C3", "C2", "C1", "")) 
+## {
+##     if (within == TRUE) {
+##         obs <- observations %>% filter(yday(observation_date) >= 
+##             start_day & yday(observation_date) <= end_day)
+##     }
+##     if (within == FALSE) {
+##         obs <- observations %>% filter(yday(observation_date) < 
+##             start_day | yday(observation_date) > end_day)
+##     }
+##     obs <- filter(obs, breeding_category %in% breeding_categories)
+##     fields <- c("atlas_block", "common_name")
+##     obs <- obs %>% select(fields) %>% distinct()
+##     return(obs)
+## }
+\end{verbatim}
+
+\section{Usage}\label{usage}
+
+This section demonstrates how to apply this function to map blocks with
+different type sof observations for a species. The first steps are to
+get the breeding safe dates as day of the year from the AtlasCache, as
+well as a data frame of observations. The observation data frame should
+be converted to the EBD format and records with an observation count of
+0 should be removed.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Species}
+\NormalTok{species }\OtherTok{\textless{}{-}} \StringTok{"Northern Bobwhite"}
+
+\CommentTok{\# Pull out breeding season records}
+\NormalTok{breedates }\OtherTok{\textless{}{-}} \FunctionTok{get\_breeding\_dates}\NormalTok{(species, }\AttributeTok{day\_year =} \ConstantTok{TRUE}\NormalTok{)}
+
+\CommentTok{\# Get all the observations for the species, exclude zero count records though}
+\NormalTok{observations }\OtherTok{\textless{}{-}} \FunctionTok{get\_observations}\NormalTok{(}\AttributeTok{species =}\NormalTok{ species, }
+                        \AttributeTok{database =} \StringTok{"AtlasCache"}\NormalTok{, }
+                        \AttributeTok{fields =} \ConstantTok{NULL}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{to\_EBD\_format}\NormalTok{() }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(observation\_count }\SpecialCharTok{!=} \DecValTok{0}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Next, retrieve a spatially-enabled blocks data frame.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Get a blocks data frame with simple features}
+\NormalTok{fields }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"ID\_BLOCK\_CODE"}\NormalTok{, }\StringTok{"ID\_EBD\_NAME"}\NormalTok{)}
+\NormalTok{blocks\_sf }\OtherTok{\textless{}{-}} \FunctionTok{get\_blocks}\NormalTok{(}\AttributeTok{spatial =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{fields =}\NormalTok{ fields)}
+\end{Highlighting}
+\end{Shaded}
+
+The function can then be used to get data frames of blocks with records
+for the species. Those data frames can then be joined with the blocks
+data frame to create a map.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Get blocks with any type of record from any day of the year.}
+\NormalTok{pres\_blocks }\OtherTok{\textless{}{-}} \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =} \DecValTok{0}\NormalTok{, }\AttributeTok{end\_day =} \DecValTok{366}\NormalTok{, }
+                                  \AttributeTok{within =} \ConstantTok{TRUE}\NormalTok{,}
+                                  \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C4"}\NormalTok{, }\StringTok{"C3"}\NormalTok{, }\StringTok{"C2"}\NormalTok{, }
+                                                          \StringTok{"C1"}\NormalTok{, }\StringTok{""}\NormalTok{))}
+\CommentTok{\# Join with blocks data frame}
+\NormalTok{pres\_blocks\_sf }\OtherTok{\textless{}{-}} \FunctionTok{right\_join}\NormalTok{(blocks\_sf, pres\_blocks, }\AttributeTok{by =} \FunctionTok{join\_by}\NormalTok{(}\StringTok{"ID\_BLOCK\_CODE"} \SpecialCharTok{==} \StringTok{"atlas\_block"}\NormalTok{))}
+
+\CommentTok{\# Plot the spatial data frame}
+\FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ blocks\_sf) }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ pres\_blocks\_sf, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ common\_name)) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Blocks With Observations"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{dev_blocks_observed_in_NOBO_files/figure-latex/unnamed-chunk-4-1.pdf}
+
+Map blocks with nonbreeding season observations.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{winter\_blocks }\OtherTok{\textless{}{-}} \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =}\NormalTok{ breedates[}\DecValTok{1}\NormalTok{], }
+                                    \AttributeTok{end\_day =}\NormalTok{ breedates[}\DecValTok{2}\NormalTok{], }
+                                    \AttributeTok{within =} \ConstantTok{FALSE}\NormalTok{,}
+                                    \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C4"}\NormalTok{, }\StringTok{"C3"}\NormalTok{, }\StringTok{"C2"}\NormalTok{, }
+                                                            \StringTok{"C1"}\NormalTok{, }\StringTok{""}\NormalTok{))}
+
+\CommentTok{\# Join with blocks data frame}
+\NormalTok{winter\_blocks\_sf }\OtherTok{\textless{}{-}} \FunctionTok{right\_join}\NormalTok{(blocks\_sf, winter\_blocks, }
+                               \AttributeTok{by =} \FunctionTok{join\_by}\NormalTok{(}\StringTok{"ID\_BLOCK\_CODE"} \SpecialCharTok{==} \StringTok{"atlas\_block"}\NormalTok{))}
+
+\CommentTok{\# Plot the spatial data frame}
+\FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ blocks\_sf) }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ winter\_blocks\_sf, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ common\_name)) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Blocks With Nonbreeding Season Observations"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{dev_blocks_observed_in_NOBO_files/figure-latex/unnamed-chunk-5-1.pdf}
+
+Map the blocks with breeding season observations.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{summer\_blocks }\OtherTok{\textless{}{-}} \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =}\NormalTok{ breedates[}\DecValTok{1}\NormalTok{], }
+                                    \AttributeTok{end\_day =}\NormalTok{ breedates[}\DecValTok{2}\NormalTok{], }
+                                    \AttributeTok{within =} \ConstantTok{TRUE}\NormalTok{,}
+                                    \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C4"}\NormalTok{, }\StringTok{"C3"}\NormalTok{, }\StringTok{"C2"}\NormalTok{, }
+                                                            \StringTok{"C1"}\NormalTok{, }\StringTok{""}\NormalTok{))}
+\CommentTok{\# Join with blocks data frame}
+\NormalTok{summer\_blocks\_sf }\OtherTok{\textless{}{-}} \FunctionTok{right\_join}\NormalTok{(blocks\_sf, summer\_blocks, }
+                               \AttributeTok{by =} \FunctionTok{join\_by}\NormalTok{(}\StringTok{"ID\_BLOCK\_CODE"} \SpecialCharTok{==} \StringTok{"atlas\_block"}\NormalTok{))}
+
+\CommentTok{\# Plot the spatial data frame}
+\FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ blocks\_sf) }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ summer\_blocks\_sf, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ common\_name)) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Blocks With Breeding Season Observations"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{dev_blocks_observed_in_NOBO_files/figure-latex/unnamed-chunk-6-1.pdf}
+
+Map blocks with confirmed or probable breeding observations from within
+breeding safe dates.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{conf\_prob }\OtherTok{\textless{}{-}} \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =}\NormalTok{ breedates[}\DecValTok{1}\NormalTok{], }
+                                \AttributeTok{end\_day =}\NormalTok{ breedates[}\DecValTok{2}\NormalTok{], }
+                                \AttributeTok{within =} \ConstantTok{TRUE}\NormalTok{,}
+                                \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C3"}\NormalTok{, }\StringTok{"C4"}\NormalTok{))}
+
+\NormalTok{conf\_prob\_sf }\OtherTok{\textless{}{-}} \FunctionTok{right\_join}\NormalTok{(blocks\_sf, conf\_prob, }
+                           \AttributeTok{by =} \FunctionTok{join\_by}\NormalTok{(}\StringTok{"ID\_BLOCK\_CODE"} \SpecialCharTok{==} \StringTok{"atlas\_block"}\NormalTok{))}
+
+\CommentTok{\# Plot the spatial data frame}
+\FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ blocks\_sf) }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ conf\_prob\_sf, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ common\_name)) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Blocks with Confirmed or Probable Breeding Records Within Safe Dates"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{dev_blocks_observed_in_NOBO_files/figure-latex/unnamed-chunk-7-1.pdf}
+
+Map blocks with confirmed or probable breeding observations from outside
+of breeding safe dates.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{conf\_prob\_out }\OtherTok{\textless{}{-}} \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =}\NormalTok{ breedates[}\DecValTok{1}\NormalTok{], }
+                                \AttributeTok{end\_day =}\NormalTok{ breedates[}\DecValTok{2}\NormalTok{], }
+                                \AttributeTok{within =} \ConstantTok{FALSE}\NormalTok{,}
+                                \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C3"}\NormalTok{, }\StringTok{"C4"}\NormalTok{))}
+
+\NormalTok{conf\_prob\_out\_sf }\OtherTok{\textless{}{-}} \FunctionTok{right\_join}\NormalTok{(blocks\_sf, conf\_prob\_out, }
+                           \AttributeTok{by =} \FunctionTok{join\_by}\NormalTok{(}\StringTok{"ID\_BLOCK\_CODE"} \SpecialCharTok{==} \StringTok{"atlas\_block"}\NormalTok{))}
+
+\CommentTok{\# Plot the spatial data frame}
+\FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ blocks\_sf) }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ conf\_prob\_out\_sf, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ common\_name)) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Blocks with Confirmed or Probable Breeding Records Outside Safe Dates"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{dev_blocks_observed_in_NOBO_files/figure-latex/unnamed-chunk-8-1.pdf}
+
+Map blocks with confirmed or probable breeding observations from any day
+of the year.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{confirmed }\OtherTok{\textless{}{-}} \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =} \DecValTok{0}\NormalTok{, }
+                                \AttributeTok{end\_day =} \DecValTok{366}\NormalTok{, }
+                                \AttributeTok{within =} \ConstantTok{TRUE}\NormalTok{,}
+                                \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C3"}\NormalTok{, }\StringTok{"C4"}\NormalTok{))}
+
+\CommentTok{\# Join with blocks data frame}
+\NormalTok{confirmed\_sf }\OtherTok{\textless{}{-}} \FunctionTok{right\_join}\NormalTok{(blocks\_sf, confirmed, }
+                   \AttributeTok{by =} \FunctionTok{join\_by}\NormalTok{(}\StringTok{"ID\_BLOCK\_CODE"} \SpecialCharTok{==} \StringTok{"atlas\_block"}\NormalTok{))}
+
+\CommentTok{\# Plot the spatial data frame}
+\FunctionTok{ggplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ blocks\_sf) }\SpecialCharTok{+}
+  \FunctionTok{geom\_sf}\NormalTok{(}\AttributeTok{data =}\NormalTok{ confirmed\_sf, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ common\_name)) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Blocks with Confirmed or Probable Breeding Records"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{dev_blocks_observed_in_NOBO_files/figure-latex/unnamed-chunk-9-1.pdf}
+
+\section{Tests}\label{tests}
+
+Test that start\_day and end\_day work by comparing three results: a
+data frame of blocks with an observation on any day, a data frame of
+blocks with observations from within a time period, and a data frame of
+blocks with observations from outside of a time period. Also, a list of
+all atlas\_blocks that are present in the observations data frame is
+useful.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Get blocks with any type of record from any day of the year.}
+\NormalTok{any }\OtherTok{\textless{}{-}} \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =} \DecValTok{0}\NormalTok{, }\AttributeTok{end\_day =} \DecValTok{366}\NormalTok{, }
+                               \AttributeTok{within =} \ConstantTok{TRUE}\NormalTok{,}
+                               \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C4"}\NormalTok{, }\StringTok{"C3"}\NormalTok{, }\StringTok{"C2"}\NormalTok{, }
+                                                          \StringTok{"C1"}\NormalTok{, }\StringTok{""}\NormalTok{))}
+
+\CommentTok{\# Get blocks with any type of record from between the 100 and 200th days of the year.}
+\NormalTok{within\_ }\OtherTok{\textless{}{-}} \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =} \DecValTok{100}\NormalTok{, }\AttributeTok{end\_day =} \DecValTok{200}\NormalTok{, }
+                               \AttributeTok{within =} \ConstantTok{TRUE}\NormalTok{,}
+                               \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C4"}\NormalTok{, }\StringTok{"C3"}\NormalTok{, }\StringTok{"C2"}\NormalTok{, }
+                                                          \StringTok{"C1"}\NormalTok{, }\StringTok{""}\NormalTok{))}
+
+\CommentTok{\# Get blocks with any type of record from between the 100 and 200th days of the year.}
+\NormalTok{outside }\OtherTok{\textless{}{-}} \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =} \DecValTok{100}\NormalTok{, }\AttributeTok{end\_day =} \DecValTok{200}\NormalTok{, }
+                               \AttributeTok{within =} \ConstantTok{FALSE}\NormalTok{,}
+                               \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C4"}\NormalTok{, }\StringTok{"C3"}\NormalTok{, }\StringTok{"C2"}\NormalTok{, }
+                                                          \StringTok{"C1"}\NormalTok{, }\StringTok{""}\NormalTok{))}
+
+\CommentTok{\# Get a list of blocks from observations}
+\NormalTok{obs\_blocks }\OtherTok{\textless{}{-}} \FunctionTok{unique}\NormalTok{(observations}\SpecialCharTok{$}\NormalTok{atlas\_block)}
+\end{Highlighting}
+\end{Shaded}
+
+The list of unique blocks in observations should be the same as the list
+from the any data frame above. This test is passed if the chunck below
+returns TRUE.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{length}\NormalTok{(}\FunctionTok{setdiff}\NormalTok{(obs\_blocks, any}\SpecialCharTok{$}\NormalTok{atlas\_block)) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] TRUE
+\end{verbatim}
+
+The within data frame should be a subset of the any data frame. This
+test is passed if the chunk returns TRUE.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Is within\_ a subset of any?}
+\FunctionTok{print}\NormalTok{(}\FunctionTok{length}\NormalTok{(}\FunctionTok{setdiff}\NormalTok{(within\_}\SpecialCharTok{$}\NormalTok{atlas\_block, any}\SpecialCharTok{$}\NormalTok{atlas\_block)) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] TRUE
+\end{verbatim}
+
+The outside data frame should be a subset of the any data frame. This
+test is passed if the chunk returns TRUE.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Is outside a subset of any?}
+\FunctionTok{print}\NormalTok{(}\FunctionTok{length}\NormalTok{(}\FunctionTok{setdiff}\NormalTok{(outside}\SpecialCharTok{$}\NormalTok{atlas\_block, any}\SpecialCharTok{$}\NormalTok{atlas\_block)) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] TRUE
+\end{verbatim}
+
+All atlas\_blocks from any should be in either the within or outside
+data frames. This test is passed if the chunk only returns TRUE.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Get the union of the within and outside lists}
+\NormalTok{u }\OtherTok{\textless{}{-}} \FunctionTok{union}\NormalTok{(outside}\SpecialCharTok{$}\NormalTok{atlas\_block, within\_}\SpecialCharTok{$}\NormalTok{atlas\_block)}
+
+\CommentTok{\# Test that is has the same items as the any list}
+\FunctionTok{print}\NormalTok{(}\FunctionTok{length}\NormalTok{(}\FunctionTok{setdiff}\NormalTok{(u, any}\SpecialCharTok{$}\NormalTok{atlas\_block)) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] TRUE
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{length}\NormalTok{(}\FunctionTok{setdiff}\NormalTok{(any}\SpecialCharTok{$}\NormalTok{atlas\_block, u)) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] TRUE
+\end{verbatim}
+
+Asking for blocks with confirmed breeding observations within the safe
+dates should return a subset of the blocks with any category of
+observation within the safe dates.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Get two results where the only difference is the categories allowed:1) all}
+\CommentTok{\#   codes and 2) just confirme}
+\NormalTok{in\_safe }\OtherTok{\textless{}{-}} \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =}\NormalTok{ breedates[}\DecValTok{1}\NormalTok{], }
+                                    \AttributeTok{end\_day =}\NormalTok{ breedates[}\DecValTok{2}\NormalTok{], }
+                                    \AttributeTok{within =} \ConstantTok{TRUE}\NormalTok{,}
+                                    \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C4"}\NormalTok{, }\StringTok{"C3"}\NormalTok{, }\StringTok{"C2"}\NormalTok{, }
+                                                            \StringTok{"C1"}\NormalTok{, }\StringTok{""}\NormalTok{))}
+
+\NormalTok{confirmed\_in\_safe }\OtherTok{\textless{}{-}} \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =}\NormalTok{ breedates[}\DecValTok{1}\NormalTok{], }
+                                \AttributeTok{end\_day =}\NormalTok{ breedates[}\DecValTok{2}\NormalTok{], }
+                                \AttributeTok{within =} \ConstantTok{TRUE}\NormalTok{,}
+                                \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C4"}\NormalTok{))}
+
+\CommentTok{\# Test that confirmed in safe is a subset of in\_safe}
+\FunctionTok{print}\NormalTok{(}\FunctionTok{length}\NormalTok{(}\FunctionTok{setdiff}\NormalTok{(confirmed\_in\_safe}\SpecialCharTok{$}\NormalTok{atlas\_block, in\_safe}\SpecialCharTok{$}\NormalTok{atlas\_block)) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] TRUE
+\end{verbatim}
+
+\section{Speed}\label{speed}
+
+Run the function 10 times and record the runtime
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{time }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{()}
+\ControlFlowTok{for}\NormalTok{ (i }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\DecValTok{10}\NormalTok{) \{}
+\NormalTok{  time1 }\OtherTok{\textless{}{-}} \FunctionTok{proc.time}\NormalTok{()}
+  \FunctionTok{blocks\_observed\_in}\NormalTok{(observations, }\AttributeTok{start\_day =} \DecValTok{100}\NormalTok{, }\AttributeTok{end\_day =} \DecValTok{200}\NormalTok{, }
+                               \AttributeTok{within =} \ConstantTok{TRUE}\NormalTok{,}
+                               \AttributeTok{breeding\_categories =} \FunctionTok{c}\NormalTok{(}\StringTok{"C4"}\NormalTok{, }\StringTok{"C3"}\NormalTok{, }\StringTok{"C2"}\NormalTok{))}
+\NormalTok{  t }\OtherTok{\textless{}{-}} \FunctionTok{proc.time}\NormalTok{() }\SpecialCharTok{{-}}\NormalTok{ time1}
+\NormalTok{  time[i] }\OtherTok{\textless{}{-}}\NormalTok{ t[}\StringTok{"elapsed"}\NormalTok{]}
+\NormalTok{\}}
+
+\CommentTok{\# Print the descriptive statistics}
+\FunctionTok{print}\NormalTok{(}\FunctionTok{summary}\NormalTok{(time))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##   0.000   0.010   0.020   0.017   0.020   0.030
+\end{verbatim}
+
+\end{document}
