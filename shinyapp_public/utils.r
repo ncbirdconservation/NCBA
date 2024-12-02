@@ -1,5 +1,18 @@
 # utility function to use throughout
 
+percent <- function(num, digits = 2, multiplier = 100, ...) {       
+  percentage <-formatC(num * multiplier, format = "f", digits = digits, ...) 
+    
+  # appending "%" symbol at the end of 
+  # calculate percentage value 
+  paste0(percentage, "%") 
+}
+
+dec_places <- function (num, digits = 2, ...) {
+  number <- format(round(num, digits), nsmall = digits)
+
+  number
+}
 #############################################################################
 # MongoDB
 # this is a read only account
@@ -483,7 +496,7 @@ get_block_summary <- function(id_ncba_block) {
 ## for overview map
 get_block_summary_table <- function(season) {
   
-  if (season == "winter") {
+  if (season == "wintering") {
     blocksum_filter <- paste0(
       '[{ "$project" : {',
       '"Block_Name" : "$ID_NCBA_BLOCK",',
@@ -496,7 +509,7 @@ get_block_summary_table <- function(season) {
       '"Checklists" : "$winterCountDiurnalChecklists",',
       '"Early_Checklists" : "$winter1CountDiurnalChecklists",',
       '"Late_Checklists" : "$winter2CountDiurnalChecklists",',
-      '"Detected_Criteria Met" : "$wbcgDetected",',
+      '"Detected_Criteria_Met" : "$wbcgDetected",',
       '"Hours_Criteria_Met" : "$wbcgTotalEffortHrs",',
       '"Checklist_Criteria_Met" : "$wbcgDiurnalVisits"',
       '}}]'
@@ -507,9 +520,10 @@ get_block_summary_table <- function(season) {
     # blocksum <- as.data.frame(blocksum)
 
     blocksum <- blocksum %>%
-      mutate('_id' = NULL)
+      mutate('_id' = NULL) %>%
+      mutate('Hours' = dec_places(Hours, digits = 1))
       # mutate('_id' = NULL) %>%
-      # mutate('Detected_Criteria Met' = ifelse(
+      # mutate('Detected_Criteria_Met' = ifelse(
       #   Detected_Criteria Met, "COMPLETE!", "missing"
       # )) %>%
       # mutate('Hours_Criteria_Met' = ifelse(
@@ -520,31 +534,45 @@ get_block_summary_table <- function(season) {
       # ))
     
 
-  } else if (season == "summer"){
+  } else if (season == "breeding"){
     # INSERT CODE HERE FOR SUMMER TABLE
     blocksum_filter <- paste0(
-      '{',
-      '"ID_NCBA_BLOCK": 1,',
-      '"ID_BLOCK_CODE": 1,',
-      '"STATUS": 1,',
-      '"county": 1,',
-      '"region": 1,',
-      '"winterCountDetected": 1,',
-      '"winterHrsDiurnal": 1,',
-      '"winterCountDiurnalChecklists": 1,',
-      '"winter1CountDiurnalChecklists": 1,',
-      '"winter2CountDiurnalChecklists": 1,',
-      '"wbcgDetected": 1,',
-      '"wbcgTotalEffortHrs": 1,',
-      '"wbcgDiurnalVisits": 1',
-      '}'
+      '[{ "$project" : {',
+      '"Block_Name" : "$ID_NCBA_BLOCK",',
+      # '"Block_Code" : "$ID_BLOCK_CODE",',
+      '"Status" : "$STATUS",',
+      '"County" : "$county",',
+      '"Region" : "$region",',
+      '"Hours" : "$breedHrsDiurnal",',
+      '"Species_Coded" : "$breedCountCoded",',
+      '"Species_Possible" : "$breedPctPossible",',
+      '"Species_Confirmed" : "$breedPctConfirmed",',
+      '"Early_Checklists" : "$breed1CountDiurnalChecklists",',
+      '"Mid_Checklists" : "$breed2CountDiurnalChecklists",',
+      '"Late_Checklists" : "$breed3CountDiurnalChecklists",',
+      '"Hours_Criteria_Met" : "$bbcgTotalEffortHrs",',
+      '"Coded_Criteria_Met" : "$bbcgCoded",',
+      '"Confirmed_Criteria_Met" : "$bbcgConfirmed"',
+      '}}]'
     )
+    blocksum <- m_block_summaries$aggregate(blocksum_filter)
+    # blocksum <- m_block_summaries$find("{}", blocksum_filter)
+    # blocksum <- as.data.frame(blocksum)
 
+    blocksum <- blocksum %>%
+      mutate('_id' = NULL) %>%
+      mutate('Species_Possible' = percent(Species_Possible, digits = 1)) %>%
+      mutate('Species_Confirmed' = percent(Species_Confirmed, digits = 1)) %>%
+      mutate('Hours' = dec_places(Hours, digits = 1))
   }
-  # print(typeof(blocksum))
-  # print(head(blocksum))
 
-  return(blocksum)
+  print(head(blocksum))
+  num_cols <- ncol(blocksum)
+  response <- list(
+    "blocksum" = blocksum,
+    "num_cols" = num_cols
+  )
+  return(response)
 }
 ## for overview map
 get_block_summaries <- function() {
@@ -554,8 +582,6 @@ get_block_summaries <- function() {
 
   blocksum <- as.data.frame(blocksum)
   
-  # print(head(blocksum))
-  # print(blocksum[blocksum$ID_NCBA_BLOCK == "SOUTHWEST_DURHAM-SE", ])
   return(blocksum)
 }
 

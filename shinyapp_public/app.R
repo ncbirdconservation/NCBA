@@ -180,12 +180,32 @@ ui <- bootstrapPage(
         )
       )
     ),
-    tabPanel("Block Table (Winter)",
+    tabPanel("Block Table",
+        div(
+          class = "col-md-12",
+          style = "background: #eee;",
+          div(
+            class = "tab-control-group",
+            style = "width: 60%",
+            radioButtons("block_table_radio",label = h4("Season"),
+              choices = list(
+                "Breeding" = "breeding",
+                "Non-Breeding" = "wintering"
+              ),
+              selected = "wintering"
+            )
+          ),
+          div(
+            class = "float-end",
+            style = "width: 30%",
+            downloadButton("download_block_table", "Download")
+          )
+        ),
         div(
           class = "col-md-12",
           style = "font-size: 13px; margin-top: 10px;",
  
-          div(dataTableOutput("block_winter"))
+          div(dataTableOutput("block_table"))
         )
     ),
     tabPanel("Species Map",
@@ -868,23 +888,44 @@ observe({
       write.csv(block_spp_list(), file, row.names = TRUE)
     }
   )
-  ## Block Table Tab (Winter)  ---------------------------------------
-  block_table_winter <- reactive({
-    get_block_summary_table("winter")
+  ## Block Table Tab -------------------------------------------------
+  block_table_data <- reactive({
+    req(input$block_table_radio)
+    get_block_summary_table(input$block_table_radio)
   })
-    output$block_winter <- DT::renderDT(
-    block_table_winter(),
+
+  output$block_table <- DT::renderDT(
+    block_table_data()$blocksum,
     filter = "top",
     options = list(
       pageLength = 100,
-      autoWidth = TRUE,
-      columnDefs = list(list(width = '200px', targets = c(2)))
+      columnDefs = list(
+        list(
+          className = 'dt-center',
+          targets = 4:block_table_data()$num_cols
+        )
+      )
     )
-    )
+  )
   
-  ## Block Table Tab (Summer)  ---------------------------------------
-  
-  
+  output$download_block_table <- downloadHandler(
+    filename = function() {
+      paste(
+        input$block_table_radio,
+        "_block_table",
+        ".csv",
+        sep = ""
+      )
+    },
+    content = function ( file ) {
+      write.csv(
+        block_table_data()$blocksum,
+        file,
+        row.names = TRUE
+        )
+    }
+  )
+
   ## SPECIES MAP  ----------------------------------------------------
   ### SETUP LEAFLET MAP, RENDER BASEMAP ------
   output$mymap <- renderLeaflet({
