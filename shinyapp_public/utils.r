@@ -516,26 +516,13 @@ get_block_summary_table <- function(season) {
     )
 
     blocksum <- m_block_summaries$aggregate(blocksum_filter)
-    # blocksum <- m_block_summaries$find("{}", blocksum_filter)
-    # blocksum <- as.data.frame(blocksum)
 
     blocksum <- blocksum %>%
       mutate('_id' = NULL) %>%
       mutate('Hours' = dec_places(Hours, digits = 1))
-      # mutate('_id' = NULL) %>%
-      # mutate('Detected_Criteria_Met' = ifelse(
-      #   Detected_Criteria Met, "COMPLETE!", "missing"
-      # )) %>%
-      # mutate('Hours_Criteria_Met' = ifelse(
-      #   Hours_Criteria_Met, "COMPLETE!", "missing"
-      # )) %>%
-      # mutate('Checklist_Criteria_Met' = ifelse(
-      #   Checklist_Criteria_Met, "COMPLETE!", "missing"
-      # ))
-    
 
   } else if (season == "breeding"){
-    # INSERT CODE HERE FOR SUMMER TABLE
+    
     blocksum_filter <- paste0(
       '[{ "$project" : {',
       '"Block_Name" : "$ID_NCBA_BLOCK",',
@@ -556,8 +543,6 @@ get_block_summary_table <- function(season) {
       '}}]'
     )
     blocksum <- m_block_summaries$aggregate(blocksum_filter)
-    # blocksum <- m_block_summaries$find("{}", blocksum_filter)
-    # blocksum <- as.data.frame(blocksum)
 
     blocksum <- blocksum %>%
       mutate('_id' = NULL) %>%
@@ -566,7 +551,6 @@ get_block_summary_table <- function(season) {
       mutate('Hours' = dec_places(Hours, digits = 1))
   }
 
-  print(head(blocksum))
   num_cols <- ncol(blocksum)
   response <- list(
     "blocksum" = blocksum,
@@ -574,6 +558,7 @@ get_block_summary_table <- function(season) {
   )
   return(response)
 }
+
 ## for overview map
 get_block_summaries <- function() {
   blocksum_filter <- '{"sppList": 0, "ebird_web_data" : 0, "NCBA_EBD_VER": 0, "MOST_RECENT_EBD_DATE": 0}'
