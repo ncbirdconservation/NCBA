@@ -481,6 +481,72 @@ get_block_summary <- function(id_ncba_block) {
 }
 
 ## for overview map
+get_block_summary_table <- function(season) {
+  
+  if (season == "winter") {
+    blocksum_filter <- paste0(
+      '[{ "$project" : {',
+      '"Block_Name" : "$ID_NCBA_BLOCK",',
+      # '"Block_Code" : "$ID_BLOCK_CODE",',
+      '"Status" : "$STATUS",',
+      '"County" : "$county",',
+      '"Region" : "$region",',
+      '"Species_Detected" : "$winterCountDetected",',
+      '"Hours" : "$winterHrsDiurnal",',
+      '"Checklists" : "$winterCountDiurnalChecklists",',
+      '"Early_Checklists" : "$winter1CountDiurnalChecklists",',
+      '"Late_Checklists" : "$winter2CountDiurnalChecklists",',
+      '"Detected_Criteria Met" : "$wbcgDetected",',
+      '"Hours_Criteria_Met" : "$wbcgTotalEffortHrs",',
+      '"Checklist_Criteria_Met" : "$wbcgDiurnalVisits"',
+      '}}]'
+    )
+
+    blocksum <- m_block_summaries$aggregate(blocksum_filter)
+    # blocksum <- m_block_summaries$find("{}", blocksum_filter)
+    # blocksum <- as.data.frame(blocksum)
+
+    blocksum <- blocksum %>%
+      mutate('_id' = NULL)
+      # mutate('_id' = NULL) %>%
+      # mutate('Detected_Criteria Met' = ifelse(
+      #   Detected_Criteria Met, "COMPLETE!", "missing"
+      # )) %>%
+      # mutate('Hours_Criteria_Met' = ifelse(
+      #   Hours_Criteria_Met, "COMPLETE!", "missing"
+      # )) %>%
+      # mutate('Checklist_Criteria_Met' = ifelse(
+      #   Checklist_Criteria_Met, "COMPLETE!", "missing"
+      # ))
+    
+
+  } else if (season == "summer"){
+    # INSERT CODE HERE FOR SUMMER TABLE
+    blocksum_filter <- paste0(
+      '{',
+      '"ID_NCBA_BLOCK": 1,',
+      '"ID_BLOCK_CODE": 1,',
+      '"STATUS": 1,',
+      '"county": 1,',
+      '"region": 1,',
+      '"winterCountDetected": 1,',
+      '"winterHrsDiurnal": 1,',
+      '"winterCountDiurnalChecklists": 1,',
+      '"winter1CountDiurnalChecklists": 1,',
+      '"winter2CountDiurnalChecklists": 1,',
+      '"wbcgDetected": 1,',
+      '"wbcgTotalEffortHrs": 1,',
+      '"wbcgDiurnalVisits": 1',
+      '}'
+    )
+
+  }
+  # print(typeof(blocksum))
+  # print(head(blocksum))
+
+  return(blocksum)
+}
+## for overview map
 get_block_summaries <- function() {
   blocksum_filter <- '{"sppList": 0, "ebird_web_data" : 0, "NCBA_EBD_VER": 0, "MOST_RECENT_EBD_DATE": 0}'
 

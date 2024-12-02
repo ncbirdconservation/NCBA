@@ -73,9 +73,9 @@ source("blocks.r")
 source("utils.r") #utilities file
 source("spp.r") #species function file
 source("blkcumhrfunc.r") #block hour graph
-source("ncba_functions_shiny.R") #add this later to sync with Nathan work
-source("ncba_functions.R") #add this later to sync with Nathan work
-print(block_predicted_spp(block = block, source = "GAP"))
+# source("ncba_functions_shiny.R") #add this later to sync with Nathan work
+# source("ncba_functions.R") #add this later to sync with Nathan work
+# print(block_predicted_spp(block = block, source = "GAP"))
 
 # MAP CONSTANTS
 nc_center_lat <- 35.5
@@ -179,6 +179,14 @@ ui <- bootstrapPage(
 
         )
       )
+    ),
+    tabPanel("Block Table (Winter)",
+        div(
+          class = "col-md-12",
+          style = "font-size: 13px; margin-top: 10px;",
+ 
+          div(dataTableOutput("block_winter"))
+        )
     ),
     tabPanel("Species Map",
         div(
@@ -851,6 +859,7 @@ observe({
 
   output$spp_observed <- renderDataTable(block_spp_list())
 
+  
   output$download_spplist <- downloadHandler(
     filename = function() {
       paste("spp_list", ".csv", sep = "")
@@ -859,7 +868,23 @@ observe({
       write.csv(block_spp_list(), file, row.names = TRUE)
     }
   )
-
+  ## Block Table Tab (Winter)  ---------------------------------------
+  block_table_winter <- reactive({
+    get_block_summary_table("winter")
+  })
+    output$block_winter <- DT::renderDT(
+    block_table_winter(),
+    filter = "top",
+    options = list(
+      pageLength = 100,
+      autoWidth = TRUE,
+      columnDefs = list(list(width = '200px', targets = c(2)))
+    )
+    )
+  
+  ## Block Table Tab (Summer)  ---------------------------------------
+  
+  
   ## SPECIES MAP  ----------------------------------------------------
   ### SETUP LEAFLET MAP, RENDER BASEMAP ------
   output$mymap <- renderLeaflet({
