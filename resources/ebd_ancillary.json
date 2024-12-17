@@ -1,0 +1,37 @@
+[
+    {
+        "SAMPLING_EVENT_IDENTIFIER" : "",
+        "DATA_SOURCE" : "",
+        "OBSERVATION_DATE" : "",
+        "YEAR" : 2024,
+        "MONTH" : 1,
+        "DURATION_MINUTES" : 0,
+        "LATITUDE" : 0,
+        "LONGITUDE" : 0,
+        "NUMBER_OBSERVERS" : 0,
+        "PRIORITY_BLOCK" : "1",
+
+        "COUNTY" : "",
+        "ID_NCBA_BLOCK" : "",
+        "NCBA_SEASON" : "",
+        "NCBA_JULIAN_DAY" : 0,
+        "TRIP_COMMENTS" : "",
+        "OBSERVATIONS" : [
+            {
+                "GLOBAL_UNIQUE_IDENTIFIER" : "",
+                "CATEGORY" : "species",
+                "COMMON_NAME" : "",
+                "SCIENTIFIC_NAME" : "",
+                "OBSERVATION_COUNT" : "",
+                "BREEDING_CODE" : "",
+                "BREEDING_CATEGORY" : "",
+                "AGE/SEX" : "",
+                "SPECIES_COMMENTS" : ""
+            }
+        ],
+        "ANCILLARY_DATA" : {
+            "LOCATION_ID" : ""
+        } 
+
+    }
+]
