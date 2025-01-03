@@ -16,6 +16,7 @@
         "NCBA_SEASON" : "",
         "NCBA_JULIAN_DAY" : 0,
         "TRIP_COMMENTS" : "",
+        "ACCESS_LEVEL" : "",
         "OBSERVATIONS" : [
             {
                 "GLOBAL_UNIQUE_IDENTIFIER" : "",
