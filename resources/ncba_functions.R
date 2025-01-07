@@ -10,6 +10,9 @@
 if (!require(here)) install.packages(
   "here", repos = "http://cran.us.r-project.org"
 )
+# alternatively, you can set the working directory explicitly
+# setwd("C:/Users/skanderson/OneDrive - State of North Carolina/@@ncba/ncba/Code/NCBA/resources")
+
 if (!require(auk)) install.packages(
   "auk", repos = "http://cran.us.r-project.org"
 )
@@ -28,8 +31,8 @@ source(here("resources",  "ncba_config.r"))
 # setwd(work_dir)
 
 
-# ------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 connect_ncba_db <- function(database, collection){
   # Connect to the NCBA MongoDB database
   #
@@ -728,9 +731,9 @@ breeding_map <- function(species) {
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-breeding_boxplot <- function(species, data, type="interactive",
-                             pallet="Paired", omit_codes=NULL,
-                             lump=NULL, drop=TRUE, cex.x.axis = 0.9,
+breeding_boxplot <- function(species, data, type = "interactive",
+                             pallet = "Paired", omit_codes = NULL,
+                             lump = NULL, drop=TRUE, cex.x.axis = 0.9,
                              cex.y.axis = 0.8, subtitle = NULL) {
   # Produces a boxplot of breeding codes over calendar day.
   #
