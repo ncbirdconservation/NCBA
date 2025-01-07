@@ -1,7 +1,7 @@
 .DS_Store
 
 # NCBA config files
-ncba.rproj
+ncba.Rproj
 ncba_config.r
 shinyapp/ncba_config.r
 development/ncba_config.r
