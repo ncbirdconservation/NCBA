@@ -51,10 +51,10 @@ print(species)
 
 Retrieve the records for the species from the Atlas Cache
 ```{r}
-records <- get_observations(species = species, 
-                            project = "EBIRD_ATL_NC", 
-                            EBD_fields_only = FALSE) %>% 
-  to_EBD_format(drop=FALSE) %>%
+records <- get_observations(species = species,
+                            project = "EBIRD_ATL_NC",
+                            EBD_fields_only = FALSE) %>%
+  to_EBD_format(drop = FALSE) %>%
   auk_unique()
 ```
 

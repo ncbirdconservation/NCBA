@@ -10,6 +10,7 @@ resources/ncba_config.r
 # R stuff
 .RHistory
 .RData
+.Ruserdata
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
