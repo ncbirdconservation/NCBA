@@ -8,7 +8,7 @@
 # then be called by their names.
 
 # this package loads the working directory from the R Studio Project
-# be sure to open in R Studio and create a project from the root directory
+# be sure to open in R Studio and create a project from the root
 if (!require(here)) install.packages(
   "here", repos = "http://cran.us.r-project.org"
 )
