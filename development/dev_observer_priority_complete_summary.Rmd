@@ -6,11 +6,13 @@ output: word_document
 ---
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
-setwd("~/Code/NCBA/resources")
-source("ncba_functions.R")
-library(auk)
+# setwd("~/Code/NCBA/resources")
+if(!require(here)) install.packages(
+  "here", repos = "http://cran.us.r-project.org")
+source(here("resources", "ncba_functions.R"))
 
-knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+library(auk)
 knitr::opts_chunk$set(
   echo = TRUE,
   warning = FALSE,

@@ -11,7 +11,9 @@ knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE)
 setwd("~/Code/NCBA/resources")
-source("ncba_functions.R")
+if(!require(here)) install.packages(
+  "here", repos = "http://cran.us.r-project.org")
+source(here("resources", "ncba_functions.R"))
 library(auk)
 library(tmap)
 ```

@@ -1,5 +1,18 @@
 # utility function to use throughout
 
+percent <- function(num, digits = 2, multiplier = 100, ...) {       
+  percentage <-formatC(num * multiplier, format = "f", digits = digits, ...) 
+    
+  # appending "%" symbol at the end of 
+  # calculate percentage value 
+  paste0(percentage, "%") 
+}
+
+dec_places <- function (num, digits = 2, ...) {
+  number <- format(round(num, digits), nsmall = digits)
+
+  number
+}
 #############################################################################
 # MongoDB
 # this is a read only account
@@ -283,7 +296,7 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
         # "NCBA_REVIEW_DATE":1,
       }
 
-      print("getting Observations from AtlasCache")
+      # print("getting Observations from AtlasCache")
       mongodata <- m$find(query, filter)
       # mongodata <- m$find(
       #   query,
@@ -291,14 +304,14 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
       #   sort=sortquery) #sorting breaks for big queries
 
       if (nrow(mongodata)>0) {
-        print("unnesting observation records")
+      # print("unnesting observation records")
         mongodata <- unnest(mongodata, cols = (c(OBSERVATIONS)))
 
         #ADD SEASON COLUMN FROM SAFE DATES TABLE AND POPULATE
         gen_breeding_start = yday("2021-04-01")
         gen_breeding_end = yday("2021-08-31")
 
-        print("adding Season (Breeding = April 1 - Aug 31)")
+      # print("adding Season (Breeding = April 1 - Aug 31)")
         mongodata$SEASON <- apply(
           mongodata[c('OBSERVATION_DATE','COMMON_NAME')],1,
           function(x) {
@@ -327,12 +340,12 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
             return(season)
 
           })
-        print("Season (Breeding or Winter)")
+      # print("Season (Breeding or Winter)")
       } # Expand observations if records returned
 
 
       # EXAMPLE/TESTING
-      print("AtlasCache records retrieved")
+    # print("AtlasCache records retrieved")
       # print(head(mongodata))
       # USE aggregation pipeline syntax to return only needed observations
       # pipeline <- str_interp(
@@ -359,7 +372,7 @@ get_block_data <- function() {
     ' "ID_EBD_NAME": 1, "ID_NCBA_BLOCK": 1, "ID_OLD_ID": 1, "NW_X": 1, ',
     '"NW_Y": 1, "PRIORITY": 1, "QUADID": 1, "QUAD_BLOCK": 1, "QUAD_NAME": 1, ',
     '"REGION": 1, "SE_X": 1, "SE_Y": 1, "SUBNAT2": 1, "TYPE": 1, ',
-    '"ID_S123_NOSPACES_TEMP": 1, "ID_S123_SPACES_TEMP": 1, "STATUS": 1}')
+    '"ID_S123_NOSPACES_TEMP": 1, "ID_S123_SPACES_TEMP": 1}')
 
   # blockdata <- m_blocks$find("{}","{}")
   blockdata <- m_blocks$find("{}",filter)
@@ -436,8 +449,15 @@ priority_block_data <- filter(
     "SE_Y",
     "PRIORITY",
     "COUNTY",
-    "REGION",
-    "STATUS")]
+    "REGION")]
+
+# merge block summary data with priority_block data
+priority_block_data <- priority_block_data %>%
+  merge(
+    get_block_summaries(),
+    by = "ID_NCBA_BLOCK",
+    all = TRUE
+  )
 
 print("filtering block records")
 
@@ -458,7 +478,7 @@ get_block_hours <- function(id_ncba_block) {
   #   1. Retrieve OBSERVATION_DATE and SAMPLING_EVENT_IDENTIFIER columns
   #       from checklists where Cerulean Warbler was observed
 
-  print(id_ncba_block)
+# print(id_ncba_block)
   if (length(id_ncba_block) >0){
     result <- filter(block_hours_month, ID_NCBA_BLOCK == id_ncba_block)
   }
@@ -474,13 +494,79 @@ get_block_summary <- function(id_ncba_block) {
 }
 
 ## for overview map
+get_block_summary_table <- function(season) {
+  
+  if (season == "wintering") {
+    blocksum_filter <- paste0(
+      '[{ "$project" : {',
+      '"Block_Name" : "$ID_NCBA_BLOCK",',
+      # '"Block_Code" : "$ID_BLOCK_CODE",',
+      '"Status" : "$STATUS",',
+      '"County" : "$county",',
+      '"Region" : "$region",',
+      '"Species_Detected" : "$winterCountDetected",',
+      '"Hours" : "$winterHrsDiurnal",',
+      '"Checklists" : "$winterCountDiurnalChecklists",',
+      '"Early_Checklists" : "$winter1CountDiurnalChecklists",',
+      '"Late_Checklists" : "$winter2CountDiurnalChecklists",',
+      '"Detected_Criteria_Met" : "$wbcgDetected",',
+      '"Hours_Criteria_Met" : "$wbcgTotalEffortHrs",',
+      '"Checklist_Criteria_Met" : "$wbcgDiurnalVisits"',
+      '}}]'
+    )
+
+    blocksum <- m_block_summaries$aggregate(blocksum_filter)
+
+    blocksum <- blocksum %>%
+      mutate('_id' = NULL) %>%
+      mutate('Hours' = dec_places(Hours, digits = 1))
+
+  } else if (season == "breeding"){
+    
+    blocksum_filter <- paste0(
+      '[{ "$project" : {',
+      '"Block_Name" : "$ID_NCBA_BLOCK",',
+      # '"Block_Code" : "$ID_BLOCK_CODE",',
+      '"Status" : "$STATUS",',
+      '"County" : "$county",',
+      '"Region" : "$region",',
+      '"Hours" : "$breedHrsDiurnal",',
+      '"Species_Coded" : "$breedCountCoded",',
+      '"Species_Possible" : "$breedPctPossible",',
+      '"Species_Confirmed" : "$breedPctConfirmed",',
+      '"Early_Checklists" : "$breed1CountDiurnalChecklists",',
+      '"Mid_Checklists" : "$breed2CountDiurnalChecklists",',
+      '"Late_Checklists" : "$breed3CountDiurnalChecklists",',
+      '"Hours_Criteria_Met" : "$bbcgTotalEffortHrs",',
+      '"Coded_Criteria_Met" : "$bbcgCoded",',
+      '"Confirmed_Criteria_Met" : "$bbcgConfirmed"',
+      '}}]'
+    )
+    blocksum <- m_block_summaries$aggregate(blocksum_filter)
+
+    blocksum <- blocksum %>%
+      mutate('_id' = NULL) %>%
+      mutate('Species_Possible' = percent(Species_Possible, digits = 1)) %>%
+      mutate('Species_Confirmed' = percent(Species_Confirmed, digits = 1)) %>%
+      mutate('Hours' = dec_places(Hours, digits = 1))
+  }
+
+  num_cols <- ncol(blocksum)
+  response <- list(
+    "blocksum" = blocksum,
+    "num_cols" = num_cols
+  )
+  return(response)
+}
+
+## for overview map
 get_block_summaries <- function() {
-  blocksum_filter <- '{"sppList": 0}'
+  blocksum_filter <- '{"sppList": 0, "ebird_web_data" : 0, "NCBA_EBD_VER": 0, "MOST_RECENT_EBD_DATE": 0}'
 
   blocksum <- m_block_summaries$find("{}", blocksum_filter)
 
   blocksum <- as.data.frame(blocksum)
-  # print(head(blocksum))
+  
   return(blocksum)
 }
 
@@ -492,4 +578,12 @@ get_db_status <- function() {
   last_date <- result$MOST_RECENT_EBD_DATE_TEXT
   # print(result)
   return(last_date)
+}
+
+get_status_text <- function(b) {
+  r <- "missing"
+  if (b) {
+    r <- "COMPLETED!"
+  }
+  return(r)
 }

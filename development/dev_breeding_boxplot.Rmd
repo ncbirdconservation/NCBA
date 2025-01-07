@@ -9,11 +9,13 @@ output:
   word_document: default
 ---
 ```{r setup, include=FALSE, message=TRUE, warning=TRUE}
-setwd("T:/Code/NCBA/resources")
-source("ncba_functions.R")
-library(auk)
+# setwd("~/Code/NCBA/resources")
+if(!require(here)) install.packages(
+  "here", repos = "http://cran.us.r-project.org")
+source(here("resources", "ncba_functions.R"))
 
-knitr::opts_knit$set(root.dir = work_dir)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+library(auk)
 knitr::opts_chunk$set(
   echo = TRUE,
   warning = FALSE,
@@ -49,10 +51,10 @@ print(species)
 
 Retrieve the records for the species from the Atlas Cache
 ```{r}
-records <- get_observations(species = species, 
-                            project = "EBIRD_ATL_NC", 
-                            EBD_fields_only = FALSE) %>% 
-  to_EBD_format(drop=FALSE) %>%
+records <- get_observations(species = species,
+                            project = "EBIRD_ATL_NC",
+                            EBD_fields_only = FALSE) %>%
+  to_EBD_format(drop = FALSE) %>%
   auk_unique()
 ```
 

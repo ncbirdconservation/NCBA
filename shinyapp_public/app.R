@@ -5,6 +5,10 @@
 # https://github.com/nmtarr/NCBA/shinyapp_public
 
 
+if(!require(ggiraph)) install.packages(
+  "ggiraph", repos = "http://cran.us.r-project.org")
+if(!require(reactlog)) install.packages(
+  "reactlog", repos = "http://cran.us.r-project.org")
 if(!require(shiny)) install.packages(
   "shiny", repos = "http://cran.us.r-project.org")
 if(!require(shinyWidgets)) install.packages(
@@ -50,25 +54,41 @@ if(!require(gridBase)) install.packages(
 if(!require(RColorBrewer)) install.packages(
   "RColorBrewer", repos = "http://cran.us.r-project.org")
 
+# data tables
+if(!require(DT)) install.packages(
+  "DT", repos = "http://cran.us.r-project.org")
+
+DT:::DT2BSClass(c("compact", "cell-border"))
+dt_opts <- list(
+  info = FALSE,
+  paging = FALSE,
+  searching = FALSE,
+  scrollX = FALSE,
+  scrollY = FALSE,
+  ordering = FALSE
+  )
+
 #get functions from other files
 source("blocks.r")
 source("utils.r") #utilities file
 source("spp.r") #species function file
 source("blkcumhrfunc.r") #block hour graph
-source("ncba_functions_shiny.R") #add this later to sync with Nathan work
+# source("ncba_functions_shiny.R") #add this later to sync with Nathan work
+# source("ncba_functions.R") #add this later to sync with Nathan work
+# print(block_predicted_spp(block = block, source = "GAP"))
 
 # MAP CONSTANTS
-nc_center_lat = 35.5
-nc_center_lng = -79.2
-nc_center_zoom = 7
-nc_block_zoom = 13
-ncba_blue = "#2a3b4d"
-ncba_half_blue = "#B8C5D3"
-checklists_found = 0
-ncba_failed = "#DB504A"
-ncba_success = "#43AA8B"
-ncba_white = "#ffffff"
-ncba_gray = "#aaaaaa"
+nc_center_lat <- 35.5
+nc_center_lng <- -79.2
+nc_center_zoom <- 7
+nc_block_zoom <- 13
+ncba_blue <- "#2a3b4d"
+ncba_half_blue <- "#B8C5D3"
+checklists_found <- 0
+ncba_failed <- "#DB504A"
+ncba_success <- "#43AA8B"
+ncba_white <- "#ffffff"
+ncba_gray <- "#aaaaaa"
 
 # SETUP FILES
 current_block = ""
@@ -100,7 +120,8 @@ ui <- bootstrapPage(
     tags$head(includeCSS("styles.css")),
     tags$head(tags$link(rel="icon", href="/input_data/ncba_blue_wbnu.ico")),
     tabPanel("Blocks",
-      div(class="col-md-2 panel sidebar", id = "block_controls",
+      div(class="row", id="top_row_panel",
+        div(class="col-md-2 panel sidebar", id = "block_controls",
           h3("Blocks", class="tab-control-title"),
           tags$p(
             "Summary statistics page for block-level data.",
@@ -115,66 +136,78 @@ ui <- bootstrapPage(
             # calls unique values from the ID_NCBA_BLOCK column
             # in the previously created table
             selected = "NONE")
-            # htmlOutput("checklist_counter")
           ),
           div(class="tab-control-group",
-          #  prettySwitch("portal_records","Portal Records Only", TRUE ),
-           radioButtons("season_radio",label = h4("Season"),
+            radioButtons("season_radio",label = h4("Season"),
               choices = list(
                 "All Records" = "All",
                 "Breeding" = "Breeding",
                 "Non-Breeding" = "Non-Breeding"
               ),
-                # "Custom" = "Custom"),
               selected = "All")
-          #  conditionalPanel(condition = "input.season_radio == 'Custom'",
-          #                   selectInput(
-          #                     "month_range",
-          #                     "Selected Months",
-          #                     choices = c(1,2,3,4,5,6,7,8,9,10,11,12),
-          #                     selected = c(1,2,3,4,5,6,7,8,9,10,11,12),
-          #                     multiple = TRUE)
-          #  )
+
           )
         ),
-        div(class="col-md-10 panel",
-          leafletOutput("mymap")
+        div(class = "col-md-10 panel",
+          leafletOutput("mymap", height = "50vh")
         ),
-        div(class="col-md-3 panel",
+      ),
+      div(class="row", id="mid_row_panel",
+        div(class = "col-md-4 panel",
           h3("Statistics"),
-          htmlOutput("block_breeding_stats"),
+          h4(htmlOutput("block_status")),
+          tabsetPanel(
+            tabPanel("Breeding", htmlOutput("block_breeding_stats")),
+            tabPanel("Wintering", htmlOutput("block_wintering_stats")),
+          ),
           downloadButton("download_block_checklists", "Download Checklists")
         ),
-        div(class="col-md-3 panel",
-          h3("Hours"),
+        div(class = "col-md-4 panel",
+          h3("Survey Hours"),
           plotOutput("blockhours")
         ),
-        div(class="col-md-3 panel",
+        div(class = "col-md-4 panel",
           h3("Species Accumulation"),
           plotOutput("spp_accumulation")
-        ),
-        div(class="col-md-6 panel",
+        )
+      ),
+      div(class="row", id="spp_list_row",
+        div(class = "col-md-12 panel",
           h3("Species List"),
           dataTableOutput("spp_observed"),
           downloadButton("download_spplist", "Download")
 
         )
+      )
     ),
-    # tabPanel("Species",
-    #   div(class="container-fluid", tags$head(includeCSS("styles.css")),
-    #     div(class="col-md-3",
-    #       selectizeInput("spp_select", h3("Species"),
-    #       choices = species_list, options=list(
-    #         placeholder = 'Select species',
-    #         onInitialize = I('function() {this.setValue(""); }')
-    #       ))
-    #     ),
-    #     div(class="col-md-9",
-    #       plotOutput("spp_breedingbox_plot"),
-    #       div(tableOutput("breeding_code_legend"), style="font-size:60%")
-    #   )
-    # )
-    # ),
+    tabPanel("Block Table",
+        div(
+          class = "col-md-12",
+          style = "background: #eee;",
+          div(
+            class = "tab-control-group",
+            style = "width: 60%",
+            radioButtons("block_table_radio",label = h4("Season"),
+              choices = list(
+                "Breeding" = "breeding",
+                "Non-Breeding" = "wintering"
+              ),
+              selected = "wintering"
+            )
+          ),
+          div(
+            class = "float-end",
+            style = "width: 30%",
+            downloadButton("download_block_table", "Download")
+          )
+        ),
+        div(
+          class = "col-md-12",
+          style = "font-size: 13px; margin-top: 10px;",
+ 
+          div(dataTableOutput("block_table"))
+        )
+    ),
     tabPanel("Species Map",
         div(
           class = "col-md-2",
@@ -233,7 +266,7 @@ server <- function(input, output, session) {
 observe({
   query <- parseQueryString(session$clientData$url_search)
   if (!is.null(query[['block']])) {
-    print(query[['block']])
+    # print(query[['block']])
     # b <- query[['block']]
     rv_block$id = query[['block']]
     # if ( b %in% input$APBlock & b != input$APBlock) {
@@ -291,7 +324,7 @@ observe({
   # Creating a reactive value so it can be updated outside of rv_block$id
   # I think rv_block$id could just be totally replaced with rv_block$id?
 
-  rv_block <- reactiveValues(chosen=NULL, id =NULL)
+  rv_block <- reactiveValues(chosen = NULL, id = NULL)
 
   #observe events where block changes
   # block map click
@@ -299,7 +332,7 @@ observe({
     input$mymap_shape_click,
     {
       rv_block$id = input$mymap_shape_click$id
-      print("block map clicked")
+      # print("block map clicked")
     }
   )
   # block select change
@@ -307,7 +340,7 @@ observe({
     input$APBlock,
     {
       rv_block$id = input$APBlock
-      print("Block selected from drop down list")
+      # print("Block selected from drop down list")
       if(input$APBlock == "NONE")
         rv_block$id = NULL
       else
@@ -321,7 +354,7 @@ observe({
     input$overview_map_shape_click,
     {
       rv_block$id = input$overview_map_shape_click$id
-      print("overview map clicked")
+      # print("overview map clicked")
 
       #change focus to blocks tab
       updateNavbarPage(
@@ -336,7 +369,7 @@ observe({
   observeEvent(
     rv_block$id,
     {
-      print(paste0("rv_block changed to ", rv_block$id))
+      # print(paste0("rv_block changed to ", rv_block$id))
       b <- rv_block$id
       # if (b %in% input$APBlock & b != input$APBlock){
       #   # block is in drop-down, and is not the current block
@@ -351,7 +384,7 @@ observe({
       # }
 
       ## Update map - zoom in
-      block_info <- filter(priority_block_data, ID_NCBA_BLOCK == rv_block$id)
+      block_info <- dplyr::filter(priority_block_data, ID_NCBA_BLOCK == rv_block$id)
 
       #calculate the center of the block
       block_center_lat <- block_info$SE_Y +
@@ -412,7 +445,7 @@ observe({
   # retrieves current block records when rv_block$id changes
   current_block_ebd <- reactive({
     req(rv_block$id)
-    print("retrieving current block data")
+    # print("retrieving current block data")
     #build query string from parameters
     #philosophy:
     #   - if block changes, rerun query to retrieve from
@@ -453,21 +486,22 @@ observe({
     validate(
       need(checklist_count()>0,"")
     )
-    print("applying filters to block records")
-      current_block_ebd() %>%
-        filter(
-          if(portal_records_switch())
-          PROJECT_CODE == "EBIRD_ATL_NC"
-          else TRUE) %>%
-        filter(
-          if (input$season_radio == "Breeding")
-            MONTH %in% c("3","4","5","6","7","8")
-           else if (input$season_radio == "Non-Breeding") 
-              MONTH %in% c("1","2","11","12")
-              else if (input$season_radio == "Custom")
-             MONTH %in% input$month_range
-          else TRUE
-        )
+    # print("applying filters to block records")
+    current_block_ebd() %>%
+      dplyr::filter(
+        if(portal_records_switch())
+        PROJECT_CODE == "EBIRD_ATL_NC"
+        else TRUE
+      ) %>%
+      dplyr::filter(
+        if (input$season_radio == "Breeding")
+          MONTH %in% c("3","4","5","6","7","8")
+          else if (input$season_radio == "Non-Breeding") 
+            MONTH %in% c("1","2","11","12")
+            else if (input$season_radio == "Custom")
+            MONTH %in% input$month_range
+        else TRUE
+      )
   })
 
 
@@ -496,7 +530,7 @@ observe({
     req(current_block_ebd(), current_block_ebd_filtered())
 
     current_block_ebd_filtered() %>%
-      filter(CATEGORY == "species") %>% # make sure only species counted
+      dplyr::filter(CATEGORY == "species") %>% # make sure only species counted
       group_by(SAMPLING_EVENT_IDENTIFIER) %>%  # nolint
       mutate(SPP_COUNT = length(unique(GLOBAL_UNIQUE_IDENTIFIER))) %>%
       ungroup(SAMPLING_EVENT_IDENTIFIER) %>%
@@ -555,68 +589,227 @@ observe({
 ### For downloading testing datasets when conditions change (Deprecated?) ####
 
   ## BREEDING STATS ----------------------------------------------------
+
+  ## BLOCK STATUS
+  output$block_status <- renderUI({
+
+    complete_text <- ifelse(
+      current_block_summary()$STATUS == "Complete",
+      "<h3>COMPLETED!</h3>",
+      "<h5>Incomplete</h5>"
+    )
+    HTML(complete_text)
+  })
+
   output$block_breeding_stats <- renderUI({
     req(current_block_summary())
-    print("rendering block stats")
+    # print("rendering block stats")
     #ensure records returned
     validate(
       need(current_block_summary(), "No checklists submitted.")
     )
-    complete_text <- ifelse(
-      current_block_summary()$STATUS == "Complete",
-      "<h2>COMPLETED!</h2>",
-      ""
+
+    breed_stat_col <- as.character(
+      c(
+        "Detected, Uncoded",
+        "Coded",
+        "Confirmed",
+        "Probable",
+        "Possible",
+        "Diurnal Hrs",
+        "Diurnal Visits (Mar/Apr)",
+        "Diurnal Visits (May/Jun)",
+        "Diurnal Visits (Jul/Aug)",
+        "Nocturnal Visits",
+        "Nocturnal Hrs"
+      )
     )
-    HTML(paste0(
-      "<p style='margin:2px 0px;font-size:1.1rem;'>", 
-      current_block_summary()$county, " county, region ",
-      current_block_summary()$region, "</p>",
-      # complete_text,
-      "<h4>Breeding</h4>",
-      "<p style='font-weight:600;'>", current_block_summary()$STATUS,"</p>",
-      "<p>Observed: ",
-      current_block_summary()$breedCountDetected + current_block_summary()$breedCountCoded,
-      "<br/>Coded: ",
-      current_block_summary()$breedCountCoded,
-      "<br/>Confirmed: ",
-      paste0(
-        current_block_summary()$breedCountConfirmed,
-        " (",
-        round(100 * current_block_summary()$breedPctConfirmed, 1),
-        "%)"
+
+    breed_val_col <- as.character(
+      c(
+        current_block_summary()$breedCountDetected,
+        current_block_summary()$breedCountCoded,
+        sprintf(
+          "%s (%.0f%%)",
+          current_block_summary()$breedCountConfirmed,
+          current_block_summary()$breedPctConfirmed * 100
         ),
-      "<br/>Possible: ",
-      paste0(
-        current_block_summary()$breedCountPossible,
-        " (",
-        round(100 * current_block_summary()$breedPctPossible, 1),
-        "%)"
+        sprintf(
+          "%s (%.0f%%)",
+          current_block_summary()$breedCountProbable,
+          current_block_summary()$breedPctProbable * 100
         ),
-      "<br/>Daytime Hours: ",
-      round(current_block_summary()$breedHrsDiurnal, 1),
-      "<br/>Daytime Visits: ",
-      current_block_summary()$breedCountDiurnalChecklists,
-      "<br/>Nocturnal Hours: ",
-      current_block_summary()$breedCountNocturnalChecklists,
-      "</p>",
-      "<h4>Winter</h4>",
-      "<p>Observed: ",
-      current_block_summary()$winterCountDetected,
-      "<br/>Daytime Hrs: ",
-        round(current_block_summary()$winterHrsDiurnal, 1),
-      "<br/>Daytime Visits: ",
-      current_block_summary()$winterCountDiurnalChecklists,
-      "<br/>Nocturnal Visits: ",
-      current_block_summary()$winterCountNocturnalChecklists,
-      "</p>"
-    ))
+        sprintf(
+          "%s (%.0f%%)",
+          current_block_summary()$breedCountPossible,
+          current_block_summary()$breedPctPossible * 100
+        ),
+        format(current_block_summary()$breedHrsDiurnal, digits = 1),
+        current_block_summary()$breed1CountDiurnalChecklists,
+        current_block_summary()$breed2CountDiurnalChecklists,
+        current_block_summary()$breed3CountDiurnalChecklists,
+        current_block_summary()$breedCountNocturnalChecklists,
+        format(current_block_summary()$breedHrsNocturnal, digits = 1)
+      )
+    )
+
+    breed_target_col <- as.character(
+      c(
+        "-",
+        ">= 55",
+        ">= 25%",
+        "-",
+        "<= 25%",
+        ">= 20",
+        ">= 1",
+        ">= 1",
+        ">= 1",
+        "2 (preferred)",
+        "-"
+      )
+    )
+    breed_status_col <- as.character(
+      c(
+        "-",
+        get_status_text(current_block_summary()$bbcgCoded),
+        get_status_text(current_block_summary()$bbcgConfirmed),
+        "-",
+        get_status_text(current_block_summary()$bbcgPossible),
+        get_status_text(current_block_summary()$bbcgTotalEffortHrs),
+        get_status_text(current_block_summary()$breed1CountDiurnalChecklists),
+        get_status_text(current_block_summary()$breed2CountDiurnalChecklists),
+        get_status_text(current_block_summary()$breed3CountDiurnalChecklists),
+        "-",
+        "-"
+      )
+    )
+
+    breed_stats_colnames <- c(
+      "Statistic",
+      "Value",
+      "Criteria",
+      "Status"
+    )
+    breed_stats_dt <- data.frame(
+      breed_stat_col,
+      breed_val_col,
+      breed_target_col,
+      breed_status_col
+    )
+    # print(breed_stats_dt)
+    # print(dt_opts)
+
+    DT::datatable(
+      breed_stats_dt,
+      options = dt_opts,
+      colnames = breed_stats_colnames,
+      rownames = FALSE
+    ) %>%
+    formatStyle(
+      columns = c(0,1,2,3),
+      fontSize = "80%"
+    ) %>%
+    formatStyle(
+      columns = c(1,2,3),
+      className = "dt-center"
+    )
+
+    # End Data Table Experiment
+  })
+
+  ## WINTERING STATISTICS ----------------------------------------------------
+  output$block_wintering_stats <- renderUI({
+    req(current_block_summary())
+  # print("rendering winter block stats")
+    #ensure records returned
+    validate(
+      need(current_block_summary(), "No checklists submitted.")
+    )
+
+    # Data Table Experiment
+    
+    winter_stat_col <- as.character(
+      c(
+        "Total Species",
+        "Diurnal Visits (Nov-Dec)",
+        "Diurnal Visits (Jan-Feb)",
+        "Diurnal Visits Total",
+        "Diurnal Hrs",
+        "Nocturnal Visits",
+        "Nocturnal Hrs"
+      )
+    )
+
+    winter_val_col <- as.character(
+      c(
+        current_block_summary()$winterCountDetected,
+        current_block_summary()$winter1CountDiurnalChecklists,
+        current_block_summary()$winter2CountDiurnalChecklists,
+        current_block_summary()$winterCountDiurnalChecklists,
+        format(current_block_summary()$winterHrsDiurnal, digits = 1),
+        current_block_summary()$winterCountNocturnalChecklists,
+        format(current_block_summary()$winterHrsNocturnal, digits = 1)
+      )
+    )
+
+    winter_target_col <- as.character(
+      c(
+        ">= 55",
+        ">= 1",
+        ">= 1",
+        ">= 2",
+        ">= 5",
+        "1 (preferred)",
+        "-"
+      )
+    )
+    winter_status_col <- as.character(
+      c(
+        get_status_text(current_block_summary()$wbcgDetected),
+        get_status_text(current_block_summary()$winter1CountDiurnalChecklists),
+        get_status_text(current_block_summary()$winter2CountDiurnalChecklists),
+        get_status_text(current_block_summary()$wbcgDiurnalVisits),
+        get_status_text(current_block_summary()$wbcgTotalEffortHrs),
+        "-",
+        "-"
+      )
+    )
+
+    winter_stats_colnames <- c(
+      "Statistic",
+      "Value",
+      "Criteria",
+      "Status"
+    )
+    winter_stats_dt <- data.frame(
+      winter_stat_col,
+      winter_val_col,
+      winter_target_col,
+      winter_status_col
+    )
+
+    DT::datatable(
+      winter_stats_dt,
+      options = dt_opts,
+      colnames = winter_stats_colnames,
+      rownames = FALSE
+    ) %>%
+    formatStyle(
+      columns = c(0,1,2,3),
+      fontSize = "80%"
+    ) %>%
+    formatStyle(
+      columns = c(1,2,3),
+      className = "dt-center"
+    )
+
 
   })
   
   #### DISPLAY BLOCK HOURS SUMMARY PLOT ------
   block_hrs_results <- reactive({
     req(current_block_ebd_checklistsonly_filtered())
-    print("running block hrs results")
+  # print("running block hrs results")
     block_hrs(current_block_ebd_checklistsonly_filtered())
 
   })
@@ -629,7 +822,7 @@ observe({
   spp_accumulation_results <- reactive({
     req(current_block_ebd(), current_block_ebd_filtered())
     # pass only those columns needed
-    sa <- filter(
+    sa <- dplyr::filter(
       current_block_ebd_filtered(),
       CATEGORY == "species"
       )[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES",
@@ -686,6 +879,7 @@ observe({
 
   output$spp_observed <- renderDataTable(block_spp_list())
 
+  
   output$download_spplist <- downloadHandler(
     filename = function() {
       paste("spp_list", ".csv", sep = "")
@@ -694,13 +888,50 @@ observe({
       write.csv(block_spp_list(), file, row.names = TRUE)
     }
   )
+  ## Block Table Tab -------------------------------------------------
+  block_table_data <- reactive({
+    req(input$block_table_radio)
+    get_block_summary_table(input$block_table_radio)
+  })
+
+  output$block_table <- DT::renderDT(
+    block_table_data()$blocksum,
+    filter = "top",
+    options = list(
+      pageLength = 100,
+      columnDefs = list(
+        list(
+          className = 'dt-center',
+          targets = 4:block_table_data()$num_cols
+        )
+      )
+    )
+  )
+  
+  output$download_block_table <- downloadHandler(
+    filename = function() {
+      paste(
+        input$block_table_radio,
+        "_block_table",
+        ".csv",
+        sep = ""
+      )
+    },
+    content = function ( file ) {
+      write.csv(
+        block_table_data()$blocksum,
+        file,
+        row.names = TRUE
+        )
+    }
+  )
 
   ## SPECIES MAP  ----------------------------------------------------
   ### SETUP LEAFLET MAP, RENDER BASEMAP ------
   output$mymap <- renderLeaflet({
 
     #setup block geojson layer
-    print("starting map, adding blocks")
+  # print("starting map, adding blocks")
 
     ## Add fill value based on block status
     priority_block_data <- priority_block_data %>%
@@ -711,7 +942,7 @@ observe({
     ) %>%
     mutate(
       colorComplete = ifelse(
-        STATUS == "Complete", ncba_blue, ncba_white
+        STATUS == "Complete", ncba_blue, "#aaaaaa"
       )
     ) %>%
     mutate(
@@ -744,8 +975,8 @@ observe({
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
         weight = 2,
-        color = ncba_white,
-        # color = ~ colorComplete,
+        # color = ncba_white,
+        color = ~ colorComplete,
         opacity = 0.9,
         # fillColor = "#777777",
         fillColor = ~ fillComplete,
@@ -764,7 +995,7 @@ observe({
   ### ZOOM MAP TO SELECTED BLOCK ------
   # observeEvent(rv_block$id, {
   #     req(rv_block$id)
-  #     block_info <- filter(block_data, ID_NCBA_BLOCK==rv_block$id)
+  #     block_info <- dplyr::filter(block_data, ID_NCBA_BLOCK==rv_block$id)
 
   #     #calculate the center of the block
   #     block_center_lat <- block_info$SE_Y +
@@ -785,7 +1016,7 @@ observe({
   output$mysppmap <- renderLeaflet({
 
     #setup block geojson layer
-    print("starting map, adding blocks")
+  # print("starting map, adding blocks")
 
     leaflet() %>%
       setView(
@@ -799,16 +1030,16 @@ observe({
   sppblock_data <- reactive({
     # print(input$sppmap_select)
       spp <- input$sppmap_select
-      print(spp)
+    # print(spp)
       get_spp_by_block(spp)
   })
 
   observeEvent(
     sppblock_data(),
     {
-      print("retrieving spp block data")
+    # print("retrieving spp block data")
       sppblockmap_data <- sppblock_data()
-      print("spp block data retrieved")
+    # print("spp block data retrieved")
 
       if (nrow(sppblockmap_data) > 0){
       # print (paste0("spp by block len = ",nrow(sppblockmap_data)))
@@ -829,12 +1060,12 @@ observe({
           TRUE ~ "C1 Observed"
         )
       )
-
+      # print(head(spp_blocks))
       spp_blocks <- mutate(
         spp_blocks,
         blocklink = sprintf(
           'https://ebird.org/atlasnc/block/%s',
-          spp_blocks$ID_BLOCK_CODE
+          spp_blocks$ID_BLOCK_CODE.x
           )
       )
       output$block_breedcode_table <- renderTable(table(spp_blocks$breedcat))
@@ -844,13 +1075,13 @@ observe({
         domain = spp_blocks$breedcat
         )
 
-      print("adding blocks to map")
+    # print("adding blocks to map")
       leafletProxy("mysppmap") %>%
       clearShapes() %>%
       clearControls() %>%
       addRectangles(
         data = priority_block_data,
-        layerId = ~ ID_BLOCK_CODE,
+        layerId = ~ ID_BLOCK_CODE.x,
         lng1 = ~ NW_X,
         lat1 = ~ NW_Y,
         lng2 = ~ SE_X,
@@ -1028,10 +1259,10 @@ insideBlockAdj <- 0.003
 
 
   ### SETUP LEAFLET MAP, RENDER BASEMAP 
-  print("loading overview_map")
+# print("loading overview_map")
   output$overview_map <- renderLeaflet({
     #setup block geojson layer
-    print("starting effort map, adding blocks")
+  # print("starting effort map, adding blocks")
     leaflet() %>%
       setView(
         lng = nc_center_lng,
@@ -1266,11 +1497,7 @@ insideBlockAdj <- 0.003
   #   }
   # )
   ### Merging Block Shapes for mapping and Summary Table
-  pb_map <- merge(
-    priority_block_data,
-    get_block_summaries(),
-    all = TRUE
-    )
+  pb_map <- priority_block_data
   # print(head(pb_map))
   
   ## Convert percentages to numbers instead of decimals

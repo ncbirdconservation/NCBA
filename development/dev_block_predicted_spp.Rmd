@@ -6,14 +6,17 @@ output: word_document
 ---
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
-setwd("~/Code/NCBA/resources")
-source("ncba_functions.R")
+if(!require(here)) install.packages(
+  "here", repos = "http://cran.us.r-project.org")
+  
+source(here("resources", "ncba_functions.R"))
 
 knitr::opts_knit$set(root.dir = work_dir)
 knitr::opts_chunk$set(
-  echo = TRUE,
-  warning = FALSE,
-  message = FALSE)
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
 ```
 
 

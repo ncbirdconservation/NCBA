@@ -8,9 +8,12 @@
 # mar 1- august 31.  
 #   Nocturnal status is based on the ncba_nocturnal field and nocturnal effort
 # is based upon ncba_nocturnal_duration.
-setwd("~/Code/NCBA/resources")
-source("ncba_functions.R")
-setwd(work_dir)
+
+if(!require(here)) install.packages(
+  "here", repos = "http://cran.us.r-project.org")
+source(here("resources", "ncba_functions.R"))
+
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 
 # Specify a path for the output csv file.
 out_file <- "T:/NCBA/Analyses/block_hours.csv"
@@ -68,7 +71,7 @@ nocturnal.N <- checklists.S %>%
   data.frame()
 
 # Make a data frame with count of nocturnal SUMMER checklists
-nocturnal.N.S <- checklists %>%
+nocturnal.N.S <- checklists.S %>%
   filter(ncba_nocturnal == 1,
          yday(observation_date) >= 59 & yday(observation_date) <= 243) %>%
   select(c("atlas_block", "ncba_nocturnal")) %>%
@@ -77,7 +80,7 @@ nocturnal.N.S <- checklists %>%
   data.frame()
 
 # Make a data frame with count of nocturnal WINTER checklists
-nocturnal.N.W <- checklists %>%
+nocturnal.N.W <- checklists.S %>%
   filter(ncba_nocturnal == 1,
          yday(observation_date) >= 304 | yday(observation_date) <= 58) %>%
   select(c("atlas_block", "ncba_nocturnal")) %>%

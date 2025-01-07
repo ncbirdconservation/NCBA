@@ -100,7 +100,8 @@ block_hrs <- function(d){
   hr.plt <- ggplot(blkhr.df, aes(fill=Year, y=value, x=month) ) +
     geom_bar(position="stack", stat="identity") +
     scale_fill_brewer(palette="Accent") +
-    labs(x="Month", y="Hours", title="Survey Hours") +
+    labs(x="Month", y="Hours") +
+    # labs(x="Month", y="Hours", title="Survey Hours") +
     theme(
       axis.text=element_text(size=11),
       axis.title=element_text(size=12)) + # font size

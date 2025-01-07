@@ -1,0 +1,252 @@
+---
+title: "dev_blocks_observed_in"
+author: "N.M. Tarr"
+date: "2023-10-2"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+# setwd("~/Code/NCBA/resources")
+if(!require(here)) install.packages(
+  "here", repos = "http://cran.us.r-project.org")
+source(here("resources", "ncba_functions.R"))
+
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+# Purpose
+This document details a function that returns a data frame of NCBA blocks within which a species was observed.  Parameter are available that limit the results according to whether the species was observed within, or outside of, a specified time period (eg., breeding dates).  Furthermore, output can be limited to certain breeding categories.
+
+# Definition
+```{r}
+blocks_observed_in
+```
+
+
+# Usage
+This section demonstrates how to apply this function to map blocks with different type sof observations for a species.  The first steps are to get the breeding safe dates as day of the year from the AtlasCache, as well as a data frame of observations.  The observation data frame should be converted to the EBD format and records with an observation count of 0 should be removed.
+```{r}
+# Species
+species <- "Wild Turkey"
+
+# Pull out breeding season records
+breedates <- get_breeding_dates(species, day_year = TRUE)
+
+# Get all the observations for the species, exclude zero count records though
+observations <- get_observations(species = species, 
+                        database = "AtlasCache", 
+                        fields = NULL) %>%
+  to_EBD_format() %>%
+  filter(observation_count != 0)
+```
+
+Next, retrieve a spatially-enabled blocks data frame.
+```{r}
+# Get a blocks data frame with simple features
+fields <- c("ID_BLOCK_CODE", "ID_EBD_NAME")
+blocks_sf <- get_blocks(spatial = TRUE, fields = fields)
+```
+
+The function can then be used to get data frames of blocks with records for the species.  Those data frames can then be joined with the blocks data frame to create a map.
+```{r}
+# Get blocks with any type of record from any day of the year.
+pres_blocks <- blocks_observed_in(observations, start_day = 0, end_day = 366, 
+                                  within = TRUE,
+                                  breeding_categories = c("C4", "C3", "C2", 
+                                                          "C1", ""))
+# Join with blocks data frame
+pres_blocks_sf <- right_join(blocks_sf, pres_blocks, by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = pres_blocks_sf, aes(fill = common_name)) +
+  ggtitle("Blocks With Observations")
+```
+
+Map blocks with nonbreeding season observations.
+```{r}
+winter_blocks <- blocks_observed_in(observations, start_day = breedates[1], 
+                                    end_day = breedates[2], 
+                                    within = FALSE,
+                                    breeding_categories = c("C4", "C3", "C2", 
+                                                            "C1", ""))
+
+# Join with blocks data frame
+winter_blocks_sf <- right_join(blocks_sf, winter_blocks, 
+                               by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = winter_blocks_sf, aes(fill = common_name)) +
+  ggtitle("Blocks With Nonbreeding Season Observations")
+```
+
+Map the blocks with breeding season observations.
+```{r}
+summer_blocks <- blocks_observed_in(observations, start_day = breedates[1], 
+                                    end_day = breedates[2], 
+                                    within = TRUE,
+                                    breeding_categories = c("C4", "C3", "C2", 
+                                                            "C1", ""))
+# Join with blocks data frame
+summer_blocks_sf <- right_join(blocks_sf, summer_blocks, 
+                               by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = summer_blocks_sf, aes(fill = common_name)) +
+  ggtitle("Blocks With Breeding Season Observations")
+```
+
+Map blocks with confirmed or probable breeding observations from within breeding safe dates.
+```{r}
+conf_prob <- blocks_observed_in(observations, start_day = breedates[1], 
+                                end_day = breedates[2], 
+                                within = TRUE,
+                                breeding_categories = c("C3", "C4"))
+
+conf_prob_sf <- right_join(blocks_sf, conf_prob, 
+                           by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = conf_prob_sf, aes(fill = common_name)) +
+  ggtitle("Blocks with Confirmed or Probable Breeding Records Within Safe Dates")
+```
+
+Map blocks with confirmed or probable breeding observations from outside of breeding safe dates.
+```{r}
+conf_prob_out <- blocks_observed_in(observations, start_day = breedates[1], 
+                                end_day = breedates[2], 
+                                within = FALSE,
+                                breeding_categories = c("C3", "C4"))
+
+conf_prob_out_sf <- right_join(blocks_sf, conf_prob_out, 
+                           by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = conf_prob_out_sf, aes(fill = common_name)) +
+  ggtitle("Blocks with Confirmed or Probable Breeding Records Outside Safe Dates")
+```
+
+Map blocks with confirmed or probable breeding observations from any day of the year.
+```{r}
+confirmed <- blocks_observed_in(observations, start_day = 0, 
+                                end_day = 366, 
+                                within = TRUE,
+                                breeding_categories = c("C3", "C4"))
+
+# Join with blocks data frame
+confirmed_sf <- right_join(blocks_sf, confirmed, 
+                   by = join_by("ID_BLOCK_CODE" == "atlas_block"))
+
+# Plot the spatial data frame
+ggplot() +
+  geom_sf(data = blocks_sf) +
+  geom_sf(data = confirmed_sf, aes(fill = common_name)) +
+  ggtitle("Blocks with Confirmed or Probable Breeding Records")
+```
+
+
+# Tests
+Test that start_day and end_day work by comparing three results: a data frame of blocks with an observation on any day, a data frame of blocks with observations from within a time period, and a data frame of blocks with observations from outside of a time period.  Also, a list of all atlas_blocks that are present in the observations data frame is useful. 
+```{r}
+# Get blocks with any type of record from any day of the year.
+any <- blocks_observed_in(observations, start_day = 0, end_day = 366, 
+                               within = TRUE,
+                               breeding_categories = c("C4", "C3", "C2", 
+                                                          "C1", ""))
+
+# Get blocks with any type of record from between the 100 and 200th days of the year.
+within_ <- blocks_observed_in(observations, start_day = 100, end_day = 200, 
+                               within = TRUE,
+                               breeding_categories = c("C4", "C3", "C2", 
+                                                          "C1", ""))
+
+# Get blocks with any type of record from between the 100 and 200th days of the year.
+outside <- blocks_observed_in(observations, start_day = 100, end_day = 200, 
+                               within = FALSE,
+                               breeding_categories = c("C4", "C3", "C2", 
+                                                          "C1", ""))
+
+# Get a list of blocks from observations
+obs_blocks <- unique(observations$atlas_block)
+```
+
+The list of unique blocks in observations should be the same as the list from the any data frame above. This test is passed if the chunck below returns TRUE.
+```{r}
+print(length(setdiff(obs_blocks, any$atlas_block)) == 0)
+```
+
+The within data frame should be a subset of the any data frame. This test is passed if the chunk returns TRUE.
+```{r}
+# Is within_ a subset of any?
+print(length(setdiff(within_$atlas_block, any$atlas_block)) == 0)
+```
+
+The outside data frame should be a subset of the any data frame. This test is passed if the chunk returns TRUE.
+```{r}
+# Is outside a subset of any?
+print(length(setdiff(outside$atlas_block, any$atlas_block)) == 0)
+```
+
+All atlas_blocks from any should be in either the within or outside data frames.  This test is passed if the chunk only returns TRUE.
+```{r}
+# Get the union of the within and outside lists
+u <- union(outside$atlas_block, within_$atlas_block)
+
+# Test that is has the same items as the any list
+print(length(setdiff(u, any$atlas_block)) == 0)
+print(length(setdiff(any$atlas_block, u)) == 0)
+```
+
+Asking for blocks with confirmed breeding observations within the safe dates should return a subset of the blocks with any category of observation within the safe dates.
+```{r}
+# Get two results where the only difference is the categories allowed:1) all
+#   codes and 2) just confirme
+in_safe <- blocks_observed_in(observations, start_day = breedates[1], 
+                                    end_day = breedates[2], 
+                                    within = TRUE,
+                                    breeding_categories = c("C4", "C3", "C2", 
+                                                            "C1", ""))
+
+confirmed_in_safe <- blocks_observed_in(observations, start_day = breedates[1], 
+                                end_day = breedates[2], 
+                                within = TRUE,
+                                breeding_categories = c("C4"))
+
+# Test that confirmed in safe is a subset of in_safe
+print(length(setdiff(confirmed_in_safe$atlas_block, in_safe$atlas_block)) == 0)
+```
+
+
+# Speed
+Run the function 10 times and record the runtime
+```{r}
+time <- c()
+for (i in 1:10) {
+  time1 <- proc.time()
+  blocks_observed_in(observations, start_day = 100, end_day = 200, 
+                               within = TRUE,
+                               breeding_categories = c("C4", "C3", "C2"))
+  t <- proc.time() - time1
+  time[i] <- t["elapsed"]
+}
+
+# Print the descriptive statistics
+print(summary(time))
+```

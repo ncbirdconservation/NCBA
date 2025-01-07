@@ -1,6 +1,7 @@
 .DS_Store
 
 # NCBA config files
+*.Rproj
 ncba_config.r
 shinyapp/ncba_config.r
 development/ncba_config.r
@@ -9,6 +10,7 @@ resources/ncba_config.r
 # R stuff
 .RHistory
 .RData
+.Ruserdata
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -120,3 +122,4 @@ rsconnect
 shinyapp/ncba_config.r
 development/ncba_config.r
 resources/ncba_config.r
+.Rproj.user
