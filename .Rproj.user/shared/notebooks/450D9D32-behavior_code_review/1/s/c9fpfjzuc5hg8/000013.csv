@@ -1,0 +1,15 @@
+"0","pe <- get_breeding_records(behaviors = c(""PE"")) %>%"
+"0","  to_EBD_format() %>%"
+"0","  auk_unique() %>%"
+"0","  filter(protocol_type != ""Banding"") %>%"
+"0","  arrange(common_name)"
+"1","[1m[33mError[39m in `unnest()`:[22m
+[38;5;232m[33m![38;5;232m Can't duplicate names between the affected columns and the original data.
+[31m✖[38;5;232m These names are duplicated:
+  [36mℹ[38;5;232m `NCBA_EBD_VER`, from `OBSERVATIONS`.
+[36mℹ[38;5;232m Use `names_sep` to disambiguate using the column name.
+[36mℹ[38;5;232m Or use `names_repair` to specify a repair strategy.[39m
+Backtrace:
+[90m  1. [39m... %>% arrange(common_name)
+[90m 21. [39m[1m[94mtidyr:::unnest.data.frame([39m[22m., cols = (c(OBSERVATIONS))[1m[94m)[39m[22m
+"

@@ -1,0 +1,111 @@
+"0","block_predicted_spp"
+"1","function(block, source) {
+"
+"1","  # Returns predicted summer and winter species lists.
+"
+"1","  #
+"
+"1","  # Description:
+"
+"1","  # The AtlasCache blocks document contains fields that report species lists 
+"
+"1","  #   for each block in summer and winter.  Those lists are derived from 
+"
+"1","  #   predictions by the USGS GAP Analysis Program and eBird.  This function
+"
+"1","  #   retrieves lists of species that were predicted to occupy a
+"
+"1","  #   block of interest from a source of interest of each summer and winter.
+"
+"1","  #
+"
+"1","  # Arguments:
+"
+"1","  # block -- the eBird ID code of the block of interest.
+"
+"1","  # source -- who's prediction do you want: ""GAP"" or ""eBird""?
+"
+"1","  
+"
+"1","  source_lookup <- list(""GAP"" = ""GAP_SPP"", ""eBird"" = ""EBD_SPP"")
+"
+"1","  source <- source_lookup[[source]]
+"
+"1","  
+"
+"1","  # Connect to the blocks collection (table)
+"
+"1","  connection_blocks <- connect_ncba_db(database = ""ebd_mgmt"", 
+"
+"1","                                       collection = ""blocks"")
+"
+"1","  
+"
+"1","  # Define and execute a query (with fields) for blocks of predicted presence.
+"
+"1","  fields <- str_interp('{""${source}"": true}')
+"
+"1","  query <- str_interp('{""ID_BLOCK_CODE"" : ""${block}""}')
+"
+"1","  pres <- connection_blocks$find(query = query, fields = fields) %>%
+"
+"1","    unnest(source)
+"
+"1","  
+"
+"1","  # GAP prediction
+"
+"1","  if (source == ""GAP_SPP"") {
+"
+"1","    # Summer list
+"
+"1","    summer_spp <- pres %>% 
+"
+"1","      filter(SUMMER == 1)
+"
+"1","    summer_spp <- summer_spp$PRIMARY_COM_NAME
+"
+"1","    
+"
+"1","    # Winter list
+"
+"1","    winter_spp <- pres %>% 
+"
+"1","      filter(WINTER == 1)
+"
+"1","    winter_spp <- winter_spp$PRIMARY_COM_NAME  
+"
+"1","  } 
+"
+"1","  
+"
+"1","  # eBird prediction
+"
+"1","  if (source == ""EBD_SPP"") {
+"
+"1","    # Summer list
+"
+"1","    summer_spp <- pres %>% 
+"
+"1","      filter(BREEDING == 1)
+"
+"1","    summer_spp <- summer_spp$PRIMARY_COM_NAME
+"
+"1","    
+"
+"1","    # Winter list
+"
+"1","    winter_spp <- pres %>% 
+"
+"1","      filter(WINTERING == 1)
+"
+"1","    winter_spp <- winter_spp$PRIMARY_COM_NAME
+"
+"1","  }
+"
+"1","  
+"
+"1","  return(list(""summer"" = summer_spp, ""winter"" = winter_spp))
+"
+"1","}
+"
