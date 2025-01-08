@@ -32,7 +32,6 @@ source(here("resources",  "ncba_config.r"))
 #   This may not always work (rmarkdown).....
 # setwd(work_dir)
 
-
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 connect_ncba_db <- function(database, collection){
@@ -733,7 +732,7 @@ breeding_map <- function(species) {
 
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-breeding_boxplot <- function(species, data, type = "interactive",
+breeding_boxplot <- function(species, data = NULL, type = "interactive",
                              pallet = "Paired", omit_codes = NULL,
                              lump = NULL, drop=TRUE, cex.x.axis = 0.9,
                              cex.y.axis = 0.8, subtitle = NULL) {
@@ -776,7 +775,13 @@ breeding_boxplot <- function(species, data, type = "interactive",
   library(ggplot2)
 
   # Data prep ------------------------------------------------------------------
-  ebird <- data # This should eventually be removed and ebird renamed.
+  # ebird <- data # This should eventually be removed and ebird renamed.
+  # if data passed, use, otherwise, get obs from species name
+  if (is.null(data)) {
+    ebird <- to_EBD_format(get_observations(species = species))
+  } else {
+    ebird <- data
+  }
 
   # replace breeding code entries "" with NULL
   ebird["breeding_code"][ebird["breeding_code"] == ""] <- "NULL"
