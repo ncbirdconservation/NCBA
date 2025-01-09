@@ -744,7 +744,7 @@ breeding_boxplot <- function(species, data = NULL, type = "interactive",
   #
   # Arguments:
   # species -- common name of the species.
-  # data -- data frame of ebird or NCBA data
+  # data -- data frame of ebird or NCBA data (use to_EBD_Format function)
   # type -- whether to create an interactive plot that supports opening
   #   checklist URLs by clicking on data points in the figure, a non-interactive
   #   plot with data from the entire state, or a plot separated out by
