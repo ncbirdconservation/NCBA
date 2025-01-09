@@ -735,7 +735,8 @@ breeding_map <- function(species) {
 breeding_boxplot <- function(species, data = NULL, type = "interactive",
                              pallet = "Paired", omit_codes = NULL,
                              lump = NULL, drop=TRUE, cex.x.axis = 0.9,
-                             cex.y.axis = 0.8, subtitle = NULL) {
+                             cex.y.axis = 0.8, subtitle = NULL, 
+                             x_units = "calendar") {
   # Produces a boxplot of breeding codes over calendar day.
   #
   # Description:
@@ -784,17 +785,28 @@ breeding_boxplot <- function(species, data = NULL, type = "interactive",
   }
 
   # replace breeding code entries "" with NULL
-  ebird["breeding_code"][ebird["breeding_code"] == ""] <- "NULL"
+  ebird["breeding_code"][ebird["breeding_code"] == ""] <- "Obs"
 
   # remove white space from evidence codes
   ebird$breeding_code <- trimws(ebird$breeding_code)
 
-  # put all dates within the same year -- ignores leap year
-  ebird$observation_date <- sub("^20\\d\\d", year(now()) - 1,
-                                ebird$observation_date)
+  if (x_units == "julian"){
+    # new code translates to julian day
+    ebird <- ebird %>%
+      mutate(obsdate = as.POSIXlt(observation_date, format = "%Y-%m-%d")) %>%
+      mutate(obsdate = obsdate$yday + 1)
+    xlabel <- "Julian Day"
+  } else {
+    # put all dates within the same year -- ignores leap year
+    ebird$observation_date <- sub("^20\\d\\d", year(now()) - 1,
+                                  ebird$observation_date)
 
-  # make obsdate a date object
-  ebird$obsdate <- as.Date(ebird$observation_date, "%Y-%m-%d")
+    # make obsdate a date object
+    ebird$obsdate <- as.Date(ebird$observation_date, "%Y-%m-%d")
+
+    xlabel <- "Calendar Date"
+
+  }
 
   # Manage Breeding Codes ------------------------------------------------------
   # set drop to true if lump is used
@@ -811,7 +823,7 @@ breeding_boxplot <- function(species, data = NULL, type = "interactive",
   # this vector will need updating if any new codes are introduced via "lump".
   codelevels <- c("H", "S", "S7", "M", "T", "P", "C", "B", "CN", "NB", "A", "N",
                   "DD", "ON", "NE", "FS", "CF", "NY", "FY", "FL", "PE", "UN",
-                  "F", "O", "NC", "NULL")
+                  "F", "O", "NC", "Obs")
   # http://stackoverflow.com/questions/19681586/ordering-bars-in-barplot
 
   # add any new codes from the lump categories
@@ -898,7 +910,7 @@ breeding_boxplot <- function(species, data = NULL, type = "interactive",
     # plot "empty" box plot
     boxplot(obsdate ~ breeding_code, horizontal = TRUE,
             cex.axis = cex.y.axis, xaxt = "n", data = ebird, border = "white",
-            main = species, las = 2, xlab = "Calendar Day",
+            main = species, las = 2, xlab = xlabel,
             ylab = "", show.names = TRUE,
             na.action = na.pass)
 
@@ -986,7 +998,7 @@ breeding_boxplot <- function(species, data = NULL, type = "interactive",
     result  <- ggplot(data = records2) +
       geom_boxplot(aes(x = obsdate, y = breeding_code)) +
       facet_wrap(~ ECOREGION, nrow=3) +
-      labs(y="Breeding Code", x="Calendar Day", title = species)
+      labs(y="Breeding Code", x=xlabel, title = species)
     plot(result)
   }
 
@@ -997,11 +1009,11 @@ breeding_boxplot <- function(species, data = NULL, type = "interactive",
 
     # ggiraph code for boxplot and interactive points
     gg_point = ggplot(data = ebird) +
-      labs(y="Breeding Code", x="Calendar Day") +
+      labs(y="Breeding Code", x = xlabel) +
       geom_boxplot(aes(x = obsdate, y = breeding_code)) +
       geom_point_interactive(aes(x = obsdate, y = breeding_code, color = col,
                                  tooltip = obsdate, data_id = obsdate,
-                                 onclick=paste0('window.open("', ChecklistLink,
+                                 onclick = paste0('window.open("', ChecklistLink,
                                                 '", "_blank")')),
                              show.legend = FALSE,
                              position = position_jitter(width = .2,
