@@ -85,7 +85,7 @@ nc_block_zoom <- 13
 ncba_blue <- "#2a3b4d"
 ncba_half_blue <- "#B8C5D3"
 checklists_found <- 0
-ncba_failed <- "#DB504A"
+ncba_failed <- "#dd0000"
 ncba_success <- "#43AA8B"
 ncba_white <- "#ffffff"
 ncba_gray <- "#aaaaaa"
@@ -232,8 +232,13 @@ ui <- bootstrapPage(
     tabPanel(
       "Overview",
       div(
-        class = "col-md-12",
+        class = "col-md-11",
         leafletOutput("overview_map", height = "70vh")
+      ),
+      div(
+        class = "col-md-1",
+        h5("Legend"),
+        plotOutput("overview_legend")
       )
     ),
     tabPanel(
@@ -253,7 +258,8 @@ ui <- bootstrapPage(
           )
 
         )
-    )
+    ),
+    # selected = "Overview"
   )
 
 )
@@ -1257,6 +1263,62 @@ winterVisitsNocturnalCriteriaMin <- 1
 insideBlockAdj <- 0.003
 
 
+### Overview map legend plot
+output$overview_legend <- renderPlot(
+  {
+
+    criteria <- data.frame(
+      type = c("Num Coded", "Pct Confirmed", "Pct Possible", "Hours"),
+      pct = c(1.1, 0.75, 1.2, 1.1),
+      pct_labels = c("60 Coded", "19% Confirmed", "30% Possible", "22 Hours")
+    )
+    criteria$type <- factor(criteria$type, levels = criteria$type)
+    # criteria$pct_labels <- factor(criteria$pct_labels, levels = criteria$pct_labels)
+    ggplot(
+      data = criteria,
+      aes( 
+        x = type,
+        y = pct,
+        fill = as.factor(pct)
+        )
+    ) +
+    geom_bar(
+      stat = "identity",
+      width = 1
+      ) +
+    scale_fill_manual(
+      values = c("#dd0000", "#2a3b4d", "#dd0000", "#2a3b4d")
+    ) +
+    theme(
+      legend.position = "none",
+      panel.background = element_blank(),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.text.x = element_blank()
+      # axis.text.x = element_text(size = 10)
+      ) +
+    scale_y_continuous(
+      expand = expansion(mult = c(0 , 0))
+    ) +
+    geom_text(
+      # data = criteria,
+      # aes(x = factor(type)),
+      aes(
+
+        label = criteria$pct_labels,
+        y = 0.5 * criteria$pct
+      ),
+      angle = 90,
+      color = "white"
+    ) +
+    geom_hline(yintercept = 1, col = ncba_gray)
+
+  }
+)
+
 
   ### SETUP LEAFLET MAP, RENDER BASEMAP 
 # print("loading overview_map")
@@ -1281,6 +1343,60 @@ insideBlockAdj <- 0.003
         group = "Street Map"
       ) %>%
       #add block outlines
+      ### Overlay Groups
+      # ## Breeding Coded (left Bar)
+      addRectangles(
+        data = pb_map,
+        lng1 = ~ NW_X,
+        lat1 = ~ SE_Y + ((NW_Y - SE_Y) * breedingCodedHgtPct),
+        lng2 = ~ NW_X - ((NW_X - SE_X)/4),
+        lat2 = ~ SE_Y,
+        fillColor = ~breedCodedPal(breedCountCoded),
+        stroke = FALSE,
+        fillOpacity = 1,
+        fill = TRUE,
+        group = "Breeding Coded"
+      ) %>%
+      ## Breeding Confirmed (Bar 2)
+      addRectangles(
+        data = pb_map,
+        lng1 = ~ NW_X - ((NW_X - SE_X) / 4),
+        lat1 = ~ SE_Y + ((NW_Y - SE_Y) * breedConfHgtPct),
+        lng2 = ~ NW_X - (((NW_X - SE_X) / 4) * 2),
+        lat2 = ~ SE_Y,
+        fillColor = ~breedConfPal(breedPctConfirmed),
+        stroke = FALSE,
+        fillOpacity = 1,
+        fill = TRUE,
+        group = "Breeding Coded"
+      ) %>%
+      ## Breeding Possible (Bar 3)
+      addRectangles(
+        data = pb_map,
+        lng1 = ~ NW_X - (((NW_X - SE_X) / 4) * 2),
+        lat1 = ~ SE_Y + ((NW_Y - SE_Y) * breedPossHgtPct),
+        lng2 = ~ NW_X - (((NW_X - SE_X) / 4) * 3),
+        lat2 = ~ SE_Y,
+        fillColor = ~breedPossPal(breedPctPossible),
+        stroke = FALSE,
+        fillOpacity = 1,
+        fill = TRUE,
+        group = "Breeding Coded"
+      ) %>%
+      ## Breeding Hours (Bar 4)
+      addRectangles(
+        data = pb_map,
+        lng1 = ~ NW_X - (((NW_X - SE_X) / 4) * 3),
+        lat1 = ~ SE_Y + ((NW_Y - SE_Y) * breedHrsHgtPct),
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        fillColor = ~breedHrsPal(breedHrsDiurnal),
+        stroke = FALSE,
+        fillOpacity = 1,
+        fill = TRUE,
+        group = "Breeding Coded"
+      ) %>%
+      ## Priority Block Boundaries
       addRectangles(
         data = pb_map,
         layerId = ~ ID_NCBA_BLOCK,
@@ -1323,79 +1439,7 @@ insideBlockAdj <- 0.003
           group = "Blocks",
           # popup = ~block_popup
       ) %>%
-      ### Overlay Groups
-      ## Breeding Coded (top bar)
-      addRectangles(
-        data = pb_map,
-        lng1 = ~ NW_X,
-        lat1 = ~ NW_Y,
-        lng2 = ~ SE_X,
-        lat2 = ~ NW_Y,
-        color = ~ncbapal(bbcgCoded),
-        # color = ~breedingcodedpal(breedCountCoded),
-        stroke = ~ !fillBool,
-        weight = 5,
-        opacity = 1,
-        fill = FALSE,
-        group = "Breeding Coded"
-      ) %>%
-      ## Breeding Confirmed (right bar)
-      addRectangles(
-        data = pb_map,
-        lng1 = ~ SE_X,
-        lat1 = ~ NW_Y,
-        lng2 = ~ SE_X,
-        lat2 = ~ SE_Y,
-        color = ~ ncbapal(bbcgConfirmed),
-        stroke = ~ !fillBool,
-        weight = 5,
-        opacity = 1,
-        fill = FALSE,
-        group = "Breeding Confirmed"
-      ) %>%
-      ## Breeding Possible (bottom bar)
-      addRectangles(
-        data = pb_map,
-        lng1 = ~ NW_X,
-        lat1 = ~ SE_Y,
-        lng2 = ~ SE_X,
-        lat2 = ~ SE_Y,
-        color = ~ ncbapal(bbcgPossible),
-        stroke = ~ !fillBool,
-        weight = 5,
-        opacity = 1,
-        fill = FALSE,
-        group = "Breeding Possible"
-      ) %>%
-      ## Breeding Diurnal Hours (left bar)
-      addRectangles(
-        data = pb_map,
-        lng1 = ~ NW_X,
-        lat1 = ~ NW_Y,
-        lng2 = ~ NW_X,
-        lat2 = ~ SE_Y,
-        color = ~ ncbapal(bbcgTotalEffortHrs),
-        stroke = ~ !fillBool,
-        weight = 5,
-        opacity = 1,
-        fill = FALSE,
-        group = "Breeding Diurnal Hrs"
-      ) %>%
-      # ## Winter Diurnal Hours (top under bar)
-      # addRectangles(
-      #   data = pb_map,
-      #   lng1 = ~ NW_X + insideBlockAdj,
-      #   lat1 = ~ NW_Y - insideBlockAdj,
-      #   lng2 = ~ SE_X - insideBlockAdj,
-      #   lat2 = ~ NW_Y - insideBlockAdj,
-      #   color = ~winterpal(winterHrsDiurnal),
-      #   stroke = TRUE,
-      #   weight = 5,
-      #   opacity = 1,
-      #   fill = FALSE,
-      #   group = "Winter Diurnal Hrs"
-      # ) %>%
-      ## winter Species (right bar)
+      
       # Layers Control (Making Icons as Overlay Layers)
       addLayersControl(data = pb_map,
         baseGroups = c("Street Map", "Dark No Labels"),
@@ -1407,66 +1451,21 @@ insideBlockAdj <- 0.003
           # "Winter Diurnal Hrs"
           ),
         options = layersControlOptions(collapsed = FALSE)
-      ) %>%
-      # # Hide Nocturnal Hours and Confirmed Species Icons upon Map Start
-      # hideGroup(
-      #   c(
-      #     "Winter Diurnal Hrs"
-      #     )
-      #   ) %>%
-      # Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
-      addLegendImage(
-        images = diurnal_symbols,
-        labels = c(
-          "0",
-          paste(">", breedCountCodedCriteriaMin)
-          ),
-        orientation = "vertical",
-        title = "Breeding Coded Species (top)",
-        position = "topleft",
-        width = 16.44,
-        height = 16.44,
-        labelStyle = "font-size: 14px; vertical-align: center;"
-      ) %>%
-      addLegendImage(
-        images = diurnal_symbols,
-        labels = c(
-          "0",
-          paste(">", round(100 * breedPctConfirmedCriteriaMin, 1))
-          ),
-        labelStyle = "font-size: 14px; vertical-align: center;",
-        title = "% Species Confirmed (right)",
-        orientation = "vertical",
-        width = 13.32,
-        height = 16.44,
-        position = "topleft"
-      ) %>%
-      addLegendImage(
-        images = diurnal_symbols,
-        labels = c(
-          "",
-          paste("<", round(100 * breedPctPossibleCriteriaMax, 1), "%")
-          ),
-        labelStyle = "font-size: 14px; vertical-align: center;",
-        title = "% Species Possible (bottom)",
-        orientation = "vertical",
-        width = 13.32,
-        height = 16.44,
-        position = "topleft"
-      ) %>%
-      addLegendImage(
-        images = diurnal_symbols,
-        labels = c(
-          "0",
-          paste(">", breedHrsDiurnalCriteriaMin)
-          ), 
-        orientation = "vertical",
-        title = "Breeding Diurnal Hrs (left)",
-        position = "topleft",
-        width = 16.44,
-        height = 16.44,
-        labelStyle = "font-size: 14px; vertical-align: center;"
       )
+      ## Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
+      # addLegendImage(
+      #   images = diurnal_symbols,
+      #   labels = c(
+      #     "0",
+      #     paste(">", breedCountCodedCriteriaMin)
+      #     ),
+      #   orientation = "vertical",
+      #   title = "Breeding Coded Species (top)",
+      #   position = "topleft",
+      #   width = 16.44,
+      #   height = 16.44,
+      #   labelStyle = "font-size: 14px; vertical-align: center;"
+      # )
     })
   
   ## Add event listener for block click
@@ -1496,6 +1495,8 @@ insideBlockAdj <- 0.003
   #     )
   #   }
   # )
+
+
   ### Merging Block Shapes for mapping and Summary Table
   pb_map <- priority_block_data
   # print(head(pb_map))
@@ -1512,7 +1513,7 @@ insideBlockAdj <- 0.003
     ) %>%
     mutate(
       fillOpac = ifelse(
-        STATUS == "Complete", 0.75,
+        STATUS == "Complete", 0.9,
         0.05
       )
     ) %>%
@@ -1543,12 +1544,23 @@ insideBlockAdj <- 0.003
     "#b3b3b3",
     ncba_blue
     )
-  diurnal_palette <- palette(diurnal_colors)
+  # diurnal_palette <- palette(diurnal_colors)
+  
   ncba_colors <- c(
-    "#b3b3b3",
+    ncba_failed,
     ncba_blue
     )
+  
   ncba_palette <- palette(ncba_colors)
+  
+  # # possible colors
+  # ncba_colors <- c(
+  #   "#dd0000",
+  #   ncba_blue
+  #   )
+  
+  # ncba_palette <- palette(ncba_colors)
+
   diurnal_symbols <- Map(
     f = makeSymbol,
     shape = diurnal_shapes,
@@ -1562,41 +1574,81 @@ insideBlockAdj <- 0.003
 
   ### palette for Diurnal Hours
   
-  ncbapal <- colorFactor(
+  # ncbapal <- colorFactor(
+  #   ncba_palette,
+  #   levels = c(0, breedCountCodedCriteriaMin)
+  #   )
+
+  # breedCodedPal <- colorFactor(
+  #   ncba_palette,
+  #   levels = c(0, breedCountCodedCriteriaMin),
+  #   reverse = TRUE
+  # )
+  breedCodedPal <- colorBin(
     ncba_palette,
-    levels = c(0, 1)
-    )
-  breedingcodedpal <- colorBin(
-    diurnal_palette,
     pb_map$breedCountCoded,
-    bins = c(0, (breedCountCodedCriteriaMin + 1)),
-    # bins = c(0.1, (breedCountCodedCriteriaMin - 1), Inf),
-    reverse = TRUE
-    )
-  breedingconfpal <- colorBin(
-    diurnal_palette,
+    bins = c(0, (breedCountCodedCriteriaMin - 1), Inf)
+  )
+  breedingCodedHgtPct <- pmin(
+    1.5,
+    pb_map$breedCountCoded / breedCountCodedCriteriaMin
+  )
+
+  breedConfPal <- colorBin(
+    ncba_palette,
     pb_map$breedPctConfirmed,
-    bins = c(0, (breedPctConfirmedCriteriaMin - 0.1), Inf),
-    reverse = TRUE
-    )
-  breedingposspal <- colorBin(
-    diurnal_palette,
+    bins = c(0, (breedPctConfirmedCriteriaMin), Inf)
+  )
+  breedConfHgtPct <- pmin(
+    1.5,
+    pb_map$breedPctConfirmed / breedPctConfirmedCriteriaMin
+  )
+
+  breedPossPal <- colorBin(
+    ncba_palette,
     pb_map$breedPctPossible,
-    bins = c(0, (breedPctPossibleCriteriaMax - 0.1), Inf),
+    bins = c(0, (breedPctPossibleCriteriaMax), Inf),
     reverse = TRUE
-    )
-  breedingpal <- colorBin(
-    diurnal_palette,
+  )
+  breedPossHgtPct <- pmin(
+    1.5,
+    pb_map$breedPctPossible / breedPctPossibleCriteriaMax
+  )
+
+  breedHrsPal <- colorBin(
+    ncba_palette,
     pb_map$breedHrsDiurnal,
-    bins = c(0, (breedHrsDiurnalCriteriaMin - 0.1), Inf),
-    reverse = FALSE
+    bins = c(0, (breedHrsDiurnalCriteriaMin), Inf)
+  )
+  breedHrsHgtPct <- pmin(
+    1.5,
+    pb_map$breedHrsDiurnal / breedHrsDiurnalCriteriaMin
     )
-  winterpal <- colorBin(
-    diurnal_palette,
-    pb_map$winterHrsDiurnal,
-    bins = c(0, (winterHrsDiurnalCriteriaMin - 0.1), Inf),
-    reverse = TRUE
-    )
+  
+  # breedConfPal <- colorBin(
+  #   diurnal_palette,
+  #   pb_map$breedPctConfirmed,
+  #   bins = c(0, (breedPctConfirmedCriteriaMin - 0.1), Inf),
+  #   reverse = TRUE
+  #   )
+  # breedingposspal <- colorBin(
+  #   diurnal_palette,
+  #   pb_map$breedPctPossible,
+  #   bins = c(0, (breedPctPossibleCriteriaMax - 0.1), Inf),
+  #   reverse = TRUE
+  #   )
+  # breedingpal <- colorBin(
+  #   diurnal_palette,
+  #   pb_map$breedHrsDiurnal,
+  #   bins = c(0, (breedHrsDiurnalCriteriaMin - 0.1), Inf),
+  #   reverse = FALSE
+  #   )
+  # winterpal <- colorBin(
+  #   diurnal_palette,
+  #   pb_map$winterHrsDiurnal,
+  #   bins = c(0, (winterHrsDiurnalCriteriaMin - 0.1), Inf),
+  #   reverse = TRUE
+  #   )
 
     ## move focus to block tab when clicked
 
