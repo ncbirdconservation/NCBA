@@ -872,7 +872,13 @@ observe({
     block_spp_pipeline <- str_interp(c(
       '[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
       '{"$unwind": {"path": "$sppList"}},',
+      '{"$lookup": {"from": "ebd_taxonomy",',
+      ' "localField" : "sppList.COMMON_NAME",',
+      ' "foreignField" : "PRIMARY_COM_NAME",',
+      ' "as": "tax"}},',
+      '{"$unwind": {"path": "$tax"}},',
       '{"$project": {',
+      '"TAX_ORDER": "$tax.TAXON_ORDER_2022",',
       '"SPECIES": "$sppList.COMMON_NAME",',
       '"BREEDING_STATUS": "$sppList.breedStatus",',
       '"BREEDING_DETECTED": "$sppList.breedDetected",',
@@ -883,7 +889,7 @@ observe({
     m_block_summaries$aggregate(block_spp_pipeline)
   })
 
-  output$spp_observed <- renderDataTable(block_spp_list())
+  output$spp_observed <- renderDataTable(block_spp_list(), rownames = FALSE)
 
   
   output$download_spplist <- downloadHandler(
@@ -1307,9 +1313,8 @@ output$overview_legend <- renderPlot(
       # data = criteria,
       # aes(x = factor(type)),
       aes(
-
-        label = criteria$pct_labels,
-        y = 0.5 * criteria$pct
+        label = pct_labels,
+        y = 0.5 * pct
       ),
       angle = 90,
       color = "white"
@@ -1409,7 +1414,7 @@ output$overview_legend <- renderPlot(
         fill = TRUE,
         fillOpacity = ~ fillOpac,
         weight = 2.5,
-        color = ncba_gray,
+        color = ~ strokeComplete,
         label = ~paste0(
             "<strong>",
             ID_NCBA_BLOCK,
@@ -1509,6 +1514,12 @@ output$overview_legend <- renderPlot(
       fillComplete = ifelse(
         STATUS == "Complete", ncba_blue,
         ncba_white
+      )
+    ) %>%
+    mutate(
+      strokeComplete = ifelse(
+        STATUS == "Complete", ncba_blue,
+        ncba_failed
       )
     ) %>%
     mutate(
