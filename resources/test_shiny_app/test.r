@@ -9,17 +9,21 @@ ncba_success <- "#43AA8B"
 ncba_white <- "#ffffff"
 ncba_gray <- "#aaaaaa"
 
-
-    criteria <- data.frame(
-      type = c("Num Coded", "Pct Confirmed", "Pct Possible", "Hours"),
-      pct = c(1.1, 0.75, 1.2, 1.1),
-      pct_labels = c("60 Coded", "19% Confirmed", "30% Possible", "22 Hours")
+criteria <- data.frame(
+      type = c("Num Coded", "Pct Confirmed", "Pct Possible",
+               "Hours", "Winter Spp"),
+      pct = c(1.1, 0.75, 1.2, 1.1, 0.8),
+      pct_labels = c("60 Coded", "19% Confirmed", "30% Possible",
+                     "22 Hours", "44 Winter Spp")
     )
     criteria$type <- factor(criteria$type, levels = criteria$type)
     # criteria$pct_labels <- factor(criteria$pct_labels, levels = criteria$pct_labels)
+    barcolors <- c("#dd0000", "#dd0000","#2a3b4d",  "#dd0000", "#2a3b4d")
+    # barorder <- c("confirmed", "winter", "coded",
+    #            "possible", "hours")
     ggplot(
       data = criteria,
-      aes( 
+      aes(
         x = type,
         y = pct,
         fill = as.factor(pct)
@@ -30,7 +34,7 @@ ncba_gray <- "#aaaaaa"
       width = 1
       ) +
     scale_fill_manual(
-      values = c("#dd0000", "#2a3b4d", "#dd0000", "#2a3b4d")
+      values = barcolors
     ) +
     theme(
       legend.position = "none",
@@ -50,15 +54,10 @@ ncba_gray <- "#aaaaaa"
       # data = criteria,
       # aes(x = factor(type)),
       aes(
-
-        label = criteria$pct_labels,
-        y = 0.5
+        label = pct_labels,
+        y = 0.5 * pct
       ),
       angle = 90,
       color = "white"
     ) +
     geom_hline(yintercept = 1, col = ncba_gray)
-
-    # ggsave(g, height = 1, width = 1)
-
-

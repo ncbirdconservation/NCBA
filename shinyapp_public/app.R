@@ -1272,17 +1272,21 @@ insideBlockAdj <- 0.003
 ### Overview map legend plot
 output$overview_legend <- renderPlot(
   {
-
     criteria <- data.frame(
-      type = c("Num Coded", "Pct Confirmed", "Pct Possible", "Hours"),
-      pct = c(1.1, 0.75, 1.2, 1.1),
-      pct_labels = c("60 Coded", "19% Confirmed", "30% Possible", "22 Hours")
+      type = c("Num Coded", "Pct Confirmed", "Pct Possible",
+               "Hours", "Winter Spp"),
+      pct = c(1.1, 0.75, 1.2, 1.1, 0.8),
+      pct_labels = c("60 Coded", "19% Confirmed", "30% Possible",
+                     "22 Hours", "44 Winter Spp")
     )
     criteria$type <- factor(criteria$type, levels = criteria$type)
     # criteria$pct_labels <- factor(criteria$pct_labels, levels = criteria$pct_labels)
+    barcolors <- c("#dd0000", "#dd0000","#2a3b4d",  "#dd0000", "#2a3b4d")
+    # barorder <- c("confirmed", "winter", "coded",
+    #            "possible", "hours")
     ggplot(
       data = criteria,
-      aes( 
+      aes(
         x = type,
         y = pct,
         fill = as.factor(pct)
@@ -1293,7 +1297,7 @@ output$overview_legend <- renderPlot(
       width = 1
       ) +
     scale_fill_manual(
-      values = c("#dd0000", "#2a3b4d", "#dd0000", "#2a3b4d")
+      values = barcolors
     ) +
     theme(
       legend.position = "none",
@@ -1325,7 +1329,8 @@ output$overview_legend <- renderPlot(
 )
 
 
-  ### SETUP LEAFLET MAP, RENDER BASEMAP 
+### SETUP LEAFLET MAP, RENDER BASEMAP
+num_bars <- 5
 # print("loading overview_map")
   output$overview_map <- renderLeaflet({
     #setup block geojson layer
@@ -1354,7 +1359,7 @@ output$overview_legend <- renderPlot(
         data = pb_map,
         lng1 = ~ NW_X,
         lat1 = ~ SE_Y + ((NW_Y - SE_Y) * breedingCodedHgtPct),
-        lng2 = ~ NW_X - ((NW_X - SE_X)/4),
+        lng2 = ~ NW_X - ((NW_X - SE_X) / num_bars),
         lat2 = ~ SE_Y,
         fillColor = ~breedCodedPal(breedCountCoded),
         stroke = FALSE,
@@ -1365,9 +1370,9 @@ output$overview_legend <- renderPlot(
       ## Breeding Confirmed (Bar 2)
       addRectangles(
         data = pb_map,
-        lng1 = ~ NW_X - ((NW_X - SE_X) / 4),
+        lng1 = ~ NW_X - ((NW_X - SE_X) / num_bars),
         lat1 = ~ SE_Y + ((NW_Y - SE_Y) * breedConfHgtPct),
-        lng2 = ~ NW_X - (((NW_X - SE_X) / 4) * 2),
+        lng2 = ~ NW_X - (((NW_X - SE_X) / num_bars) * 2),
         lat2 = ~ SE_Y,
         fillColor = ~breedConfPal(breedPctConfirmed),
         stroke = FALSE,
@@ -1378,9 +1383,9 @@ output$overview_legend <- renderPlot(
       ## Breeding Possible (Bar 3)
       addRectangles(
         data = pb_map,
-        lng1 = ~ NW_X - (((NW_X - SE_X) / 4) * 2),
+        lng1 = ~ NW_X - (((NW_X - SE_X) / num_bars) * 2),
         lat1 = ~ SE_Y + ((NW_Y - SE_Y) * breedPossHgtPct),
-        lng2 = ~ NW_X - (((NW_X - SE_X) / 4) * 3),
+        lng2 = ~ NW_X - (((NW_X - SE_X) / num_bars) * 3),
         lat2 = ~ SE_Y,
         fillColor = ~breedPossPal(breedPctPossible),
         stroke = FALSE,
@@ -1391,15 +1396,28 @@ output$overview_legend <- renderPlot(
       ## Breeding Hours (Bar 4)
       addRectangles(
         data = pb_map,
-        lng1 = ~ NW_X - (((NW_X - SE_X) / 4) * 3),
+        lng1 = ~ NW_X - (((NW_X - SE_X) / num_bars) * 3),
         lat1 = ~ SE_Y + ((NW_Y - SE_Y) * breedHrsHgtPct),
-        lng2 = ~ SE_X,
+        lng2 = ~ NW_X - (((NW_X - SE_X) / num_bars) * 4),
         lat2 = ~ SE_Y,
         fillColor = ~breedHrsPal(breedHrsDiurnal),
         stroke = FALSE,
         fillOpacity = 1,
         fill = TRUE,
         group = "Breeding Coded"
+      ) %>%
+      ## Wintering Spp (Bar 5)
+      addRectangles(
+        data = pb_map,
+        lng1 = ~ NW_X - (((NW_X - SE_X) / num_bars) * 4),
+        lat1 = ~ SE_Y + ((NW_Y - SE_Y) * winterSppHgtPct),
+        lng2 = ~ SE_X,
+        lat2 = ~ SE_Y,
+        fillColor = ~winterSppPal(winterCountDetected),
+        stroke = FALSE,
+        fillOpacity = 1,
+        fill = TRUE,
+        group = "Winter Spp"
       ) %>%
       ## Priority Block Boundaries
       addRectangles(
@@ -1448,13 +1466,13 @@ output$overview_legend <- renderPlot(
       # Layers Control (Making Icons as Overlay Layers)
       addLayersControl(data = pb_map,
         baseGroups = c("Street Map", "Dark No Labels"),
-        overlayGroups = c(
-          "Breeding Coded",
-          "Breeding Confirmed",
-          "Breeding Possible",
-          "Breeding Diurnal Hrs"
-          # "Winter Diurnal Hrs"
-          ),
+        # overlayGroups = c(
+        #   "Breeding Coded",
+        #   "Breeding Confirmed",
+        #   "Breeding Possible",
+        #   "Breeding Diurnal Hrs"
+        #   # "Winter Diurnal Hrs"
+        #   ),
         options = layersControlOptions(collapsed = FALSE)
       )
       ## Legends for Diurnal Hours, Nocturnal Hours, and Confirmed Species
@@ -1634,6 +1652,16 @@ output$overview_legend <- renderPlot(
   breedHrsHgtPct <- pmin(
     1.5,
     pb_map$breedHrsDiurnal / breedHrsDiurnalCriteriaMin
+    )
+
+  winterSppPal <- colorBin(
+    ncba_palette,
+    pb_map$winterCountDetected,
+    bins = c(0, (winterSppCriteriaMin), Inf)
+  )
+  winterSppHgtPct <- pmin(
+    1.5,
+    pb_map$winterCountDetected / winterSppCriteriaMin
     )
   
   # breedConfPal <- colorBin(
