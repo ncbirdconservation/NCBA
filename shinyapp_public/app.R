@@ -168,19 +168,19 @@ ui <- bootstrapPage(
           downloadButton("download_block_checklists", "Download Checklists")
         ),
         div(class = "col-md-4 panel",
-          h3("Block Needs (testing)"),
-          htmlOutput("block_needs_table")
-          # dataTableOutput("block_needs_table")
-        ),
-        div(class = "col-md-4 panel",
           h3("Survey Hours"),
           plotOutput("blockhours")
+        ),
+        div(class = "col-md-4 panel",
+          h3("Species Accumulation"),
+          plotOutput("spp_accumulation")
         ),
       ),
       div(class = "row", id = "spp_list_row",
         div(class = "col-md-4 panel",
-          h3("Species Accumulation"),
-          plotOutput("spp_accumulation")
+          h3("Block Needs (testing)"),
+          htmlOutput("block_needs_table")
+          # dataTableOutput("block_needs_table")
         ),
         div(class = "col-md-8 panel",
           h3("Species List"),
