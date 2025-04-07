@@ -1506,6 +1506,8 @@ num_bars <- 5
             "<br/>",
             STATUS,
             "</strong>",
+            # "<br/>Survey Year: ",
+
             "<br/>Breeding Coded: ",
             breedCountCoded,
             "</strong><br>Breeding Confirmed: ",
