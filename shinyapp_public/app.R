@@ -1113,7 +1113,7 @@ observe({
   #         )
   # })
 
-   ## SPECIES MAP  ----------------------------------------------------
+  ## SPECIES MAP  ----------------------------------------------------
   ### SETUP LEAFLET MAP, RENDER BASEMAP ------
   output$mysppmap <- renderLeaflet({
 
@@ -1176,6 +1176,35 @@ observe({
       print(head(sppblock_data))
 
       spp_blocks <- sppblock_data()
+      if (nrow(spp_blocks) > 0){
+        # print (paste0("spp by block len = ",nrow(sppblockmap_data)))
+        spp_blocks <- merge(
+          priority_block_data,
+          spp_blocks,
+          by = "ID_NCBA_BLOCK"
+          )
+        # print(paste0("spp block len = ",nrow(spp_blocks)))
+        print(head(spp_blocks))
+
+        spp_blocks <- mutate(
+          spp_blocks,
+          breedcat = case_when(
+            bc == "C4" ~ "C4 Confirmed",
+            bc == "C3" ~ "C3 Probable",
+            bc == "C2" ~ "C2 Possible",
+            TRUE ~ "C1 Observed"
+          )
+        )
+        print(head(spp_blocks))
+        spp_blocks <- mutate(
+          spp_blocks,
+          blocklink = sprintf(
+            'https://ebird.org/atlasnc/block/%s',
+            spp_blocks$ID_BLOCK_CODE.x
+            )
+        )
+        print(head(spp_blocks))
+      }
       output$block_breedcode_table <- renderTable(table(spp_blocks$breedcat))
 
       block_colors <- colorFactor(
