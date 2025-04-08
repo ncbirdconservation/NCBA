@@ -1135,17 +1135,25 @@ observe({
     print(paste0("spp selected = ", spp))
     
     spp_blocks <- get_spp_by_block(spp)
-    print(head(spp_blocks))
-  # print("spp block data retrieved")
-    if (nrow(spp_blocks) > 0){
-      # print (paste0("spp by block len = ",nrow(sppblockmap_data)))
+  })
+
+  observeEvent(
+    sppblock_data(),
+    {
+
+      spp_blocks <- sppblock_data()
+      print("species map data table:")
+      print(head(spp_blocks))
+      if (nrow(spp_blocks) > 0){
+        print("more than one detction of species")
+
       spp_blocks <- merge(
         priority_block_data,
         spp_blocks,
         by = "ID_NCBA_BLOCK"
         )
-      # print(paste0("spp block len = ",nrow(spp_blocks)))
-      print(head(spp_blocks))
+        
+      # print(head(spp_blocks))
 
       spp_blocks <- mutate(
         spp_blocks,
@@ -1156,20 +1164,7 @@ observe({
           TRUE ~ "C1 Observed"
         )
       )
-
-    }
-    return(spp_blocks)
-  })
-
-  observeEvent(
-    sppblock_data(),
-    {
-      print("species map data table:")
-      print(head(sppblock_data))
-
-      spp_blocks <- sppblock_data()
-      if (nrow(spp_blocks) > 0){
-        print(head(spp_blocks))
+        # print(head(spp_blocks))
         spp_blocks <- mutate(
           spp_blocks,
           blocklink = sprintf(
@@ -1177,8 +1172,8 @@ observe({
             spp_blocks$ID_BLOCK_CODE.x
             )
         )
-        print(head(spp_blocks))
-      }
+        # print(head(spp_blocks))
+ 
       output$block_breedcode_table <- renderTable(table(spp_blocks$breedcat))
 
       block_colors <- colorFactor(
@@ -1234,6 +1229,7 @@ observe({
         title = "Breeding Category",
         opacity = 1
         )
+    }
     }
   )
 

@@ -135,45 +135,7 @@ get_spp_by_block <- function(species){
 # Retrieves data from MongoDB Atlas with max behavior category for each 
 # spp/block combination for the passed species common name
 
-#   pipeline <- sprintf(
-#     '[
-#     {
-#         "$match": {
-#             "PRIORITY_BLOCK": "1", 
-#             "OBSERVATIONS.COMMON_NAME": "%s"
-#         }
-#     }, {
-#         "$unwind": {
-#             "path": "$OBSERVATIONS"
-#         }
-#     }, {
-#         "$match": {
-#             "OBSERVATIONS.COMMON_NAME": "%s"
-#         }
-#     }, {
-#         "$project": {
-#             "species": "$OBSERVATIONS.COMMON_NAME", 
-#             "breedcat": "$OBSERVATIONS.BREEDING_CATEGORY", 
-#             "ID_NCBA_BLOCK": 1
-#         }
-#     }, {
-#         "$group": {
-#             "_id": "$ID_NCBA_BLOCK", 
-#             "ID_NCBA_BLOCK" : {
-#               "$first":"$ID_NCBA_BLOCK"
-#             },
-#             "bc": {
-#                 "$max": "$breedcat"
-#             }
-#         }
-#     }
-# ]',
-# species,
-# species
-#   )
-#   mongodata <- m$aggregate(pipeline)
-
-# pulls from block_summaries collection
+# pulls from BLOCK_SUMMARIES collection
   pipeline <- sprintf(
     '[
       {
@@ -190,6 +152,7 @@ get_spp_by_block <- function(species){
       {
         "$project":
           {
+            "_id" : 0,
             "ID_NCBA_BLOCK": 1,
             "bc": "$sppList.breedMaxCategory"
           }
@@ -198,39 +161,6 @@ get_spp_by_block <- function(species){
     species
     )
   mongodata <- m_block_summaries$aggregate(pipeline)
-# pulls from ebd_observations  collection
-  # pipeline <- sprintf(
-  #   '[
-  #     {
-  #       "$match": {
-  #           "COMMON_NAME": "%s"
-  #         }
-  #     },
-  #     {
-  #       "$group": {
-  #         "_id": "$ID_NCBA_BLOCK",
-  #         "bcat": {
-  #           "$max": "$BREEDING_CATEGORY" 
-  #         },
-  #         "ID_NCBA_BLOCK" : {
-  #           "$first" : "$ID_NCBA_BLOCK" 
-  #         }
-  #       }
-  #     },
-  #     {
-  #       "$project":
-  #         {
-  #           "ID_NCBA_BLOCK": 1,
-  #           "bc": "$bcat"
-  #         }
-  #     }
-  #   ]',
-  #   species
-  #   )
-  # mongodata <- m_observations$aggregate(pipeline)
-
-
-
 
   return(mongodata)
 
