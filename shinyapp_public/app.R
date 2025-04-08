@@ -1131,27 +1131,18 @@ observe({
   ### ADD SYMBOLOGY FOR SELECTED SPECIES ------
   sppblock_data <- reactive({
     # print(input$sppmap_select)
-      spp <- input$sppmap_select
-    # print(spp)
-      get_spp_by_block(spp)
-  })
-
-  observeEvent(
-    sppblock_data(),
-    {
-    # print("retrieving spp block data")
-      sppblockmap_data <- sppblock_data()
-    # print("spp block data retrieved")
-
-      if (nrow(sppblockmap_data) > 0){
+    spp <- input$sppmap_select
+    
+    spp_blocks <- get_spp_by_block(spp)
+  # print("spp block data retrieved")
+    if (nrow(spp_blocks) > 0){
       # print (paste0("spp by block len = ",nrow(sppblockmap_data)))
       spp_blocks <- merge(
         priority_block_data,
-        sppblockmap_data,
+        spp_blocks,
         by = "ID_NCBA_BLOCK"
         )
       # print(paste0("spp block len = ",nrow(spp_blocks)))
-
 
       spp_blocks <- mutate(
         spp_blocks,
@@ -1162,7 +1153,7 @@ observe({
           TRUE ~ "C1 Observed"
         )
       )
-      # print(head(spp_blocks))
+      print(head(spp_blocks))
       spp_blocks <- mutate(
         spp_blocks,
         blocklink = sprintf(
@@ -1170,6 +1161,17 @@ observe({
           spp_blocks$ID_BLOCK_CODE.x
           )
       )
+    }
+    return(spp_blocks)
+  })
+
+  observeEvent(
+    sppblock_data(),
+    {
+      print("species map data table:")
+      print(head(sppblock_data))
+
+      spp_blocks <- sppblock_data()
       output$block_breedcode_table <- renderTable(table(spp_blocks$breedcat))
 
       block_colors <- colorFactor(
@@ -1224,8 +1226,7 @@ observe({
         ),
         title = "Breeding Category",
         opacity = 1
-        ) 
-        }
+        )
     }
   )
 
