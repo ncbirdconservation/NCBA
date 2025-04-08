@@ -1132,8 +1132,10 @@ observe({
   sppblock_data <- reactive({
     # print(input$sppmap_select)
     spp <- input$sppmap_select
+    print(paste0("spp selected = ", spp))
     
     spp_blocks <- get_spp_by_block(spp)
+    print(head(spp_blocks))
   # print("spp block data retrieved")
     if (nrow(spp_blocks) > 0){
       # print (paste0("spp by block len = ",nrow(sppblockmap_data)))
@@ -1143,6 +1145,7 @@ observe({
         by = "ID_NCBA_BLOCK"
         )
       # print(paste0("spp block len = ",nrow(spp_blocks)))
+      print(head(spp_blocks))
 
       spp_blocks <- mutate(
         spp_blocks,
@@ -1161,6 +1164,7 @@ observe({
           spp_blocks$ID_BLOCK_CODE.x
           )
       )
+      print(head(spp_blocks))
     }
     return(spp_blocks)
   })
