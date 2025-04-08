@@ -231,12 +231,7 @@ ui <- bootstrapPage(
               )
             )
           ),
-          div(tableOutput("block_breedcode_table")),
-          div(
-            # class = "float-end",
-            # style = "width: 30%",
-            downloadButton("download_sppmap_table", "Download")
-          )
+          div(tableOutput("block_breedcode_table"))
         ),
         div(
           class = "col-md-10",
@@ -1004,24 +999,6 @@ observe({
     content = function ( file ) {
       write.csv(
         block_table_data()$blocksum,
-        file,
-        row.names = TRUE
-        )
-    }
-  )
-  
-  output$download_sppmap_table <- downloadHandler(
-    filename = function() {
-      paste(
-        input$sppmap_select,
-        "_sppmap_table",
-        ".csv",
-        sep = ""
-      )
-    },
-    content = function ( file ) {
-      write.csv(
-        sppblock_data(),
         file,
         row.names = TRUE
         )
