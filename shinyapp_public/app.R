@@ -1135,26 +1135,7 @@ observe({
     print(paste0("spp selected = ", spp))
     
     spp_blocks <- get_spp_by_block(spp)
-  })
-
-  observeEvent(
-    sppblock_data(),
-    {
-
-      spp_blocks <- sppblock_data()
-      print("species map data table:")
-      print(head(spp_blocks))
-      if (nrow(spp_blocks) > 0){
-        print("more than one detction of species")
-
-      spp_blocks <- merge(
-        priority_block_data,
-        spp_blocks,
-        by = "ID_NCBA_BLOCK"
-        )
-        
-      # print(head(spp_blocks))
-
+    if (nrow(spp_blocks)>0){
       spp_blocks <- mutate(
         spp_blocks,
         breedcat = case_when(
@@ -1164,7 +1145,24 @@ observe({
           TRUE ~ "C1 Observed"
         )
       )
-        # print(head(spp_blocks))
+
+    }
+    return(spp_blocks)
+  })
+
+  observeEvent(
+    sppblock_data(),
+    {
+
+      spp_blocks <- sppblock_data()
+
+      if (nrow(spp_blocks) > 0){
+
+        spp_blocks <- merge(
+          priority_block_data,
+          spp_blocks,
+          by = "ID_NCBA_BLOCK"
+          )
         spp_blocks <- mutate(
           spp_blocks,
           blocklink = sprintf(
@@ -1172,7 +1170,7 @@ observe({
             spp_blocks$ID_BLOCK_CODE.x
             )
         )
-        # print(head(spp_blocks))
+
  
       output$block_breedcode_table <- renderTable(table(spp_blocks$breedcat))
 
