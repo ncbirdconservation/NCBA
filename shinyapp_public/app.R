@@ -140,7 +140,8 @@ ui <- bootstrapPage(
               "NONE"),
             # calls unique values from the ID_NCBA_BLOCK column
             # in the previously created table
-            selected = "NONE")
+            selected = "NONE"),
+            div(id = "block_link")
           ),
           div(class = "tab-control-group",
             radioButtons("season_radio", label = h4("Season"),
@@ -345,14 +346,25 @@ observe({
   # Creating a reactive value so it can be updated outside of rv_block$id
   # I think rv_block$id could just be totally replaced with rv_block$id?
 
-  rv_block <- reactiveValues(chosen = NULL, id = NULL)
+  rv_block <- reactiveValues(chosen = NULL, id = NULL, code = NULL)
+
+  observeEvent(
+    rv_block$id,
+    {
+      block_data <- dplyr::filter(
+        priority_block_data,
+        ID_NCBA_BLOCK == rv_block$id
+      )
+      rv_block$code <- block_data$ID_BLOCK_CODE.x
+    }
+  )
 
   #observe events where block changes
   # block map click
   observeEvent(
     input$mymap_shape_click,
     {
-      rv_block$id = input$mymap_shape_click$id
+      rv_block$id <- input$mymap_shape_click$id
       # print("block map clicked")
     }
   )
@@ -360,12 +372,12 @@ observe({
   observeEvent(
     input$APBlock,
     {
-      rv_block$id = input$APBlock
+      rv_block$id <- input$APBlock
       # print("Block selected from drop down list")
       if(input$APBlock == "NONE")
-        rv_block$id = NULL
+        rv_block$id <- NULL
       else
-        rv_block$id = input$APBlock
+        rv_block$id <- input$APBlock
     },
     ignoreInit = TRUE
   )
@@ -374,7 +386,7 @@ observe({
   observeEvent(
     input$overview_map_shape_click,
     {
-      rv_block$id = input$overview_map_shape_click$id
+      rv_block$id <- input$overview_map_shape_click$id
       # print("overview map clicked")
 
       #change focus to blocks tab
@@ -387,26 +399,40 @@ observe({
   )
 
   # when rv_block changes, do the following
+       ## update link to eBird page
+  output$block_link <- renderUI({
+    req(rv_block$code)
+    # print("updating block link")
+    block_link <- paste0(
+      '<a href="https://ebird.org/atlasnc/block/',
+      rv_block$code$ID_BLOCK_CODE.x,
+      '" target="_blank">',
+      'eBird Block Page',
+      '</a>'
+    )
+    print(block_link)
+    HTML(block_link)
+  })
   observeEvent(
-    rv_block$id,
+    rv_block$clientData,
     {
-      # print(paste0("rv_block changed to ", rv_block$id))
       b <- rv_block$id
-      # if (b %in% input$APBlock & b != input$APBlock){
-      #   # block is in drop-down, and is not the current block
-      #   selected = input$APBlock[input$APBlock != b]
-      # } else {
-        # selected = b
-        updateSelectInput(
-          session,
-          "APBlock",
-          selected = b
+      updateSelectInput(
+        session,
+        "APBlock",
+        selected = b
+      )
+     
+      ## get block data
+      block_info <- dplyr::filter(
+        priority_block_data,
+        ID_NCBA_BLOCK == rv_block$id
         )
-      # }
+
+      print(block_info)
+
 
       ## Update map - zoom in
-      block_info <- dplyr::filter(priority_block_data, ID_NCBA_BLOCK == rv_block$id)
-
       #calculate the center of the block
       block_center_lat <- block_info$SE_Y +
         ((block_info$NW_Y - block_info$SE_Y)/2)
