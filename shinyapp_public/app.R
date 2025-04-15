@@ -141,7 +141,7 @@ ui <- bootstrapPage(
             # calls unique values from the ID_NCBA_BLOCK column
             # in the previously created table
             selected = "NONE"),
-            div(id = "block_link")
+            uiOutput("block_link")
           ),
           div(class = "tab-control-group",
             radioButtons("season_radio", label = h4("Season"),
@@ -401,20 +401,27 @@ observe({
   # when rv_block changes, do the following
        ## update link to eBird page
   output$block_link <- renderUI({
-    req(rv_block$code)
-    # print("updating block link")
-    block_link <- paste0(
-      '<a href="https://ebird.org/atlasnc/block/',
-      rv_block$code$ID_BLOCK_CODE.x,
-      '" target="_blank">',
-      'eBird Block Page',
-      '</a>'
-    )
-    print(block_link)
+    
+    if (is.null(rv_block$id)) {
+      block_link <- paste0(
+        '<a class="hlink" href="https://ncbirdatlas.org" target="_blank">',
+        'eBird Block Page</a>'
+      )
+    } else{
+      # print("updating block link")
+      block_link <- paste0(
+        '<a class="hlink" href="https://ebird.org/atlasnc/block/',
+        rv_block$code,
+        '" target="_blank">',
+        'eBird Block Page',
+        '</a>'
+      )
+    }
     HTML(block_link)
   })
+
   observeEvent(
-    rv_block$clientData,
+    rv_block$id,
     {
       b <- rv_block$id
       updateSelectInput(
@@ -423,14 +430,10 @@ observe({
         selected = b
       )
      
-      ## get block data
       block_info <- dplyr::filter(
         priority_block_data,
         ID_NCBA_BLOCK == rv_block$id
         )
-
-      print(block_info)
-
 
       ## Update map - zoom in
       #calculate the center of the block
@@ -448,51 +451,11 @@ observe({
     }
   )
 
-  # # grab id from map click
-  # observeEvent (input$mymap_shape_click, {
-  #   blockmap_info <- input$mymap_shape_click
-  #   blockmap_info_id <- input$mymap_shape_click$id
-
-  #   # rv_block$chosen <- blockmap_info
-  #   rv_block$id <-  blockmap_info_id
-  # })
-
-  # current block changes when map is clicked
-  # current_block_r <- reactive({
-  #   print("map clicked")
-  #   print(rv_block$id)
-  #   paste(rv_block$id)
-  # })
-
-  # when map block clicked, update select input drop down list
-  # and when clicking current block it doesn't clear the name
-  # from the drop down list
-  # observeEvent(input$mymap_shape_click, {
-  #   print("Updating drop down list to match clicked block")
-  #   click <- input$mymap_shape_click
-  #   if(click$id %in% input$APBlock & click$id != input$APBlock)
-  #     selected = input$APBlock[input$APBlock != click$id]
-  #   else
-  #     selected = c(input$APBlock, click$id)
-  #   updateSelectInput(session, "APBlock",
-  #                     selected = selected)
-  # })
-
-  #### React to Change of Selected Block in Drop down list instead of click,
-  ## a bit redundant with the one above but I am not sure how to combine them?
-  # observeEvent(input$APBlock, {
-  #   print("Block selected from drop down list")
-  #   blockmap_list_id <- input$APBlock
-  #   if(input$APBlock == "NONE")
-  #     rv_block$id = NULL
-  #   else
-  #     rv_block$id = blockmap_list_id
-  # })
 
   # retrieves current block records when rv_block$id changes
   current_block_ebd <- reactive({
     req(rv_block$id)
-    # print("retrieving current block data")
+    
     #build query string from parameters
     #philosophy:
     #   - if block changes, rerun query to retrieve from
@@ -553,22 +516,6 @@ observe({
 
 
   # UPDATE CHECKLIST COUNT
-  # output$checklist_counter <- renderUI({
-  #   req(
-  #     current_block_ebd(),
-  #     current_block_ebd_filtered(),
-  #     checklist_count(),
-  #     checklist_filtered_count())
-
-  #   all <- paste(checklist_count(), " Total Checklists Found")
-
-  #   filtered <- paste(
-  #     checklist_filtered_count(),
-  #     " Filtered Checklists Found")
-
-  #   HTML(paste(all, filtered, sep='<br/>'))
-
-  # })
 
   #### FILTERS BLOCK RECORDS WHEN CRITERIA CHANGES
   #     RETURNS CHECKLIST LEVEL DATA ------
@@ -608,10 +555,7 @@ observe({
         )
   })
 
-
-
-
-  # # POPULATE LABEL FOR CURRENT BLOCK
+  ## POPULATE LABEL FOR CURRENT BLOCK
 
   output$download_block_checklists <- downloadHandler(
     filename = function() {
