@@ -408,7 +408,6 @@ observe({
         'eBird Block Page</a>'
       )
     } else{
-      # print("updating block link")
       block_link <- paste0(
         '<a class="hlink" href="https://ebird.org/atlasnc/block/',
         rv_block$code,
