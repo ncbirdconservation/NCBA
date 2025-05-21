@@ -100,7 +100,17 @@ current_block <- ""
 enableBookmarking("url")
 sd <- get_safe_dates()
 
-
+createGMapsLink <- function(val) {
+  sprintf('<a href="https://www.google.com/#q=%s" target="_blank" class="btn btn-primary">Info</a>',val)
+}
+createChecklistLink <- function(val) {
+  str_interp(c(
+    '<a href="https://www.ebird.org/checklist/${val}"',
+    'target="_blank" class="btn btn-primary">${val}</a>'
+    )
+  )
+  return('<a href="https://ebird.org">test link</a>')
+}
 # Define UI for Quackalacky Data app -----------------------------------------
 ui <- bootstrapPage(
   # titlePanel("NC Bird Atlas Explorer"),
@@ -179,9 +189,11 @@ ui <- bootstrapPage(
       ),
       div(class = "row", id = "spp_list_row",
         div(class = "col-md-4 panel",
-          h3("Block Needs (testing)"),
-          htmlOutput("block_needs_table")
+          h3("S7 Eligible Species"),
+          dataTableOutput("block_s7_table"),
+          # htmlOutput("block_needs_table")
           # dataTableOutput("block_needs_table")
+          downloadButton("download_s7list", "Download")
         ),
         div(class = "col-md-8 panel",
           h3("Species List"),
@@ -324,7 +336,7 @@ observe({
         '<a style="text-decoration:none;cursor:default;color:#FFFFFF;"',
         ' class="active" href="#">NC Bird Atlas Explorer</a>',
         '<p style="font-style:italic;font-size: 0.62em;">',
-        'Last Updated ', get_db_status(), '</p>'
+        'Last Updated ', get_db_status(), '</p>' # nolint: object_usage_linter.
         )
       )
   })
@@ -846,52 +858,52 @@ observe({
   })
 
   #### DISPLAY BLOCK NEEDS ------
-  bn_block <- reactive({
-    if (length(rv_block$id) > 0) {
-      rv_block$id
-    } else {
-      "NONE"
-    }
-  })
-  output$block_needs_table <- renderUI({
-    bn <- get_block_needs(block = bn_block())
+  # bn_block <- reactive({
+  #   if (length(rv_block$id) > 0) {
+  #     rv_block$id
+  #   } else {
+  #     "NONE"
+  #   }
+  # })
+  # output$block_needs_table <- renderUI({
+  #   bn <- get_block_needs(block = bn_block())
     
-    bn_breed_html <- "<h4>Breeding</h4>"
-    bn_winter_html <- "<h4>Wintering</h4>"
-    key_html <- paste0(
-      "<div style='font-size:0.95rem;padding:10px 0px;text-align:center;'>",
-      "<span style='color:", as.character(priority_colors["High"]),
-      "'>High Priority</span>, ",
-      "<span style='color:", as.character(priority_colors["Medium"]),
-      "'>Medium Priority</span>, ",
-      "<span style='color:", as.character(priority_colors["Low"]),
-      "'>Low Priority</span></div>"
-    )
+  #   bn_breed_html <- "<h4>Breeding</h4>"
+  #   bn_winter_html <- "<h4>Wintering</h4>"
+  #   key_html <- paste0(
+  #     "<div style='font-size:0.95rem;padding:10px 0px;text-align:center;'>",
+  #     "<span style='color:", as.character(priority_colors["High"]),
+  #     "'>High Priority</span>, ",
+  #     "<span style='color:", as.character(priority_colors["Medium"]),
+  #     "'>Medium Priority</span>, ",
+  #     "<span style='color:", as.character(priority_colors["Low"]),
+  #     "'>Low Priority</span></div>"
+  #   )
 
-    if (!is.na(as.character(bn[1, "SEASON"]))) {
-      for (row in 1 : nrow(bn)) {
+  #   if (!is.na(as.character(bn[1, "SEASON"]))) {
+  #     for (row in 1 : nrow(bn)) {
 
-        line <- sprintf(
-          "<div style='padding: 0px 10px; color:%s'><strong>%s</strong>: %s</div>",
-          as.character(priority_colors[as.character(bn[row, "PRIORITY"])]),
-          bn[row, "CRITERIA"],
-          bn[row, "DESCRIPTION"]
-          # bn[row, "DATE"]
-        )
-        if (bn[row, "SEASON"] == "Breeding") {
-          bn_breed_html <- paste0(bn_breed_html, line)
-        } else {
-          bn_winter_html <- paste0(bn_winter_html, line)
-        }
-      }
-    } else {
-      none_html <- "<div style='padding: 0px 20px;'>None</div>"
-      bn_breed_html <- paste0(bn_breed_html, none_html)
-      bn_winter_html <- paste0(bn_winter_html, none_html)
-    }
+  #       line <- sprintf(
+  #         "<div style='padding: 0px 10px; color:%s'><strong>%s</strong>: %s</div>",
+  #         as.character(priority_colors[as.character(bn[row, "PRIORITY"])]),
+  #         bn[row, "CRITERIA"],
+  #         bn[row, "DESCRIPTION"]
+  #         # bn[row, "DATE"]
+  #       )
+  #       if (bn[row, "SEASON"] == "Breeding") {
+  #         bn_breed_html <- paste0(bn_breed_html, line)
+  #       } else {
+  #         bn_winter_html <- paste0(bn_winter_html, line)
+  #       }
+  #     }
+  #   } else {
+  #     none_html <- "<div style='padding: 0px 20px;'>None</div>"
+  #     bn_breed_html <- paste0(bn_breed_html, none_html)
+  #     bn_winter_html <- paste0(bn_winter_html, none_html)
+  #   }
 
-    HTML(paste0(bn_breed_html, bn_winter_html, key_html))
-  })
+  #   HTML(paste0(bn_breed_html, bn_winter_html, key_html))
+  # })
   # output$block_needs_table <- renderDataTable(
   #   get_block_needs(block = bn_block()),
   #   options = list(
@@ -919,6 +931,7 @@ observe({
       ' "as": "tax"}},',
       '{"$unwind": {"path": "$tax"}},',
       '{"$project": {',
+      '"_id":0,',
       '"TAX_ORDER": "$tax.TAXON_ORDER_2022",',
       '"SPECIES": "$sppList.COMMON_NAME",',
       '"BREEDING_STATUS": "$sppList.breedStatus",',
@@ -941,6 +954,65 @@ observe({
       write.csv(block_spp_list(), file, row.names = TRUE)
     }
   )
+
+  block_s7_list <- reactive({
+    cblock <- rv_block$id
+
+    block_s7_pipeline <- str_interp(c(
+      '[{"$match":{"_id": "${cblock}"}},',
+      '{"$unwind":{"path": "$sppList"}},',
+      '{"$match":{"sppList.breedMaxCategory": "C2"}},',
+      '{"$project":{',
+        '"COMMON_NAME": "$sppList.COMMON_NAME",',
+        '"S7_CHECKLISTS": "$sppList.s7EligibleChecklists",',
+        '"S7_CHECKLISTS_COUNT": {"$size":"$sppList.s7EligibleChecklists"}}},',
+      '{"$match":{"S7_CHECKLISTS_COUNT": {"$ne": 0}}},',
+      '{"$unwind":{"path": "$S7_CHECKLISTS"}},',
+      '{"$project":{',
+        '"COMMON_NAME": 1, "CHECKLIST": "$S7_CHECKLISTS.SEI",',
+        '"OBS_DATE": "$S7_CHECKLISTS.OBS_DATE",',
+        '"LATITUDE": "$S7_CHECKLISTS.LATITUDE",',
+        '"LONGITUDE": "$S7_CHECKLISTS.LONGITUDE"}},',
+      '{"$addFields":{"OBS_DATE_DT": {',
+        '"$dateFromString":{"dateString":"$OBS_DATE","format": "%Y-%m-%d"}}}',
+        '},',
+      '{"$addFields":{"DAYS_SINCE": {',
+        '"$dateDiff": {"startDate": "$OBS_DATE_DT","endDate": "$$NOW",',
+        '"unit": "day"}}}},',
+      '{"$match":{"DAYS_SINCE": {"$gte": 7}}},',
+      '{"$project":{"DAYS_SINCE":0,"OBS_DATE_DT":0,"OBS_DATE":0,"_id":0}}',
+      ']'
+    ))
+    block_s7_table <- m_block_summaries$aggregate(block_s7_pipeline)
+
+  })
+  output$block_s7_table <- renderDataTable(
+    {
+      block_s7_table <- block_s7_list()
+      if (length(block_s7_table) != 0) {
+        # mutate(block_s7_table, CHECKLIST2 = createChecklistLink(CHECKLIST))
+        # block_s7_table %>%
+          # select(COMMON_NAME, CHECKLIST, LATITUDE, LONGITUDE) %>%
+          # dplyr::mutate(CHECKLIST2 = createChecklistLink(CHECKLIST))
+          # dplyr::mutate(CHECKLIST = createChecklistLink(CHECKLIST))
+        # print(head(block_s7_table))
+        block_s7_table
+      }
+    }, 
+    rownames = FALSE,
+    escape = FALSE
+  )
+
+  
+  output$download_s7list <- downloadHandler(
+    filename = function() {
+      paste(rv_block$id,"_s7_eligible_list", ".csv", sep = "")
+    },
+    content = function ( file ) {
+      write.csv(block_s7_list(), file, row.names = TRUE)
+    }
+  )
+
   ## Block Table Tab -------------------------------------------------
   block_table_data <- reactive({
     req(input$block_table_radio)
