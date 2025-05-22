@@ -100,16 +100,16 @@ current_block <- ""
 enableBookmarking("url")
 sd <- get_safe_dates()
 
-createGMapsLink <- function(val) {
-  sprintf('<a href="https://www.google.com/#q=%s" target="_blank" class="btn btn-primary">Info</a>',val)
+createGMapsLink <- function(lat, lon) {
+  paste0(
+    'https://www.google.com/maps/search/?',
+    'api=1&query=', lat, '%2C', lon
+  )
 }
 createChecklistLink <- function(val) {
-  str_interp(c(
-    '<a href="https://www.ebird.org/checklist/${val}"',
-    'target="_blank" class="btn btn-primary">${val}</a>'
-    )
+  paste0(
+    "https://www.ebird.org/checklist/", val
   )
-  return('<a href="https://ebird.org">test link</a>')
 }
 # Define UI for Quackalacky Data app -----------------------------------------
 ui <- bootstrapPage(
@@ -985,20 +985,38 @@ observe({
     ))
     block_s7_table <- m_block_summaries$aggregate(block_s7_pipeline)
 
+    if (length(block_s7_table) > 0){
+      block_s7_table %>%
+        dplyr::mutate(
+          CHECKLIST_LINK = createChecklistLink(CHECKLIST),
+          COORDS_LINK = createGMapsLink(LATITUDE, LONGITUDE)
+        )
+    } else {
+      block_s7_table <- NULL
+    }
   })
   output$block_s7_table <- renderDataTable(
     {
-      block_s7_table <- block_s7_list()
-      if (length(block_s7_table) != 0) {
-        # mutate(block_s7_table, CHECKLIST2 = createChecklistLink(CHECKLIST))
-        # block_s7_table %>%
-          # select(COMMON_NAME, CHECKLIST, LATITUDE, LONGITUDE) %>%
-          # dplyr::mutate(CHECKLIST2 = createChecklistLink(CHECKLIST))
-          # dplyr::mutate(CHECKLIST = createChecklistLink(CHECKLIST))
-        # print(head(block_s7_table))
-        block_s7_table
-      }
-    }, 
+      req(block_s7_list())
+      block_s7_table <- block_s7_list() %>%
+        dplyr::mutate(
+          COORDS_LINK = NULL,
+          CHECKLIST_LINK = NULL,
+          CHECKLIST = paste0(
+            '<a href="', createChecklistLink(CHECKLIST),
+            '" target="_blank">', CHECKLIST, '</a>'
+          ),
+          COORDS = paste0(
+            '<a href="', createGMapsLink(LATITUDE, LONGITUDE),
+            '" target="_blank">', LATITUDE, ',', LONGITUDE,
+            '</a>'
+          ),
+          LATITUDE = NULL,
+          LONGITUDE = NULL
+        )
+
+      return(block_s7_table)
+    },
     rownames = FALSE,
     escape = FALSE
   )
@@ -1135,25 +1153,6 @@ observe({
           )
   })
 
-  ### ZOOM MAP TO SELECTED BLOCK ------
-  # observeEvent(rv_block$id, {
-  #     req(rv_block$id)
-  #     block_info <- dplyr::filter(block_data, ID_NCBA_BLOCK==rv_block$id)
-
-  #     #calculate the center of the block
-  #     block_center_lat <- block_info$SE_Y +
-  #       ((block_info$NW_Y - block_info$SE_Y)/2)
-  #     block_center_lng <- block_info$SE_X - 
-  #       ((block_info$SE_X - block_info$NW_X)/2)
-
-  #     leafletProxy("mymap", session) %>%
-  #       setView(
-  #         lat = block_center_lat,
-  #         lng = block_center_lng,
-  #         zoom = nc_block_zoom
-  #         )
-  # })
-
   ## SPECIES MAP  ----------------------------------------------------
   ### SETUP LEAFLET MAP, RENDER BASEMAP ------
   output$mysppmap <- renderLeaflet({
@@ -1173,7 +1172,7 @@ observe({
   sppblock_data <- reactive({
     # print(input$sppmap_select)
     spp <- input$sppmap_select
-    print(paste0("spp selected = ", spp))
+    # print(paste0("spp selected = ", spp))
     
     spp_blocks <- get_spp_by_block(spp)
     if (nrow(spp_blocks)>0){
