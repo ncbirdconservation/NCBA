@@ -247,14 +247,22 @@ ui <- bootstrapPage(
     ),
     tabPanel(
       "Overview",
-      div(
-        class = "col-md-11",
-        leafletOutput("overview_map", height = "70vh")
+      div(class = "row", id = "overview_map_row",
+        div(
+          class = "col-md-11",
+          leafletOutput("overview_map", height = "70vh")
+        ),
+        div(
+          class = "col-md-1",
+          h5("Legend"),
+          plotOutput("overview_legend")
+        )
       ),
-      div(
-        class = "col-md-1",
-        h5("Legend"),
-        plotOutput("overview_legend")
+      div(class = "row", id = "overview_table_row",
+        div(
+          class = "col-md-10",
+          dataTableOutput("overview_stats_table")
+        )
       )
     ),
     tabPanel(
@@ -1785,6 +1793,7 @@ num_bars <- 5
     1.5,
     pb_map$winterCountDetected / winterSppCriteriaMin
     )
+
   
   # breedConfPal <- colorBin(
   #   diurnal_palette,
@@ -1867,7 +1876,38 @@ num_bars <- 5
   ### Change to Block Tab when Clicking a Block in Effort Map
   ### 
 
-}  
+  # OVERVIEW Table
+  overview_stats <- reactive({
+    filter <- paste0('{"_id" : 0}')
+      out <- m_block_progress$find('{}',filter)
+      print (out)
+      colnames(out) <- c(
+            "Ecoregion",
+            "Incomplete Blocks",
+            "Coded Spp Needed",
+            "Blocks With Coded Spp Need",
+            "Confirmed Spp Needed",
+            "Blocks with Confirmed Spp Need",
+            "Possible Codes to Upgrade/Remove",
+            "Blocks with Possible Changes Needed"
+            )
+
+      return(out)
+  })
+
+  output$overview_stats_table <- renderDataTable(
+
+    overview_stats(),
+    options = list(
+        rownames = FALSE,
+        paging = FALSE,
+        searching = FALSE,
+        selection = "none"
+        )
+    )
+} 
+
+
 #
 # ## SUMMARIZE START TIMES --------------------------------------------------
 # plot(start_time_boxplot(ebird))

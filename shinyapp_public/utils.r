@@ -71,6 +71,11 @@ m_status <- mongo(
   url = URI,
   options = ssl_options(weak_cert_validation = T))
 
+m_block_progress <- mongo(
+  "BLOCK_PROGRESS_TABLE",
+  url = URI,
+  options = ssl_options(weak_cert_validation = T))
+
 get_safe_dates <- function(){
   sd <- m_sd$find("{}","{}")
 
