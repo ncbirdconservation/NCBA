@@ -113,23 +113,11 @@ createChecklistLink <- function(val) {
 }
 # Define UI for Quackalacky Data app -----------------------------------------
 ui <- bootstrapPage(
-  # titlePanel("NC Bird Atlas Explorer"),
   navbarPage(
     theme = shinytheme("flatly"), 
     collapsible = TRUE,
-    # theme = shinytheme("cosmo"), collapsible=TRUE,
     position = "static-top",
-    # header = 
     htmlOutput("navbar_title"),
-    # HTML(
-    #   paste0(
-    #     '<a style="text-decoration:none;cursor:default;color:#FFFFFF;"',
-    #     ' class="active" href="#">NC Bird Atlas Explorer</a>',
-    #     '<p style="font-style:italic;font-size: 0.62em;">',
-    #     'Last Updated Dec 31, 2023</p>'
-    #     )
-    #   ),
-    # ),
     id = "nav",
     windowTitle = "NCBA Explorer",
     tags$head(includeCSS("styles.css")),
@@ -165,7 +153,7 @@ ui <- bootstrapPage(
           )
         ),
         div(class = "col-md-10 panel",
-          leafletOutput("mymap", height = "50vh")
+          leafletOutput("mymap", height = "70vh")
         ),
       ),
       div(class = "row", id = "mid_row_panel",
