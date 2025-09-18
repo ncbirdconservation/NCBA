@@ -139,7 +139,8 @@ ui <- bootstrapPage(
             # calls unique values from the ID_NCBA_BLOCK column
             # in the previously created table
             selected = "NONE"),
-            uiOutput("block_link")
+            uiOutput("block_link"),
+            uiOutput("block_report_url")
           ),
           div(class = "tab-control-group",
             radioButtons("season_radio", label = h4("Season"),
@@ -203,7 +204,7 @@ ui <- bootstrapPage(
                 "Breeding" = "breeding",
                 "Non-Breeding" = "wintering"
               ),
-              selected = "wintering"
+              selected = "breeding"
             )
           ),
           div(
@@ -427,6 +428,29 @@ observe({
     HTML(block_link)
   })
 
+  ## update link to Block Report
+  output$block_report_url <- renderUI({
+    
+    if (is.null(rv_block$id)) {
+      block_report <- paste0(
+        '<a class="hlink" href="https://drive.google.com/drive/u/0/folders/1WIDSsWddPqbxuDbWjBj7Z8cIzL2v8vdq" target="_blank">',
+        'Block Reports</a><br/><span style="font-size:1.2rem;">(Status, Species List, and S7 List)</span>'
+      )
+    } else{
+      block_report <- paste0(
+        '<a class="hlink" href="',
+        current_block_summary()$REPORT_URL,
+        '" target="_blank">',
+        'Block Report',
+        '</a>',
+        '<br/><span style="font-size:1.2rem;">(Status, Species List, and S7 List)</span>'
+      )
+    }
+    HTML(block_report)
+  })
+
+
+
   observeEvent(
     rv_block$id,
     {
@@ -531,12 +555,14 @@ observe({
     req(current_block_ebd(), current_block_ebd_filtered())
 
     current_block_ebd_filtered() %>%
-      dplyr::filter(CATEGORY == "species") %>% # make sure only species counted
+      dplyr::filter(
+        (CATEGORY == "species" | CATEGORY == "issf") &
+        NCBA_HIDDEN == 0) %>% # make sure only species counted
       group_by(SAMPLING_EVENT_IDENTIFIER) %>%  # nolint
       mutate(SPP_COUNT = length(unique(GLOBAL_UNIQUE_IDENTIFIER))) %>%
       ungroup(SAMPLING_EVENT_IDENTIFIER) %>%
       distinct(SAMPLING_EVENT_IDENTIFIER, .keep_all = TRUE) %>%
-      select(ALL_SPECIES_REPORTED, SPP_COUNT, ATLAS_BLOCK,BCR_CODE,COUNTRY, # nolint
+      select(ALL_SPECIES_REPORTED, SPP_COUNT, BCR_CODE,COUNTRY, # nolint
         COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA, # nolint
         EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE, # nolint
         ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID, # nolint
@@ -544,6 +570,14 @@ observe({
         OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE, # nolint
         SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED, # nolint
         TRIP_COMMENTS,USFWS_CODE,YEAR,EBD_NOCTURNAL) %>% # nolint
+      # select(ALL_SPECIES_REPORTED, SPP_COUNT, ATLAS_BLOCK,BCR_CODE,COUNTRY, # nolint
+      #   COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA, # nolint
+      #   EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE, # nolint
+      #   ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID, # nolint
+      #   LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE, # nolint
+      #   OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE, # nolint
+      #   SAMPLING_EVENT_IDENTIFIER,STATE,STATE_CODE,TIME_OBSERVATIONS_STARTED, # nolint
+      #   TRIP_COMMENTS,USFWS_CODE,YEAR,EBD_NOCTURNAL) %>% # nolint
       # ADD ADDITIONAL FILTERS HERE AS NEEDED
       # create a column with the html link https://ebird.org/checklist/SID
       mutate(
@@ -955,20 +989,18 @@ observe({
     cblock <- rv_block$id
 
     block_s7_pipeline <- str_interp(c(
-      '[{"$match":{"_id": "${cblock}"}},',
-      '{"$unwind":{"path": "$sppList"}},',
-      '{"$match":{"sppList.breedMaxCategory": "C2"}},',
-      '{"$project":{',
-        '"COMMON_NAME": "$sppList.COMMON_NAME",',
-        '"S7_CHECKLISTS": "$sppList.s7EligibleChecklists",',
-        '"S7_CHECKLISTS_COUNT": {"$size":"$sppList.s7EligibleChecklists"}}},',
-      '{"$match":{"S7_CHECKLISTS_COUNT": {"$ne": 0}}},',
-      '{"$unwind":{"path": "$S7_CHECKLISTS"}},',
-      '{"$project":{',
-        '"COMMON_NAME": 1, "CHECKLIST": "$S7_CHECKLISTS.SEI",',
-        '"OBS_DATE": "$S7_CHECKLISTS.OBS_DATE",',
-        '"LATITUDE": "$S7_CHECKLISTS.LATITUDE",',
-        '"LONGITUDE": "$S7_CHECKLISTS.LONGITUDE"}},',
+      '[{"$match":{"_id": "${cblock}","s7EligibleChecklists":{"$gt":{}}}},',
+      '{"$addFields":{"S7_CHECKS":{"$objectToArray":"$s7EligibleChecklists"}}},',
+      '{"$unwind":{"path": "$S7_CHECKS"}},',
+      '{"$project":{"SEI":"$S7_CHECKS.k","OBS_DATE":"$S7_CHECKS.v.OBS_DATE",',
+        '"LATITUDE":"$S7_CHECKS.v.LATITUDE",',
+        '"LONGITUDE":"$S7_CHECKS.v.LONGITUDE",',
+        '"SPP_LIST":{"$reduce":{"input":"$S7_CHECKS.v.SPP_LIST",',
+        '"initialValue":"","in":{"$concat" :[',
+        '"$$value",{"$cond":[{"$eq":["$$value",""]},"",", "]},"$$this"',
+        ']} ',
+        '}}',
+      '}},',
       '{"$addFields":{"OBS_DATE_DT": {',
         '"$dateFromString":{"dateString":"$OBS_DATE","format": "%Y-%m-%d"}}}',
         '},',
@@ -984,7 +1016,7 @@ observe({
     if (length(block_s7_table) > 0){
       block_s7_table %>%
         dplyr::mutate(
-          CHECKLIST_LINK = createChecklistLink(CHECKLIST),
+          CHECKLIST_LINK = createChecklistLink(SEI),
           COORDS_LINK = createGMapsLink(LATITUDE, LONGITUDE)
         )
     } else {
@@ -999,14 +1031,15 @@ observe({
           COORDS_LINK = NULL,
           CHECKLIST_LINK = NULL,
           CHECKLIST = paste0(
-            '<a href="', createChecklistLink(CHECKLIST),
-            '" target="_blank">', CHECKLIST, '</a>'
+            '<a href="', createChecklistLink(SEI),
+            '" target="_blank">', SEI, '</a>'
           ),
           COORDS = paste0(
             '<a href="', createGMapsLink(LATITUDE, LONGITUDE),
             '" target="_blank">', LATITUDE, ',', LONGITUDE,
             '</a>'
           ),
+          SEI = NULL,
           LATITUDE = NULL,
           LONGITUDE = NULL
         )

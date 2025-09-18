@@ -212,7 +212,7 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
       if (filter == "{}") {
         # DEFINE DEFAULT FILTER that excludes unused fields
         filter <- paste0(
-          '{"ALL_SPECIES_REPORTED":1,"ATLAS_BLOCK":1,"BCR_CODE":1,',
+          '{"ALL_SPECIES_REPORTED":1, "BCR_CODE":1,',
           '"COUNTRY":1,"COUNTRY_CODE":1,"COUNTY":1,"COUNTY_CODE":1,',
           '"DURATION_MINUTES":1,"EFFORT_AREA_HA":1,"EFFORT_DISTANCE_KM":1,',
           '"GROUP_IDENTIFIER":1,"IBA_CODE":1,"ID_BLOCK_CODE":1,',
@@ -223,7 +223,22 @@ get_ebd_data <- function(query="{}", filter="{}", sd=safe_dates){
           '"PROJECT_CODE":1,"PROTOCOL_CODE":1,"PROTOCOL_TYPE":1,',
           '"SAMPLING_EVENT_IDENTIFIER":1,"STATE":1,"STATE_CODE":1,',
           '"TIME_OBSERVATIONS_STARTED":1,"TRIP_COMMENTS":1,',
-          '"USFWS_CODE":1,"YEAR":1, "EBD_NOCTURNAL":1}')
+          '"USFWS_CODE":1,"YEAR":1, "EBD_NOCTURNAL":1, "NCBA_HIDDEN" : 1',
+          '}')
+        # filter <- paste0(
+        #   '{"ALL_SPECIES_REPORTED":1,"ATLAS_BLOCK":1,"BCR_CODE":1,',
+        #   '"COUNTRY":1,"COUNTRY_CODE":1,"COUNTY":1,"COUNTY_CODE":1,',
+        #   '"DURATION_MINUTES":1,"EFFORT_AREA_HA":1,"EFFORT_DISTANCE_KM":1,',
+        #   '"GROUP_IDENTIFIER":1,"IBA_CODE":1,"ID_BLOCK_CODE":1,',
+        #   '"ID_NCBA_BLOCK":1,"LAST_EDITED_DATE":1,"LATITUDE":1,',
+        #   '"LOCALITY":1,"LOCALITY_ID":1,"LOCALITY_TYPE":1,"LONGITUDE":1,',
+        #   '"MONTH":1,"NUMBER_OBSERVERS":1,"OBSERVATIONS":1,',
+        #   '"OBSERVATION_DATE":1,"OBSERVER_ID":1,"PRIORITY_BLOCK":1,',
+        #   '"PROJECT_CODE":1,"PROTOCOL_CODE":1,"PROTOCOL_TYPE":1,',
+        #   '"SAMPLING_EVENT_IDENTIFIER":1,"STATE":1,"STATE_CODE":1,',
+        #   '"TIME_OBSERVATIONS_STARTED":1,"TRIP_COMMENTS":1,',
+        #   '"USFWS_CODE":1,"YEAR":1, "EBD_NOCTURNAL":1, "NCBA_HIDDEN" : 1',
+        #   '}')
 
         # fields excluded
         # "GEOM.coordinates":1,"GEOM.type":1,"NCBA_APPROVED":1,"NCBA_BLOCK":1,
@@ -386,6 +401,18 @@ priority_block_data <- filter(
     "COUNTY",
     "REGION")]
 
+## for overview map
+get_block_summaries <- function() {
+  blocksum_filter <- '{"sppList": 0, "ebird_web_data" : 0, "NCBA_EBD_VER": 0, "MOST_RECENT_EBD_DATE": 0}'
+
+  blocksum <- m_block_summaries$find("{}", blocksum_filter)
+
+  blocksum <- as.data.frame(blocksum)
+  
+  return(blocksum)
+}
+
+
 # merge block summary data with priority_block data
 priority_block_data <- priority_block_data %>%
   merge(
@@ -492,17 +519,6 @@ get_block_summary_table <- function(season) {
     "num_cols" = num_cols
   )
   return(response)
-}
-
-## for overview map
-get_block_summaries <- function() {
-  blocksum_filter <- '{"sppList": 0, "ebird_web_data" : 0, "NCBA_EBD_VER": 0, "MOST_RECENT_EBD_DATE": 0}'
-
-  blocksum <- m_block_summaries$find("{}", blocksum_filter)
-
-  blocksum <- as.data.frame(blocksum)
-  
-  return(blocksum)
 }
 
 get_db_status <- function() {
