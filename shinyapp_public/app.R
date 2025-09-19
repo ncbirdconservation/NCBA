@@ -90,6 +90,8 @@ ncba_failed <- "#dd0000"
 ncba_success <- "#43AA8B"
 ncba_white <- "#ffffff"
 ncba_gray <- "#aaaaaa"
+ncba_breed_complete <- "#43AA8B"
+ncba_winter_complete <- "#895129"
 priority_colors <- c(
   "High" = "#dd0000",
   "Medium" = "#daaa00",
@@ -1698,11 +1700,19 @@ num_bars <- 5
       )
     ) %>%
     mutate(
-      strokeComplete = ifelse(
-        STATUS == "Complete", ncba_blue,
-        ncba_failed
+      strokeComplete = case_when(
+        STATUS == "Complete" ~ ncba_blue,
+        BREEDING_COMPLETE == 1 ~ ncba_breed_complete,
+        WINTERING_COMPLETE == 1 ~ ncba_winter_complete,
+        TRUE ~ ncba_failed
       )
     ) %>%
+    # mutate(
+    #   strokeComplete = ifelse(
+    #     STATUS == "Complete", ncba_blue,
+    #     ncba_failed
+    #   )
+    # ) %>%
     mutate(
       fillOpac = ifelse(
         STATUS == "Complete", 0.9,
