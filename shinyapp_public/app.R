@@ -1133,15 +1133,31 @@ observe({
       )
     ) %>%
     mutate(
-      colorComplete = ifelse(
-        STATUS == "Complete", ncba_blue, "#aaaaaa"
+      colorComplete = case_when(
+        STATUS == "Complete" ~ ncba_blue,
+        BREEDING_COMPLETE == 1 ~ ncba_breed_complete,
+        WINTERING_COMPLETE == 1 ~ ncba_winter_complete,
+        TRUE ~ ncba_gray
       )
     ) %>%
+    # mutate(
+    #   colorComplete = ifelse(
+    #     STATUS == "Complete", ncba_blue, "#aaaaaa"
+    #   )
+    # ) %>%
     mutate(
       fillOpac = ifelse(
         STATUS == "Complete", 0.8, 0.05
       )
     )
+    print(priority_block_data[
+      priority_block_data$ID_NCBA_BLOCK == "SILER_CITY-SE",
+      "BREEDING_COMPLETE"
+    ])
+    print(priority_block_data[
+      priority_block_data$ID_NCBA_BLOCK == "SILER_CITY-SE",
+      "colorComplete"
+    ])
 
     leaflet() %>%
       setView(
@@ -1166,7 +1182,7 @@ observe({
         lat1 = ~ NW_Y,
         lng2 = ~ SE_X,
         lat2 = ~ SE_Y,
-        weight = 2,
+        weight = 3,
         # color = ncba_white,
         color = ~ colorComplete,
         opacity = 0.9,
@@ -1176,6 +1192,15 @@ observe({
         fillOpacity = ~ fillOpac,
         fill = TRUE,
         label = ~ ID_NCBA_BLOCK
+        ) %>%
+        addLegend(
+          "bottomright",
+          colors = c(ncba_blue, ncba_breed_complete, ncba_winter_complete,
+            ncba_gray),
+          labels = c("Complete", "Breeding Complete", "Wintering Complete",
+            "Incomplete"),
+          title = "Block Status",
+          opacity = 1
         ) %>%
         addLayersControl(
           data = priority_block_data,
@@ -1594,8 +1619,9 @@ num_bars <- 5
         fillColor = ~ fillComplete,
         fill = TRUE,
         fillOpacity = ~ fillOpac,
-        weight = 2.5,
+        weight = 4,
         color = ~ strokeComplete,
+        opacity = 0.8,
         label = ~paste0(
             "<strong>",
             ID_NCBA_BLOCK,
@@ -1707,12 +1733,6 @@ num_bars <- 5
         TRUE ~ ncba_failed
       )
     ) %>%
-    # mutate(
-    #   strokeComplete = ifelse(
-    #     STATUS == "Complete", ncba_blue,
-    #     ncba_failed
-    #   )
-    # ) %>%
     mutate(
       fillOpac = ifelse(
         STATUS == "Complete", 0.9,
@@ -1725,7 +1745,7 @@ num_bars <- 5
         FALSE
       )
     )
-
+    
   ### Centroids of Priority Blocks
   centr_x <- (pb_map$NW_X + pb_map$SE_X)/2
   centr_y <- (pb_map$NW_Y + pb_map$SE_Y)/2
@@ -1923,7 +1943,7 @@ num_bars <- 5
   overview_stats <- reactive({
     filter <- paste0('{"_id" : 0}')
       out <- m_block_progress$find('{}',filter)
-      print (out)
+      # print (out)
       colnames(out) <- c(
             "Ecoregion",
             "Incomplete Blocks",
