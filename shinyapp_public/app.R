@@ -164,29 +164,29 @@ ui <- bootstrapPage(
           h3("Statistics"),
           h4(htmlOutput("block_status")),
           tabsetPanel(
-            tabPanel("Breeding", htmlOutput("block_breeding_stats")),
             tabPanel("Wintering", htmlOutput("block_wintering_stats")),
+            tabPanel("Breeding", htmlOutput("block_breeding_stats")),
           ),
           downloadButton("download_block_checklists", "Download Checklists")
         ),
-        div(class = "col-md-4 panel",
+        div(class = "col-md-8 panel",
           h3("Survey Hours"),
           plotOutput("blockhours")
         ),
-        div(class = "col-md-4 panel",
-          h3("Species Accumulation"),
-          plotOutput("spp_accumulation")
-        ),
+        # div(class = "col-md-4 panel",
+        #   h3("Species Accumulation"),
+        #   plotOutput("spp_accumulation")
+        # ),
       ),
       div(class = "row", id = "spp_list_row",
-        div(class = "col-md-4 panel",
-          h3("S7 Eligible Species"),
-          dataTableOutput("block_s7_table"),
-          # htmlOutput("block_needs_table")
-          # dataTableOutput("block_needs_table")
-          downloadButton("download_s7list", "Download")
-        ),
-        div(class = "col-md-8 panel",
+        # div(class = "col-md-4 panel",
+        #   h3("S7 Eligible Species"),
+        #   dataTableOutput("block_s7_table"),
+        #   # htmlOutput("block_needs_table")
+        #   # dataTableOutput("block_needs_table")
+        #   downloadButton("download_s7list", "Download")
+        # ),
+        div(class = "col-md-12 panel",
           h3("Species List"),
           dataTableOutput("spp_observed"),
           downloadButton("download_spplist", "Download")
@@ -853,41 +853,41 @@ observe({
   })
 
   #### DISPLAY SPECIES ACCUMULATION PLOT ------
-  spp_accumulation_results <- reactive({
-    req(current_block_ebd(), current_block_ebd_filtered())
-    # pass only those columns needed
-    sa <- dplyr::filter(
-      current_block_ebd_filtered(),
-      CATEGORY == "species"
-      )[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES",
-      "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME", "CATEGORY")]
+  # spp_accumulation_results <- reactive({
+  #   req(current_block_ebd(), current_block_ebd_filtered())
+  #   # pass only those columns needed
+  #   sa <- dplyr::filter(
+  #     current_block_ebd_filtered(),
+  #     CATEGORY == "species"
+  #     )[c("SAMPLING_EVENT_IDENTIFIER", "OBSERVATION_DATE", "DURATION_MINUTES",
+  #     "BREEDING_CODE", "BREEDING_CATEGORY", "COMMON_NAME", "CATEGORY")]
 
-    cblock <- rv_block$id
+  #   cblock <- rv_block$id
 
-    ## Retrieves appropriate data through aggregation query
-    ## _id = combination of block name and species
-    ## spp = species common name
-    ## maxBC = maximum Breeding Code
-    pipeline <- str_interp(c(
-      '[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
-      '{"$unwind": {"path": "$OBSERVATIONS"}}, ',
-      '{"$match": {"OBSERVATIONS.CATEGORY": "species"}},',
-      '{"$group": {"_id": {"blockName": "$ID_NCBA_BLOCK",',
-      '"spp": "$OBSERVATIONS.COMMON_NAME"},',
-      '"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]'
-      ))
+  #   ## Retrieves appropriate data through aggregation query
+  #   ## _id = combination of block name and species
+  #   ## spp = species common name
+  #   ## maxBC = maximum Breeding Code
+  #   pipeline <- str_interp(c(
+  #     '[{"$match": {"ID_NCBA_BLOCK": "${cblock}"}},',
+  #     '{"$unwind": {"path": "$OBSERVATIONS"}}, ',
+  #     '{"$match": {"OBSERVATIONS.CATEGORY": "species"}},',
+  #     '{"$group": {"_id": {"blockName": "$ID_NCBA_BLOCK",',
+  #     '"spp": "$OBSERVATIONS.COMMON_NAME"},',
+  #     '"maxBC": {"$max": "$OBSERVATIONS.BREEDING_CATEGORY"}}}]'
+  #     ))
 
-    spp_bcs <- aggregate_ebd_data(pipeline)
-    plot_spp_accumulation(sa, spp_bcs)
+  #   spp_bcs <- aggregate_ebd_data(pipeline)
+  #   plot_spp_accumulation(sa, spp_bcs)
 
-  })
+  # })
 
-  output$spp_accumulation <- renderPlot({
-    req(spp_accumulation_results())
-    # print(spp_accumulation_results()$spp_acc_data)
-    spp_accumulation_results()$plot
+  # output$spp_accumulation <- renderPlot({
+  #   req(spp_accumulation_results())
+  #   # print(spp_accumulation_results()$spp_acc_data)
+  #   spp_accumulation_results()$plot
 
-  })
+  # })
 
   #### DISPLAY BLOCK NEEDS ------
   # bn_block <- reactive({
@@ -966,9 +966,9 @@ observe({
       '"_id":0,',
       '"TAX_ORDER": "$tax.TAXON_ORDER_2022",',
       '"SPECIES": "$sppList.COMMON_NAME",',
-      '"BREEDING_STATUS": "$sppList.breedStatus",',
+      '"WINTER_DETECTED": "$sppList.winterDetected",',
       '"BREEDING_DETECTED": "$sppList.breedDetected",',
-      '"WINTER_DETECTED": "$sppList.winterDetected"',
+      '"BREEDING_STATUS": "$sppList.breedStatus"',
       '}}',
       ']'
     ))
@@ -987,80 +987,80 @@ observe({
     }
   )
 
-  block_s7_list <- reactive({
-    cblock <- rv_block$id
+  # block_s7_list <- reactive({
+  #   cblock <- rv_block$id
 
-    block_s7_pipeline <- str_interp(c(
-      '[{"$match":{"_id": "${cblock}","s7EligibleChecklists":{"$gt":{}}}},',
-      '{"$addFields":{"S7_CHECKS":{"$objectToArray":"$s7EligibleChecklists"}}},',
-      '{"$unwind":{"path": "$S7_CHECKS"}},',
-      '{"$project":{"SEI":"$S7_CHECKS.k","OBS_DATE":"$S7_CHECKS.v.OBS_DATE",',
-        '"LATITUDE":"$S7_CHECKS.v.LATITUDE",',
-        '"LONGITUDE":"$S7_CHECKS.v.LONGITUDE",',
-        '"SPP_LIST":{"$reduce":{"input":"$S7_CHECKS.v.SPP_LIST",',
-        '"initialValue":"","in":{"$concat" :[',
-        '"$$value",{"$cond":[{"$eq":["$$value",""]},"",", "]},"$$this"',
-        ']} ',
-        '}}',
-      '}},',
-      '{"$addFields":{"OBS_DATE_DT": {',
-        '"$dateFromString":{"dateString":"$OBS_DATE","format": "%Y-%m-%d"}}}',
-        '},',
-      '{"$addFields":{"DAYS_SINCE": {',
-        '"$dateDiff": {"startDate": "$OBS_DATE_DT","endDate": "$$NOW",',
-        '"unit": "day"}}}},',
-      '{"$match":{"DAYS_SINCE": {"$gte": 7}}},',
-      '{"$project":{"DAYS_SINCE":0,"OBS_DATE_DT":0,"OBS_DATE":0,"_id":0}}',
-      ']'
-    ))
-    block_s7_table <- m_block_summaries$aggregate(block_s7_pipeline)
+  #   block_s7_pipeline <- str_interp(c(
+  #     '[{"$match":{"_id": "${cblock}","s7EligibleChecklists":{"$gt":{}}}},',
+  #     '{"$addFields":{"S7_CHECKS":{"$objectToArray":"$s7EligibleChecklists"}}},',
+  #     '{"$unwind":{"path": "$S7_CHECKS"}},',
+  #     '{"$project":{"SEI":"$S7_CHECKS.k","OBS_DATE":"$S7_CHECKS.v.OBS_DATE",',
+  #       '"LATITUDE":"$S7_CHECKS.v.LATITUDE",',
+  #       '"LONGITUDE":"$S7_CHECKS.v.LONGITUDE",',
+  #       '"SPP_LIST":{"$reduce":{"input":"$S7_CHECKS.v.SPP_LIST",',
+  #       '"initialValue":"","in":{"$concat" :[',
+  #       '"$$value",{"$cond":[{"$eq":["$$value",""]},"",", "]},"$$this"',
+  #       ']} ',
+  #       '}}',
+  #     '}},',
+  #     '{"$addFields":{"OBS_DATE_DT": {',
+  #       '"$dateFromString":{"dateString":"$OBS_DATE","format": "%Y-%m-%d"}}}',
+  #       '},',
+  #     '{"$addFields":{"DAYS_SINCE": {',
+  #       '"$dateDiff": {"startDate": "$OBS_DATE_DT","endDate": "$$NOW",',
+  #       '"unit": "day"}}}},',
+  #     '{"$match":{"DAYS_SINCE": {"$gte": 7}}},',
+  #     '{"$project":{"DAYS_SINCE":0,"OBS_DATE_DT":0,"OBS_DATE":0,"_id":0}}',
+  #     ']'
+  #   ))
+  #   block_s7_table <- m_block_summaries$aggregate(block_s7_pipeline)
 
-    if (length(block_s7_table) > 0){
-      block_s7_table %>%
-        dplyr::mutate(
-          CHECKLIST_LINK = createChecklistLink(SEI),
-          COORDS_LINK = createGMapsLink(LATITUDE, LONGITUDE)
-        )
-    } else {
-      block_s7_table <- NULL
-    }
-  })
-  output$block_s7_table <- renderDataTable(
-    {
-      req(block_s7_list())
-      block_s7_table <- block_s7_list() %>%
-        dplyr::mutate(
-          COORDS_LINK = NULL,
-          CHECKLIST_LINK = NULL,
-          CHECKLIST = paste0(
-            '<a href="', createChecklistLink(SEI),
-            '" target="_blank">', SEI, '</a>'
-          ),
-          COORDS = paste0(
-            '<a href="', createGMapsLink(LATITUDE, LONGITUDE),
-            '" target="_blank">', LATITUDE, ',', LONGITUDE,
-            '</a>'
-          ),
-          SEI = NULL,
-          LATITUDE = NULL,
-          LONGITUDE = NULL
-        )
+  #   if (length(block_s7_table) > 0){
+  #     block_s7_table %>%
+  #       dplyr::mutate(
+  #         CHECKLIST_LINK = createChecklistLink(SEI),
+  #         COORDS_LINK = createGMapsLink(LATITUDE, LONGITUDE)
+  #       )
+  #   } else {
+  #     block_s7_table <- NULL
+  #   }
+  # })
+  # output$block_s7_table <- renderDataTable(
+  #   {
+  #     req(block_s7_list())
+  #     block_s7_table <- block_s7_list() %>%
+  #       dplyr::mutate(
+  #         COORDS_LINK = NULL,
+  #         CHECKLIST_LINK = NULL,
+  #         CHECKLIST = paste0(
+  #           '<a href="', createChecklistLink(SEI),
+  #           '" target="_blank">', SEI, '</a>'
+  #         ),
+  #         COORDS = paste0(
+  #           '<a href="', createGMapsLink(LATITUDE, LONGITUDE),
+  #           '" target="_blank">', LATITUDE, ',', LONGITUDE,
+  #           '</a>'
+  #         ),
+  #         SEI = NULL,
+  #         LATITUDE = NULL,
+  #         LONGITUDE = NULL
+  #       )
 
-      return(block_s7_table)
-    },
-    rownames = FALSE,
-    escape = FALSE
-  )
+  #     return(block_s7_table)
+  #   },
+  #   rownames = FALSE,
+  #   escape = FALSE
+  # )
 
   
-  output$download_s7list <- downloadHandler(
-    filename = function() {
-      paste(rv_block$id,"_s7_eligible_list", ".csv", sep = "")
-    },
-    content = function ( file ) {
-      write.csv(block_s7_list(), file, row.names = TRUE)
-    }
-  )
+  # output$download_s7list <- downloadHandler(
+  #   filename = function() {
+  #     paste(rv_block$id,"_s7_eligible_list", ".csv", sep = "")
+  #   },
+  #   content = function ( file ) {
+  #     write.csv(block_s7_list(), file, row.names = TRUE)
+  #   }
+  # )
 
   ## Block Table Tab -------------------------------------------------
   block_table_data <- reactive({
