@@ -599,11 +599,47 @@ observe({
   })
 
   ## POPULATE LABEL FOR CURRENT BLOCK
+  checklist_download <- reactive({
+    req(current_block_ebd())
 
+    current_block_ebd() %>%
+    dplyr::filter(
+      (CATEGORY == "species" | CATEGORY == "issf") &
+      NCBA_HIDDEN == 0) %>% # make sure only species counted
+    group_by(SAMPLING_EVENT_IDENTIFIER) %>%  # nolint
+    mutate(SPP_COUNT = length(unique(GLOBAL_UNIQUE_IDENTIFIER))) %>%
+    ungroup(SAMPLING_EVENT_IDENTIFIER) %>%
+    distinct(SAMPLING_EVENT_IDENTIFIER, .keep_all = TRUE) %>%
+    select(ALL_SPECIES_REPORTED, SPP_COUNT, BCR_CODE,COUNTRY, # nolint
+      COUNTRY_CODE,COUNTY,COUNTY_CODE,DURATION_MINUTES,EFFORT_AREA_HA, # nolint
+      EFFORT_DISTANCE_KM,GROUP_IDENTIFIER,IBA_CODE,ID_BLOCK_CODE, # nolint
+      ID_NCBA_BLOCK,LAST_EDITED_DATE,LATITUDE,LOCALITY,LOCALITY_ID, # nolint
+      LOCALITY_TYPE,LONGITUDE,MONTH,NUMBER_OBSERVERS,OBSERVATION_DATE, # nolint
+      OBSERVER_ID,PRIORITY_BLOCK,PROJECT_CODE,PROTOCOL_CODE,PROTOCOL_TYPE, # nolint
+      SAMPLING_EVENT_IDENTIFIER,GROUP_IDENTIFIER,STATE,STATE_CODE, # nolint
+      TIME_OBSERVATIONS_STARTED, # nolint
+      TRIP_COMMENTS,USFWS_CODE,YEAR,EBD_NOCTURNAL) %>% # nolint
+    mutate(
+      link = paste(htmlEscape("https://ebird.org/checklist"),
+      SAMPLING_EVENT_IDENTIFIER, sep = "/")) %>%
+    # then a column with the HTML code for part of the popup label
+    mutate(
+      ebird_link = paste0("",'<a style="font-weight:bold" href="',
+        link,
+        '"target="_blank">',htmlEscape(SAMPLING_EVENT_IDENTIFIER),
+        '</a> <br>',"Date: ", htmlEscape(OBSERVATION_DATE), "<br>",
+        "Start Time: ", htmlEscape(TIME_OBSERVATIONS_STARTED), "<br>",
+        "Length (Minutes): ", htmlEscape(DURATION_MINUTES), "<br>",
+        "Distance (km): ", htmlEscape(EFFORT_DISTANCE_KM), "<br>"
+        )
+      )
+
+  })
   output$download_block_checklists <- downloadHandler(
     filename = function() {
       p <- ""
       if (portal_records_switch()){ p <- "portal"}
+
 
       paste(
         rv_block$id,
@@ -613,7 +649,8 @@ observe({
     },
     content = function(file) (
       write.csv(
-        current_block_ebd_checklistsonly_filtered(),
+        checklist_download(),
+        # current_block_ebd_checklistsonly_filtered(),
         file,
         row.names = TRUE)
     )
