@@ -1187,14 +1187,14 @@ observe({
         STATUS == "Complete", 0.8, 0.05
       )
     )
-    print(priority_block_data[
-      priority_block_data$ID_NCBA_BLOCK == "SILER_CITY-SE",
-      "BREEDING_COMPLETE"
-    ])
-    print(priority_block_data[
-      priority_block_data$ID_NCBA_BLOCK == "SILER_CITY-SE",
-      "colorComplete"
-    ])
+    # print(priority_block_data[
+    #   priority_block_data$ID_NCBA_BLOCK == "SILER_CITY-SE",
+    #   "BREEDING_COMPLETE"
+    # ])
+    # print(priority_block_data[
+    #   priority_block_data$ID_NCBA_BLOCK == "SILER_CITY-SE",
+    #   "colorComplete"
+    # ])
 
     leaflet() %>%
       setView(

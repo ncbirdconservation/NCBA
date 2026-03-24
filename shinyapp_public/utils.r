@@ -164,7 +164,7 @@ get_spp_by_block <- function(species){
       }
     ]',
     species
-    )
+  )
   mongodata <- m_block_summaries$aggregate(pipeline)
 
   return(mongodata)
