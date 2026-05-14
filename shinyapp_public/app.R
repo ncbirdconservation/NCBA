@@ -115,6 +115,7 @@ createChecklistLink <- function(val) {
 }
 # Define UI for Quackalacky Data app -----------------------------------------
 ui <- bootstrapPage(
+
   navbarPage(
     theme = shinytheme("flatly"), 
     collapsible = TRUE,
@@ -293,6 +294,20 @@ ui <- bootstrapPage(
 
 # Define server logic to plot various variables against mpg
 server <- function(input, output, session) {
+
+## DISPLAY NOTICE
+# toggleModal(session, "startupModal", toggle = "open")
+showModal(
+  modalDialog(id = "startupModal", title = "NC Bird Atlas Data Collection Complete!",
+              easyClose = TRUE, size = "l", fade = TRUE,
+              icon = icon("fa-triangle-exclamation"),
+              p(
+                "The NC Bird Atlas data collection phase finished on 2/28/2026. We are now working on analysis an development of final products. This website is for informational purposes only."
+              )
+  ),
+  session = session
+  
+)
 
 ## GET SERVER URL PARAMETERS (if they exist)
 
